@@ -1,9 +1,16 @@
+import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import authRoutes from './routes/auth';
+import communityRoutes from './routes/communities';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,10 +25,13 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// API routes will be added here
-app.use('/api', (_req, res) => {
-  res.json({ message: 'Peerzle API' });
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok' });
 });
+
+// API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/communities', communityRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
