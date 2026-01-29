@@ -96,4 +96,59 @@ export async function getMembership(slug: string): Promise<Membership> {
   return response.data;
 }
 
+// Conversation types
+export interface Message {
+  id: string;
+  conversation_id: string;
+  sender_membership_id: string;
+  content: string;
+  created_at: string;
+  moderation_result: unknown | null;
+  sender_email: string;
+}
+
+export interface Conversation {
+  id: string;
+  community_id: string;
+  seeker_membership_id: string;
+  helper_membership_id: string | null;
+  topic: string | null;
+  status: 'matching' | 'active' | 'ended';
+  started_at: string;
+  ended_at: string | null;
+  seeker_rating: number | null;
+  helper_rating: number | null;
+  safety_flags: unknown[];
+  community_slug?: string;
+  community_name?: string;
+  messages?: Message[];
+}
+
+// Conversation API
+export async function startConversation(communitySlug: string, topic: string): Promise<Conversation> {
+  const response = await api.post<Conversation>('/api/conversations/start', { communitySlug, topic });
+  return response.data;
+}
+
+export async function getConversation(id: string): Promise<Conversation> {
+  const response = await api.get<Conversation>(`/api/conversations/${id}`);
+  return response.data;
+}
+
+export async function getActiveConversations(): Promise<Conversation[]> {
+  const response = await api.get<Conversation[]>('/api/conversations/active');
+  return response.data;
+}
+
+export async function endConversation(id: string): Promise<Conversation> {
+  const response = await api.post<Conversation>(`/api/conversations/${id}/end`);
+  return response.data;
+}
+
+// Message API
+export async function sendMessage(conversationId: string, content: string): Promise<Message> {
+  const response = await api.post<Message>('/api/messages', { conversationId, content });
+  return response.data;
+}
+
 export default api;
