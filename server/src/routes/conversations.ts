@@ -21,10 +21,10 @@ interface ConversationRow {
 interface MessageRow {
   id: string;
   conversation_id: string;
-  sender_membership_id: string;
+  sender_membership_id: string | null;
   content: string;
   created_at: Date;
-  moderation_result: unknown | null;
+  moderation_result: { sender?: string } | null;
 }
 
 interface MembershipRow {
@@ -145,12 +145,12 @@ router.get('/:id', authenticate, async (req: AuthenticatedRequest, res: Response
 
     const conversation = conversationResult.rows[0];
 
-    // Get messages
-    const messagesResult = await query<MessageRow & { sender_email: string }>(
+    // Get messages (LEFT JOIN to include PeerBot messages with null sender)
+    const messagesResult = await query<MessageRow & { sender_email: string | null }>(
       `SELECT msg.*, u.email as sender_email
        FROM messages msg
-       JOIN memberships m ON m.id = msg.sender_membership_id
-       JOIN users u ON u.id = m.user_id
+       LEFT JOIN memberships m ON m.id = msg.sender_membership_id
+       LEFT JOIN users u ON u.id = m.user_id
        WHERE msg.conversation_id = $1
        ORDER BY msg.created_at ASC`,
       [id]

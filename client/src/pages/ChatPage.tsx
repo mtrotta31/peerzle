@@ -235,7 +235,8 @@ export default function ChatPage() {
           </p>
         ) : (
           messages.map((message) => {
-            const isMine = message.sender_email === user?.email;
+            const isPeerBot = message.moderation_result?.sender === 'peerbot';
+            const isMine = !isPeerBot && message.sender_email === user?.email;
             return (
               <div
                 key={message.id}
@@ -245,19 +246,44 @@ export default function ChatPage() {
                   marginBottom: '12px',
                 }}
               >
+                {isPeerBot && (
+                  <div
+                    style={{
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
+                      backgroundColor: '#7c3aed',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      marginRight: '8px',
+                      flexShrink: 0,
+                    }}
+                  >
+                    <span style={{ color: 'white', fontSize: '14px' }}>🤖</span>
+                  </div>
+                )}
                 <div
                   style={{
                     maxWidth: '70%',
                     padding: '12px 16px',
                     borderRadius: '12px',
-                    backgroundColor: isMine ? '#1a365d' : 'white',
+                    backgroundColor: isMine ? '#1a365d' : isPeerBot ? '#f3e8ff' : 'white',
                     color: isMine ? 'white' : '#1f2937',
                     boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                    border: isPeerBot ? '1px solid #c4b5fd' : 'none',
                   }}
                 >
                   {!isMine && (
-                    <p style={{ margin: '0 0 4px', fontSize: '12px', color: '#6b7280' }}>
-                      {message.sender_email}
+                    <p
+                      style={{
+                        margin: '0 0 4px',
+                        fontSize: '12px',
+                        color: isPeerBot ? '#7c3aed' : '#6b7280',
+                        fontWeight: isPeerBot ? 600 : 400,
+                      }}
+                    >
+                      {isPeerBot ? 'PeerBot' : message.sender_email}
                     </p>
                   )}
                   <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{message.content}</p>

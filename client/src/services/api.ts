@@ -100,11 +100,11 @@ export async function getMembership(slug: string): Promise<Membership> {
 export interface Message {
   id: string;
   conversation_id: string;
-  sender_membership_id: string;
+  sender_membership_id: string | null;
   content: string;
   created_at: string;
-  moderation_result: unknown | null;
-  sender_email: string;
+  moderation_result: { sender?: string } | null;
+  sender_email: string | null;
 }
 
 export interface Conversation {
