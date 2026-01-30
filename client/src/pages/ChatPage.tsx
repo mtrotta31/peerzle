@@ -4,6 +4,11 @@ import { Conversation, Message, getConversation, sendMessage, endConversation } 
 import { connectSocket, joinConversation, leaveConversation, sendTypingIndicator, getSocket } from '../services/socket';
 import { useAuth } from '../context/AuthContext';
 
+interface SafetyAlert {
+  riskLevel: 'moderate_concern' | 'crisis';
+  messageId: string;
+}
+
 export default function ChatPage() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -14,6 +19,8 @@ export default function ChatPage() {
   const [isEnding, setIsEnding] = useState(false);
   const [error, setError] = useState('');
   const [typingUser, setTypingUser] = useState<string | null>(null);
+  const [showCrisisBanner, setShowCrisisBanner] = useState(false);
+  const [crisisRiskLevel, setCrisisRiskLevel] = useState<'moderate_concern' | 'crisis' | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { user } = useAuth();
@@ -59,6 +66,13 @@ export default function ChatPage() {
             setTypingUser(data.isTyping ? data.userId : null);
           }
         });
+
+        // Listen for safety alerts
+        socket.on('safety_alert', (alert: SafetyAlert) => {
+          console.log('Safety alert received:', alert);
+          setCrisisRiskLevel(alert.riskLevel);
+          setShowCrisisBanner(true);
+        });
       } catch (err) {
         setError('Failed to load conversation');
         console.error(err);
@@ -77,6 +91,7 @@ export default function ChatPage() {
       const socket = getSocket();
       socket?.off('new_message');
       socket?.off('user_typing');
+      socket?.off('safety_alert');
     };
   }, [conversationId, user?.id]);
 
@@ -128,6 +143,10 @@ export default function ChatPage() {
       console.error('Failed to end conversation:', err);
       setIsEnding(false);
     }
+  };
+
+  const handleDismissCrisisBanner = () => {
+    setShowCrisisBanner(false);
   };
 
   if (isLoading) {
@@ -191,6 +210,55 @@ export default function ChatPage() {
           )}
         </div>
       </div>
+
+      {/* Crisis Resources Banner */}
+      {showCrisisBanner && (
+        <div
+          style={{
+            padding: '16px 20px',
+            backgroundColor: crisisRiskLevel === 'crisis' ? '#dc2626' : '#ea580c',
+            color: 'white',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <p style={{ margin: 0, fontWeight: 'bold', fontSize: '16px' }}>
+                If you're in crisis, help is available
+              </p>
+              <div style={{ marginTop: '8px', fontSize: '14px' }}>
+                <p style={{ margin: '4px 0' }}>
+                  <strong>988 Suicide & Crisis Lifeline</strong> - Call or text 988
+                </p>
+                <p style={{ margin: '4px 0' }}>
+                  <strong>Crisis Text Line</strong> - Text HOME to 741741
+                </p>
+                <p style={{ margin: '4px 0' }}>
+                  <strong>Emergency</strong> - Call 911
+                </p>
+              </div>
+              <p style={{ margin: '12px 0 0', fontSize: '13px', opacity: 0.9 }}>
+                You don't have to face this alone. Professional help is available 24/7.
+              </p>
+            </div>
+            <button
+              onClick={handleDismissCrisisBanner}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: 'rgba(255,255,255,0.2)',
+                color: 'white',
+                border: '1px solid rgba(255,255,255,0.4)',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                whiteSpace: 'nowrap',
+                marginLeft: '16px',
+              }}
+            >
+              I'm okay
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Matching Status Banner */}
       {isMatching && (

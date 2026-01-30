@@ -3,6 +3,7 @@ import { query } from '../config/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { emitToConversation } from '../config/socket';
 import { generatePeerBotResponse } from '../services/peerbot';
+import { analyzeMessageSafety, shouldShowCrisisResources, mapRiskLevelToSeverity, SafetyAnalysisResult } from '../services/safety';
 
 const router = Router();
 
@@ -12,7 +13,7 @@ interface MessageRow {
   sender_membership_id: string | null;
   content: string;
   created_at: Date;
-  moderation_result: { sender?: string } | null;
+  moderation_result: { sender?: string; safety?: SafetyAnalysisResult } | null;
 }
 
 interface MembershipRow {
@@ -25,6 +26,7 @@ interface ConversationInfo {
   helper_membership_id: string | null;
   topic: string | null;
   community_name: string;
+  community_id: string;
 }
 
 // POST /api/messages - Send a message
@@ -57,7 +59,7 @@ router.post('/', authenticate, async (req: AuthenticatedRequest, res: Response) 
       return;
     }
 
-    const { membership_id, conversation_status } = verifyResult.rows[0];
+    const { membership_id, conversation_status, community_id } = verifyResult.rows[0];
 
     if (conversation_status === 'ended') {
       res.status(400).json({ error: 'Cannot send messages to ended conversation' });
@@ -92,7 +94,13 @@ router.post('/', authenticate, async (req: AuthenticatedRequest, res: Response) 
 
     res.status(201).json(messageWithSender);
 
-    // Check if conversation has no helper - if so, trigger PeerBot
+    // Run async tasks in parallel (don't await - fire and forget)
+    // 1. Safety analysis for user messages
+    runSafetyAnalysis(message.id, conversationId, community_id, content.trim()).catch((err) => {
+      console.error('Safety analysis error:', err);
+    });
+
+    // 2. Check if conversation has no helper - if so, trigger PeerBot
     triggerPeerBotIfNeeded(conversationId).catch((err) => {
       console.error('PeerBot trigger error:', err);
     });
@@ -102,10 +110,77 @@ router.post('/', authenticate, async (req: AuthenticatedRequest, res: Response) 
   }
 });
 
+async function runSafetyAnalysis(
+  messageId: string,
+  conversationId: string,
+  communityId: string,
+  content: string
+): Promise<void> {
+  // Get conversation context
+  const contextResult = await query<{ topic: string | null }>(
+    'SELECT topic FROM conversations WHERE id = $1',
+    [conversationId]
+  );
+  const topic = contextResult.rows[0]?.topic || null;
+
+  // Get recent messages for context (excluding the current one)
+  const recentResult = await query<{ content: string }>(
+    `SELECT content FROM messages
+     WHERE conversation_id = $1 AND id != $2
+     ORDER BY created_at DESC LIMIT 3`,
+    [conversationId, messageId]
+  );
+  const recentMessages = recentResult.rows.map((r) => r.content).reverse();
+
+  // Analyze the message
+  const safetyResult = await analyzeMessageSafety(content, { topic, recentMessages });
+
+  // Update the message with safety analysis
+  await query(
+    `UPDATE messages SET moderation_result = $1 WHERE id = $2`,
+    [JSON.stringify({ safety: safetyResult }), messageId]
+  );
+
+  // Log safety events
+  if (safetyResult.riskLevel !== 'safe') {
+    console.log(`[SAFETY] ${safetyResult.riskLevel.toUpperCase()} - Conversation: ${conversationId}`);
+    console.log(`[SAFETY] Flags: ${safetyResult.flags.join(', ')}`);
+    console.log(`[SAFETY] Suggested action: ${safetyResult.suggestedAction}`);
+  }
+
+  // If crisis or moderate concern, emit safety alert and log to database
+  if (shouldShowCrisisResources(safetyResult.riskLevel)) {
+    // Emit safety alert to conversation
+    emitToConversation(conversationId, 'safety_alert', {
+      riskLevel: safetyResult.riskLevel,
+      messageId,
+    });
+
+    // Log to alert_events table
+    await query(
+      `INSERT INTO alert_events (community_id, conversation_id, alert_type, severity, context)
+       VALUES ($1, $2, 'safety', $3, $4)`,
+      [
+        communityId,
+        conversationId,
+        mapRiskLevelToSeverity(safetyResult.riskLevel),
+        JSON.stringify({
+          message_id: messageId,
+          risk_level: safetyResult.riskLevel,
+          flags: safetyResult.flags,
+          suggested_action: safetyResult.suggestedAction,
+        }),
+      ]
+    );
+
+    console.log(`[SAFETY] Alert logged to database for conversation: ${conversationId}`);
+  }
+}
+
 async function triggerPeerBotIfNeeded(conversationId: string): Promise<void> {
   // Get conversation info
   const conversationResult = await query<ConversationInfo>(
-    `SELECT c.helper_membership_id, c.topic, cm.name as community_name
+    `SELECT c.helper_membership_id, c.topic, cm.name as community_name, c.community_id
      FROM conversations c
      JOIN communities cm ON cm.id = c.community_id
      WHERE c.id = $1`,
@@ -145,7 +220,7 @@ async function triggerPeerBotIfNeeded(conversationId: string): Promise<void> {
     community_name,
   });
 
-  // Save PeerBot message
+  // Save PeerBot message (no safety analysis needed for PeerBot)
   const peerBotMessageResult = await query<MessageRow>(
     `INSERT INTO messages (conversation_id, sender_membership_id, content, moderation_result)
      VALUES ($1, NULL, $2, $3)
