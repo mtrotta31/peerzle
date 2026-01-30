@@ -134,4 +134,51 @@ router.get('/:slug/membership', authenticate, async (req: AuthenticatedRequest, 
   }
 });
 
+// PUT /api/communities/:slug/availability - Toggle helper availability
+router.put('/:slug/availability', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { slug } = req.params;
+    const { isAvailable } = req.body;
+    const userId = req.user!.userId;
+
+    if (typeof isAvailable !== 'boolean') {
+      res.status(400).json({ error: 'isAvailable must be a boolean' });
+      return;
+    }
+
+    // Get community
+    const communityResult = await query<CommunityRow>(
+      'SELECT id FROM communities WHERE slug = $1 AND is_active = true',
+      [slug]
+    );
+
+    if (communityResult.rows.length === 0) {
+      res.status(404).json({ error: 'Community not found' });
+      return;
+    }
+
+    const communityId = communityResult.rows[0].id;
+
+    // Update membership availability
+    const result = await query<MembershipRow>(
+      `UPDATE memberships
+       SET is_available = $1, role = CASE WHEN role = 'seeker' THEN 'both' ELSE role END
+       WHERE user_id = $2 AND community_id = $3
+       RETURNING *`,
+      [isAvailable, userId, communityId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Not a member of this community' });
+      return;
+    }
+
+    console.log(`[HELPER] ${isAvailable ? 'Available' : 'Unavailable'}: User ${userId} in ${slug}`);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Toggle availability error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

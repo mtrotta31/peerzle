@@ -101,7 +101,8 @@ router.post('/', authenticate, async (req: AuthenticatedRequest, res: Response) 
     });
 
     // 2. Check if conversation has no helper - if so, trigger PeerBot
-    triggerPeerBotIfNeeded(conversationId).catch((err) => {
+    // Pass the sender's membership_id so we can check if they're the helper
+    triggerPeerBotIfNeeded(conversationId, membership_id).catch((err) => {
       console.error('PeerBot trigger error:', err);
     });
   } catch (error) {
@@ -177,10 +178,10 @@ async function runSafetyAnalysis(
   }
 }
 
-async function triggerPeerBotIfNeeded(conversationId: string): Promise<void> {
+async function triggerPeerBotIfNeeded(conversationId: string, senderMembershipId: string): Promise<void> {
   // Get conversation info
-  const conversationResult = await query<ConversationInfo>(
-    `SELECT c.helper_membership_id, c.topic, cm.name as community_name, c.community_id
+  const conversationResult = await query<ConversationInfo & { seeker_membership_id: string }>(
+    `SELECT c.helper_membership_id, c.seeker_membership_id, c.topic, cm.name as community_name, c.community_id
      FROM conversations c
      JOIN communities cm ON cm.id = c.community_id
      WHERE c.id = $1`,
@@ -189,10 +190,19 @@ async function triggerPeerBotIfNeeded(conversationId: string): Promise<void> {
 
   if (conversationResult.rows.length === 0) return;
 
-  const { helper_membership_id, topic, community_name } = conversationResult.rows[0];
+  const { helper_membership_id, seeker_membership_id, topic, community_name } = conversationResult.rows[0];
 
   // Only respond if no human helper is assigned
-  if (helper_membership_id !== null) return;
+  if (helper_membership_id !== null) {
+    console.log('[PEERBOT] Helper is assigned, skipping PeerBot response');
+    return;
+  }
+
+  // Only respond to seeker messages, not helper messages
+  if (senderMembershipId !== seeker_membership_id) {
+    console.log('[PEERBOT] Message not from seeker, skipping PeerBot response');
+    return;
+  }
 
   // Get recent messages for context
   const messagesResult = await query<MessageRow & { sender_email: string | null }>(
@@ -213,6 +223,17 @@ async function triggerPeerBotIfNeeded(conversationId: string): Promise<void> {
 
   // Add a small delay to feel more natural (1.5 seconds)
   await new Promise((resolve) => setTimeout(resolve, 1500));
+
+  // Re-check if helper has joined during the delay
+  const recheckResult = await query<{ helper_membership_id: string | null }>(
+    'SELECT helper_membership_id FROM conversations WHERE id = $1',
+    [conversationId]
+  );
+
+  if (recheckResult.rows[0]?.helper_membership_id !== null) {
+    console.log('[PEERBOT] Helper joined during delay, skipping response');
+    return;
+  }
 
   // Generate PeerBot response
   const peerBotContent = await generatePeerBotResponse(messages, {

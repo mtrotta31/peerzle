@@ -1,6 +1,18 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Community, Membership, Conversation, getCommunity, getMembership, startConversation, getActiveConversations } from '../services/api';
+import {
+  Community,
+  Membership,
+  Conversation,
+  PendingConversation,
+  getCommunity,
+  getMembership,
+  startConversation,
+  getActiveConversations,
+  toggleAvailability,
+  getPendingConversations,
+  acceptConversation,
+} from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { AxiosError } from 'axios';
 
@@ -9,11 +21,28 @@ export default function CommunityDashboard() {
   const [community, setCommunity] = useState<Community | null>(null);
   const [membership, setMembership] = useState<Membership | null>(null);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
+  const [pendingConversations, setPendingConversations] = useState<PendingConversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isStarting, setIsStarting] = useState(false);
+  const [isTogglingAvailability, setIsTogglingAvailability] = useState(false);
+  const [isAccepting, setIsAccepting] = useState<string | null>(null);
   const [error, setError] = useState('');
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  const loadPendingConversations = async () => {
+    try {
+      const pending = await getPendingConversations();
+      // Filter to only show pending for this community
+      if (community) {
+        setPendingConversations(pending.filter((p) => p.community_id === community.id));
+      } else {
+        setPendingConversations(pending);
+      }
+    } catch (err) {
+      console.error('Failed to load pending conversations:', err);
+    }
+  };
 
   useEffect(() => {
     async function loadData() {
@@ -35,6 +64,12 @@ export default function CommunityDashboard() {
         if (existingConv) {
           setActiveConversation(existingConv);
         }
+
+        // Load pending conversations if user is available as helper
+        if (membershipData.is_available) {
+          const pending = await getPendingConversations();
+          setPendingConversations(pending.filter((p) => p.community_id === communityData.id));
+        }
       } catch (err) {
         const axiosError = err as AxiosError<{ error: string }>;
         if (axiosError.response?.status === 404) {
@@ -49,6 +84,16 @@ export default function CommunityDashboard() {
 
     loadData();
   }, [slug]);
+
+  // Refresh pending conversations when availability changes
+  useEffect(() => {
+    if (membership?.is_available && community) {
+      loadPendingConversations();
+      // Poll for new pending conversations every 10 seconds
+      const interval = setInterval(loadPendingConversations, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [membership?.is_available, community?.id]);
 
   const handleStartConversation = async (topic: string) => {
     if (!slug || isStarting) return;
@@ -68,6 +113,58 @@ export default function CommunityDashboard() {
     } finally {
       setIsStarting(false);
     }
+  };
+
+  const handleToggleAvailability = async () => {
+    if (!slug || !membership || isTogglingAvailability) return;
+
+    setIsTogglingAvailability(true);
+    try {
+      const updated = await toggleAvailability(slug, !membership.is_available);
+      setMembership(updated);
+
+      if (updated.is_available) {
+        // Load pending conversations when becoming available
+        await loadPendingConversations();
+      } else {
+        setPendingConversations([]);
+      }
+    } catch (err) {
+      console.error('Failed to toggle availability:', err);
+      alert('Failed to update availability');
+    } finally {
+      setIsTogglingAvailability(false);
+    }
+  };
+
+  const handleAcceptConversation = async (conversationId: string) => {
+    if (isAccepting) return;
+
+    setIsAccepting(conversationId);
+    try {
+      await acceptConversation(conversationId);
+      navigate(`/chat/${conversationId}`);
+    } catch (err) {
+      const axiosError = err as AxiosError<{ error: string }>;
+      alert(axiosError.response?.data?.error || 'Failed to accept conversation');
+      // Refresh pending list in case it was taken by another helper
+      await loadPendingConversations();
+    } finally {
+      setIsAccepting(null);
+    }
+  };
+
+  const formatTimeWaiting = (startedAt: string) => {
+    const start = new Date(startedAt);
+    const now = new Date();
+    const diffMs = now.getTime() - start.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins} min ago`;
+    const diffHours = Math.floor(diffMins / 60);
+    if (diffHours < 24) return `${diffHours} hr ago`;
+    return `${Math.floor(diffHours / 24)} days ago`;
   };
 
   if (isLoading) {
@@ -119,7 +216,7 @@ export default function CommunityDashboard() {
 
       {/* Content */}
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-        {/* Welcome Card */}
+        {/* Welcome Card with Helper Toggle */}
         <div
           style={{
             backgroundColor: 'white',
@@ -129,13 +226,155 @@ export default function CommunityDashboard() {
             boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
           }}
         >
-          <h2 style={{ margin: '0 0 8px 0', color: branding.primaryColor }}>
-            Welcome, {user?.email}
-          </h2>
-          <p style={{ margin: 0, color: '#666' }}>
-            Your role: <strong>{roleName}</strong>
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div>
+              <h2 style={{ margin: '0 0 8px 0', color: branding.primaryColor }}>
+                Welcome, {user?.email}
+              </h2>
+              <p style={{ margin: 0, color: '#666' }}>
+                Your role: <strong>{roleName}</strong>
+              </p>
+            </div>
+
+            {/* Helper Availability Toggle */}
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'flex-end',
+                gap: '8px',
+              }}
+            >
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  cursor: isTogglingAvailability ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    color: membership.is_available ? '#059669' : '#6b7280',
+                  }}
+                >
+                  {membership.is_available ? 'Available to Help' : 'Not Available'}
+                </span>
+                <div
+                  onClick={handleToggleAvailability}
+                  style={{
+                    width: '48px',
+                    height: '26px',
+                    backgroundColor: membership.is_available ? '#059669' : '#d1d5db',
+                    borderRadius: '13px',
+                    position: 'relative',
+                    transition: 'background-color 0.2s',
+                    opacity: isTogglingAvailability ? 0.5 : 1,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '22px',
+                      height: '22px',
+                      backgroundColor: 'white',
+                      borderRadius: '50%',
+                      position: 'absolute',
+                      top: '2px',
+                      left: membership.is_available ? '24px' : '2px',
+                      transition: 'left 0.2s',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                    }}
+                  />
+                </div>
+              </label>
+              <span style={{ fontSize: '12px', color: '#9ca3af' }}>
+                Toggle to help others
+              </span>
+            </div>
+          </div>
         </div>
+
+        {/* Pending Requests Section */}
+        {membership.is_available && pendingConversations.length > 0 && (
+          <div
+            style={{
+              backgroundColor: '#ecfdf5',
+              border: '1px solid #a7f3d0',
+              borderRadius: '8px',
+              padding: '20px',
+              marginBottom: '20px',
+            }}
+          >
+            <h3 style={{ margin: '0 0 16px 0', color: '#065f46', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '20px' }}>🆘</span>
+              Pending Requests ({pendingConversations.length})
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {pendingConversations.map((conv) => (
+                <div
+                  key={conv.id}
+                  style={{
+                    backgroundColor: 'white',
+                    borderRadius: '6px',
+                    padding: '16px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  }}
+                >
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 500, color: '#1f2937' }}>
+                      {conv.topic || 'General Support'}
+                    </p>
+                    <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#6b7280' }}>
+                      Waiting {formatTimeWaiting(conv.started_at)}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleAcceptConversation(conv.id)}
+                    disabled={isAccepting === conv.id}
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: '#059669',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: isAccepting === conv.id ? 'not-allowed' : 'pointer',
+                      fontWeight: 500,
+                      opacity: isAccepting === conv.id ? 0.6 : 1,
+                    }}
+                  >
+                    {isAccepting === conv.id ? 'Accepting...' : 'Accept'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* No pending requests message */}
+        {membership.is_available && pendingConversations.length === 0 && (
+          <div
+            style={{
+              backgroundColor: '#f0fdf4',
+              border: '1px solid #bbf7d0',
+              borderRadius: '8px',
+              padding: '20px',
+              marginBottom: '20px',
+              textAlign: 'center',
+            }}
+          >
+            <p style={{ margin: 0, color: '#166534' }}>
+              You're available to help. No pending requests right now.
+            </p>
+            <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#4ade80' }}>
+              This page will automatically refresh when someone needs help.
+            </p>
+          </div>
+        )}
 
         {/* Active Conversation Banner */}
         {activeConversation && (

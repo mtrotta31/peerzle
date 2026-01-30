@@ -9,6 +9,12 @@ interface SafetyAlert {
   messageId: string;
 }
 
+interface HelperJoinedEvent {
+  conversationId: string;
+  helperEmail: string;
+  helperMembershipId: string;
+}
+
 export default function ChatPage() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const [conversation, setConversation] = useState<Conversation | null>(null);
@@ -21,6 +27,7 @@ export default function ChatPage() {
   const [typingUser, setTypingUser] = useState<string | null>(null);
   const [showCrisisBanner, setShowCrisisBanner] = useState(false);
   const [crisisRiskLevel, setCrisisRiskLevel] = useState<'moderate_concern' | 'crisis' | null>(null);
+  const [helperJoined, setHelperJoined] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { user } = useAuth();
@@ -73,6 +80,15 @@ export default function ChatPage() {
           setCrisisRiskLevel(alert.riskLevel);
           setShowCrisisBanner(true);
         });
+
+        // Listen for helper joining
+        socket.on('helper_joined', (event: HelperJoinedEvent) => {
+          console.log('Helper joined:', event);
+          setHelperJoined(event.helperEmail);
+          setConversation((prev) =>
+            prev ? { ...prev, status: 'active', helper_membership_id: event.helperMembershipId } : prev
+          );
+        });
       } catch (err) {
         setError('Failed to load conversation');
         console.error(err);
@@ -92,6 +108,7 @@ export default function ChatPage() {
       socket?.off('new_message');
       socket?.off('user_typing');
       socket?.off('safety_alert');
+      socket?.off('helper_joined');
     };
   }, [conversationId, user?.id]);
 
@@ -260,8 +277,22 @@ export default function ChatPage() {
         </div>
       )}
 
+      {/* Helper Joined Banner */}
+      {helperJoined && (
+        <div
+          style={{
+            padding: '12px 20px',
+            backgroundColor: '#d1fae5',
+            color: '#065f46',
+            textAlign: 'center',
+          }}
+        >
+          Connected with <strong>{helperJoined}</strong>
+        </div>
+      )}
+
       {/* Matching Status Banner */}
-      {isMatching && (
+      {isMatching && !helperJoined && (
         <div
           style={{
             padding: '12px 20px',

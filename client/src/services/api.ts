@@ -151,4 +151,24 @@ export async function sendMessage(conversationId: string, content: string): Prom
   return response.data;
 }
 
+// Helper API
+export async function toggleAvailability(communitySlug: string, isAvailable: boolean): Promise<Membership> {
+  const response = await api.put<Membership>(`/api/communities/${communitySlug}/availability`, { isAvailable });
+  return response.data;
+}
+
+export interface PendingConversation extends Conversation {
+  seeker_email: string;
+}
+
+export async function getPendingConversations(): Promise<PendingConversation[]> {
+  const response = await api.get<PendingConversation[]>('/api/helpers/pending');
+  return response.data;
+}
+
+export async function acceptConversation(conversationId: string): Promise<Conversation> {
+  const response = await api.post<Conversation>(`/api/helpers/accept/${conversationId}`);
+  return response.data;
+}
+
 export default api;
