@@ -34,80 +34,237 @@ export default function SignupPage() {
     }
   };
 
+  const inputStyle = {
+    width: '100%',
+    padding: '14px 16px',
+    borderRadius: '12px',
+    border: '1px solid #E2E8F0',
+    fontSize: '16px',
+    boxSizing: 'border-box' as const,
+    transition: 'border-color 0.2s, background-color 0.2s',
+  };
+
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.currentTarget.style.borderColor = '#2B7CF6';
+    e.currentTarget.style.backgroundColor = '#EDF4FF';
+  };
+
+  const handleBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.currentTarget.style.borderColor = '#E2E8F0';
+    e.currentTarget.style.backgroundColor = 'white';
+  };
+
   return (
-    <div style={{ maxWidth: '400px', margin: '100px auto', padding: '20px' }}>
-      <h1>Create Account</h1>
-
-      {error && (
-        <div style={{ color: 'red', marginBottom: '16px' }}>
-          {error}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit}>
-        <div style={{ marginBottom: '16px' }}>
-          <label htmlFor="email" style={{ display: 'block', marginBottom: '4px' }}>
-            Email
-          </label>
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'white',
+        padding: '20px',
+      }}
+    >
+      <div
+        style={{
+          width: '100%',
+          maxWidth: '480px',
+        }}
+      >
+        {/* Logo */}
+        <div style={{ textAlign: 'center', marginBottom: '32px' }}>
+          <img
+            src="/peerzle-logo-vertical.svg"
+            alt="Peerzle"
+            style={{ width: '180px', height: 'auto' }}
           />
+          <p
+            style={{
+              marginTop: '12px',
+              color: '#64748B',
+              fontSize: '16px',
+            }}
+          >
+            Peer support, when you need it
+          </p>
         </div>
 
-        <div style={{ marginBottom: '16px' }}>
-          <label htmlFor="password" style={{ display: 'block', marginBottom: '4px' }}>
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            minLength={8}
-            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-          />
-        </div>
-
-        <div style={{ marginBottom: '16px' }}>
-          <label htmlFor="confirmPassword" style={{ display: 'block', marginBottom: '4px' }}>
-            Confirm Password
-          </label>
-          <input
-            id="confirmPassword"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            required
-            minLength={8}
-            style={{ width: '100%', padding: '8px', boxSizing: 'border-box' }}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={isSubmitting}
+        {/* Card */}
+        <div
           style={{
-            width: '100%',
-            padding: '12px',
-            backgroundColor: '#007bff',
-            color: 'white',
-            border: 'none',
-            cursor: isSubmitting ? 'not-allowed' : 'pointer',
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '32px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+            border: '1px solid #E2E8F0',
           }}
         >
-          {isSubmitting ? 'Creating account...' : 'Create Account'}
-        </button>
-      </form>
+          {error && (
+            <div
+              style={{
+                color: '#DC2626',
+                backgroundColor: '#FEF2F2',
+                padding: '12px 16px',
+                borderRadius: '12px',
+                marginBottom: '20px',
+                fontSize: '14px',
+              }}
+            >
+              {error}
+            </div>
+          )}
 
-      <p style={{ marginTop: '16px', textAlign: 'center' }}>
-        Already have an account? <Link to="/login">Log in</Link>
-      </p>
+          <form onSubmit={handleSubmit}>
+            <div style={{ marginBottom: '20px' }}>
+              <label
+                htmlFor="email"
+                style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 500,
+                  color: '#1E3A5F',
+                  fontSize: '14px',
+                }}
+              >
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                style={inputStyle}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+              />
+            </div>
+
+            <div style={{ marginBottom: '20px' }}>
+              <label
+                htmlFor="password"
+                style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 500,
+                  color: '#1E3A5F',
+                  fontSize: '14px',
+                }}
+              >
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={8}
+                style={inputStyle}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+              />
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label
+                htmlFor="confirmPassword"
+                style={{
+                  display: 'block',
+                  marginBottom: '8px',
+                  fontWeight: 500,
+                  color: '#1E3A5F',
+                  fontSize: '14px',
+                }}
+              >
+                Confirm Password
+              </label>
+              <input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                minLength={8}
+                style={inputStyle}
+                onFocus={handleFocus}
+                onBlur={handleBlur}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              style={{
+                width: '100%',
+                padding: '14px 24px',
+                backgroundColor: '#2B7CF6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '24px',
+                fontSize: '16px',
+                fontWeight: 600,
+                cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                opacity: isSubmitting ? 0.7 : 1,
+                transition: 'background-color 0.2s, transform 0.2s',
+              }}
+              onMouseOver={(e) => {
+                if (!isSubmitting) {
+                  e.currentTarget.style.backgroundColor = '#1E6AD9';
+                }
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = '#2B7CF6';
+              }}
+            >
+              {isSubmitting ? 'Creating account...' : 'Create Account'}
+            </button>
+          </form>
+
+          <div style={{ marginTop: '16px' }}>
+            <Link
+              to="/login"
+              style={{
+                display: 'block',
+                width: '100%',
+                padding: '14px 24px',
+                backgroundColor: 'white',
+                color: '#2B7CF6',
+                border: '2px solid #2B7CF6',
+                borderRadius: '24px',
+                fontSize: '16px',
+                fontWeight: 600,
+                textAlign: 'center',
+                textDecoration: 'none',
+                boxSizing: 'border-box',
+                transition: 'background-color 0.2s, color 0.2s',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = '#EDF4FF';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = 'white';
+              }}
+            >
+              Sign In Instead
+            </Link>
+          </div>
+        </div>
+
+        <p
+          style={{
+            marginTop: '24px',
+            textAlign: 'center',
+            color: '#64748B',
+            fontSize: '14px',
+          }}
+        >
+          Already have an account?{' '}
+          <Link to="/login" style={{ color: '#2B7CF6', fontWeight: 500 }}>
+            Sign in
+          </Link>
+        </p>
+      </div>
     </div>
   );
 }

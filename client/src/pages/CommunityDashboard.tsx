@@ -27,7 +27,7 @@ export default function CommunityDashboard() {
   const [isTogglingAvailability, setIsTogglingAvailability] = useState(false);
   const [isAccepting, setIsAccepting] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const loadPendingConversations = async () => {
@@ -168,71 +168,119 @@ export default function CommunityDashboard() {
   };
 
   if (isLoading) {
-    return <div style={{ padding: '20px' }}>Loading...</div>;
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          backgroundColor: '#F8FAFC',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <p style={{ color: '#64748B' }}>Loading...</p>
+      </div>
+    );
   }
 
   if (error || !community || !membership) {
     return (
       <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-        <p style={{ color: 'red' }}>{error || 'Something went wrong'}</p>
-        <Link to="/communities">Back to Communities</Link>
+        <p style={{ color: '#DC2626' }}>{error || 'Something went wrong'}</p>
+        <Link to="/communities" style={{ color: '#2B7CF6' }}>
+          Back to Communities
+        </Link>
       </div>
     );
   }
 
-  const { branding, terminology, topics } = community.config;
+  const { terminology, topics } = community.config;
   const roleName = membership.role === 'helper' || membership.role === 'both'
     ? terminology.helper
     : terminology.seeker;
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC' }}>
       {/* Header */}
-      <div
+      <header
         style={{
-          backgroundColor: branding.primaryColor,
-          color: 'white',
-          padding: '20px',
+          backgroundColor: 'white',
+          borderBottom: '1px solid #E2E8F0',
+          padding: '16px 24px',
         }}
       >
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h1 style={{ margin: 0 }}>{community.name}</h1>
-            <Link
-              to="/communities"
-              style={{
-                color: 'white',
-                textDecoration: 'none',
-                padding: '8px 16px',
-                border: '1px solid white',
-                borderRadius: '4px',
-              }}
-            >
-              Back to Communities
-            </Link>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <img
+                src="/peerzle-icon.svg"
+                alt="Peerzle"
+                style={{ width: '32px', height: '32px' }}
+              />
+              <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1E3A5F' }}>
+                {community.name}
+              </h1>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <span style={{ color: '#64748B', fontSize: '14px' }}>{user?.email}</span>
+              <button
+                onClick={logout}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: 'white',
+                  color: '#64748B',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '24px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#F8FAFC';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white';
+                }}
+              >
+                Log Out
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      </header>
 
       {/* Content */}
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+      <main style={{ maxWidth: '800px', margin: '0 auto', padding: '24px' }}>
         {/* Welcome Card with Helper Toggle */}
         <div
           style={{
             backgroundColor: 'white',
-            borderRadius: '8px',
+            borderRadius: '16px',
             padding: '24px',
             marginBottom: '20px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'flex-start',
+            }}
+          >
             <div>
-              <h2 style={{ margin: '0 0 8px 0', color: branding.primaryColor }}>
-                Welcome, {user?.email}
+              <h2 style={{ margin: '0 0 8px 0', color: '#1E3A5F', fontSize: '20px' }}>
+                Welcome back
               </h2>
-              <p style={{ margin: 0, color: '#666' }}>
-                Your role: <strong>{roleName}</strong>
+              <p style={{ margin: 0, color: '#64748B', fontSize: '14px' }}>
+                Your role: <strong style={{ color: '#1E3A5F' }}>{roleName}</strong>
               </p>
             </div>
 
@@ -257,7 +305,7 @@ export default function CommunityDashboard() {
                   style={{
                     fontSize: '14px',
                     fontWeight: 500,
-                    color: membership.is_available ? '#059669' : '#6b7280',
+                    color: membership.is_available ? '#16A34A' : '#64748B',
                   }}
                 >
                   {membership.is_available ? 'Available to Help' : 'Not Available'}
@@ -265,31 +313,32 @@ export default function CommunityDashboard() {
                 <div
                   onClick={handleToggleAvailability}
                   style={{
-                    width: '48px',
-                    height: '26px',
-                    backgroundColor: membership.is_available ? '#059669' : '#d1d5db',
-                    borderRadius: '13px',
+                    width: '52px',
+                    height: '28px',
+                    backgroundColor: membership.is_available ? '#16A34A' : '#CBD5E1',
+                    borderRadius: '14px',
                     position: 'relative',
                     transition: 'background-color 0.2s',
                     opacity: isTogglingAvailability ? 0.5 : 1,
+                    cursor: isTogglingAvailability ? 'not-allowed' : 'pointer',
                   }}
                 >
                   <div
                     style={{
-                      width: '22px',
-                      height: '22px',
+                      width: '24px',
+                      height: '24px',
                       backgroundColor: 'white',
                       borderRadius: '50%',
                       position: 'absolute',
                       top: '2px',
-                      left: membership.is_available ? '24px' : '2px',
+                      left: membership.is_available ? '26px' : '2px',
                       transition: 'left 0.2s',
                       boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
                     }}
                   />
                 </div>
               </label>
-              <span style={{ fontSize: '12px', color: '#9ca3af' }}>
+              <span style={{ fontSize: '12px', color: '#94A3B8' }}>
                 Toggle to help others
               </span>
             </div>
@@ -300,15 +349,24 @@ export default function CommunityDashboard() {
         {membership.is_available && pendingConversations.length > 0 && (
           <div
             style={{
-              backgroundColor: '#ecfdf5',
-              border: '1px solid #a7f3d0',
-              borderRadius: '8px',
+              backgroundColor: 'white',
+              borderLeft: '4px solid #2B7CF6',
+              borderRadius: '16px',
               padding: '20px',
               marginBottom: '20px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
             }}
           >
-            <h3 style={{ margin: '0 0 16px 0', color: '#065f46', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '20px' }}>🆘</span>
+            <h3
+              style={{
+                margin: '0 0 16px 0',
+                color: '#1E3A5F',
+                fontSize: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+              }}
+            >
               Pending Requests ({pendingConversations.length})
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -316,20 +374,19 @@ export default function CommunityDashboard() {
                 <div
                   key={conv.id}
                   style={{
-                    backgroundColor: 'white',
-                    borderRadius: '6px',
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: '12px',
                     padding: '16px',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
                   }}
                 >
                   <div>
-                    <p style={{ margin: 0, fontWeight: 500, color: '#1f2937' }}>
+                    <p style={{ margin: 0, fontWeight: 500, color: '#1E3A5F' }}>
                       {conv.topic || 'General Support'}
                     </p>
-                    <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#6b7280' }}>
+                    <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748B' }}>
                       Waiting {formatTimeWaiting(conv.started_at)}
                     </p>
                   </div>
@@ -338,13 +395,23 @@ export default function CommunityDashboard() {
                     disabled={isAccepting === conv.id}
                     style={{
                       padding: '10px 20px',
-                      backgroundColor: '#059669',
+                      backgroundColor: '#16A34A',
                       color: 'white',
                       border: 'none',
-                      borderRadius: '6px',
+                      borderRadius: '24px',
                       cursor: isAccepting === conv.id ? 'not-allowed' : 'pointer',
                       fontWeight: 500,
+                      fontSize: '14px',
                       opacity: isAccepting === conv.id ? 0.6 : 1,
+                      transition: 'background-color 0.2s',
+                    }}
+                    onMouseOver={(e) => {
+                      if (isAccepting !== conv.id) {
+                        e.currentTarget.style.backgroundColor = '#15803D';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#16A34A';
                     }}
                   >
                     {isAccepting === conv.id ? 'Accepting...' : 'Accept'}
@@ -359,19 +426,18 @@ export default function CommunityDashboard() {
         {membership.is_available && pendingConversations.length === 0 && (
           <div
             style={{
-              backgroundColor: '#f0fdf4',
-              border: '1px solid #bbf7d0',
-              borderRadius: '8px',
+              backgroundColor: '#EDF4FF',
+              borderRadius: '16px',
               padding: '20px',
               marginBottom: '20px',
               textAlign: 'center',
             }}
           >
-            <p style={{ margin: 0, color: '#166534' }}>
-              You're available to help. No pending requests right now.
+            <p style={{ margin: 0, color: '#1E3A5F', fontWeight: 500 }}>
+              You're available to help
             </p>
-            <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#4ade80' }}>
-              This page will automatically refresh when someone needs help.
+            <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#64748B' }}>
+              No pending requests right now. This page will refresh automatically.
             </p>
           </div>
         )}
@@ -380,34 +446,43 @@ export default function CommunityDashboard() {
         {activeConversation && (
           <div
             style={{
-              backgroundColor: branding.secondaryColor,
-              color: 'white',
-              borderRadius: '8px',
-              padding: '16px 24px',
+              backgroundColor: 'white',
+              borderLeft: '4px solid #16A34A',
+              borderRadius: '16px',
+              padding: '20px',
               marginBottom: '20px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
             }}
           >
             <div>
-              <p style={{ margin: 0, fontWeight: 'bold' }}>
+              <p style={{ margin: 0, fontWeight: 600, color: '#1E3A5F' }}>
                 You have an active {terminology.conversation.toLowerCase()}
               </p>
-              <p style={{ margin: '4px 0 0', opacity: 0.9, fontSize: '14px' }}>
+              <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#64748B' }}>
                 Topic: {activeConversation.topic || 'General Support'}
               </p>
             </div>
             <button
               onClick={() => navigate(`/chat/${activeConversation.id}`)}
               style={{
-                padding: '10px 20px',
-                backgroundColor: 'white',
-                color: branding.secondaryColor,
+                padding: '10px 24px',
+                backgroundColor: '#2B7CF6',
+                color: 'white',
                 border: 'none',
-                borderRadius: '4px',
+                borderRadius: '24px',
                 cursor: 'pointer',
-                fontWeight: 'bold',
+                fontWeight: 600,
+                fontSize: '14px',
+                transition: 'background-color 0.2s',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = '#1E6AD9';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = '#2B7CF6';
               }}
             >
               Continue
@@ -415,110 +490,152 @@ export default function CommunityDashboard() {
           </div>
         )}
 
-        {/* Topics */}
+        {/* How are you feeling today? */}
         <div
           style={{
             backgroundColor: 'white',
-            borderRadius: '8px',
+            borderRadius: '16px',
             padding: '24px',
             marginBottom: '20px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
           }}
         >
-          <h3 style={{ margin: '0 0 8px 0', color: branding.primaryColor }}>
-            {activeConversation ? 'Topics' : `Start a ${terminology.conversation}`}
+          <h3 style={{ margin: '0 0 8px 0', color: '#1E3A5F', fontSize: '18px' }}>
+            {activeConversation ? 'Topics' : 'How are you feeling today?'}
           </h3>
-          <p style={{ margin: '0 0 16px 0', color: '#666', fontSize: '14px' }}>
+          <p style={{ margin: '0 0 20px 0', color: '#64748B', fontSize: '14px' }}>
             {activeConversation
               ? 'End your current session to start a new one'
-              : 'Click on a topic to connect with a ' + terminology.helper}
+              : `Select a topic to connect with a ${terminology.helper}`}
           </p>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: '12px',
+            }}
+          >
             {topics.map((topic) => (
               <button
                 key={topic}
                 onClick={() => !activeConversation && handleStartConversation(topic)}
                 disabled={isStarting || !!activeConversation}
                 style={{
-                  padding: '12px 16px',
-                  backgroundColor: activeConversation ? '#f3f4f6' : `${branding.primaryColor}10`,
-                  borderLeft: `3px solid ${activeConversation ? '#9ca3af' : branding.primaryColor}`,
-                  borderTop: 'none',
-                  borderRight: 'none',
-                  borderBottom: 'none',
-                  borderRadius: '4px',
+                  padding: '16px',
+                  backgroundColor: 'white',
+                  border: `1px solid ${activeConversation ? '#E2E8F0' : '#E2E8F0'}`,
+                  borderRadius: '16px',
                   textAlign: 'left',
                   cursor: activeConversation ? 'not-allowed' : 'pointer',
-                  color: activeConversation ? '#9ca3af' : '#1f2937',
+                  color: activeConversation ? '#94A3B8' : '#1E3A5F',
                   fontSize: '14px',
+                  fontWeight: 500,
                   transition: 'all 0.2s',
+                  opacity: activeConversation ? 0.6 : 1,
                 }}
                 onMouseOver={(e) => {
                   if (!activeConversation) {
-                    e.currentTarget.style.backgroundColor = `${branding.primaryColor}20`;
-                    e.currentTarget.style.transform = 'translateX(4px)';
+                    e.currentTarget.style.borderColor = '#2B7CF6';
+                    e.currentTarget.style.backgroundColor = '#F8FAFC';
                   }
                 }}
                 onMouseOut={(e) => {
-                  if (!activeConversation) {
-                    e.currentTarget.style.backgroundColor = `${branding.primaryColor}10`;
-                    e.currentTarget.style.transform = 'translateX(0)';
-                  }
+                  e.currentTarget.style.borderColor = '#E2E8F0';
+                  e.currentTarget.style.backgroundColor = 'white';
                 }}
               >
                 {topic}
               </button>
             ))}
           </div>
+          {!activeConversation && (
+            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+              <button
+                onClick={() => handleStartConversation('General Support')}
+                disabled={isStarting}
+                style={{
+                  padding: '14px 32px',
+                  backgroundColor: '#2B7CF6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '24px',
+                  cursor: isStarting ? 'not-allowed' : 'pointer',
+                  fontWeight: 600,
+                  fontSize: '16px',
+                  opacity: isStarting ? 0.7 : 1,
+                  transition: 'background-color 0.2s',
+                }}
+                onMouseOver={(e) => {
+                  if (!isStarting) {
+                    e.currentTarget.style.backgroundColor = '#1E6AD9';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#2B7CF6';
+                }}
+              >
+                {isStarting ? 'Starting...' : 'Start Conversation'}
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Session History and Helper Dashboard Links */}
-        <div style={{ textAlign: 'center', display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap' }}>
+        {/* Navigation Links */}
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '12px',
+            flexWrap: 'wrap',
+          }}
+        >
           <Link
             to={`/community/${slug}/history`}
             style={{
-              color: '#6b7280',
+              padding: '10px 20px',
+              backgroundColor: 'white',
+              color: '#64748B',
+              border: '1px solid #E2E8F0',
+              borderRadius: '24px',
               textDecoration: 'none',
               fontSize: '14px',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              padding: '8px 16px',
-              borderRadius: '4px',
-              transition: 'color 0.2s',
+              fontWeight: 500,
+              transition: 'all 0.2s',
             }}
             onMouseOver={(e) => {
-              e.currentTarget.style.color = branding.primaryColor;
+              e.currentTarget.style.borderColor = '#2B7CF6';
+              e.currentTarget.style.color = '#2B7CF6';
             }}
             onMouseOut={(e) => {
-              e.currentTarget.style.color = '#6b7280';
+              e.currentTarget.style.borderColor = '#E2E8F0';
+              e.currentTarget.style.color = '#64748B';
             }}
           >
-            <span style={{ fontSize: '16px' }}>📋</span>
             Session History
           </Link>
           {(membership.is_available || membership.role === 'helper' || membership.role === 'both' || membership.role === 'admin') && (
             <Link
               to={`/community/${slug}/helper-dashboard`}
               style={{
-                color: '#6b7280',
+                padding: '10px 20px',
+                backgroundColor: 'white',
+                color: '#64748B',
+                border: '1px solid #E2E8F0',
+                borderRadius: '24px',
                 textDecoration: 'none',
                 fontSize: '14px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 16px',
-                borderRadius: '4px',
-                transition: 'color 0.2s',
+                fontWeight: 500,
+                transition: 'all 0.2s',
               }}
               onMouseOver={(e) => {
-                e.currentTarget.style.color = branding.primaryColor;
+                e.currentTarget.style.borderColor = '#2B7CF6';
+                e.currentTarget.style.color = '#2B7CF6';
               }}
               onMouseOut={(e) => {
-                e.currentTarget.style.color = '#6b7280';
+                e.currentTarget.style.borderColor = '#E2E8F0';
+                e.currentTarget.style.color = '#64748B';
               }}
             >
-              <span style={{ fontSize: '16px' }}>📊</span>
               Helper Dashboard
             </Link>
           )}
@@ -526,30 +643,54 @@ export default function CommunityDashboard() {
             <Link
               to={`/community/${slug}/admin`}
               style={{
-                color: '#92400e',
+                padding: '10px 20px',
+                backgroundColor: 'white',
+                color: '#64748B',
+                border: '1px solid #E2E8F0',
+                borderRadius: '24px',
                 textDecoration: 'none',
                 fontSize: '14px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '8px 16px',
-                borderRadius: '4px',
-                backgroundColor: '#fef3c7',
-                transition: 'background-color 0.2s',
+                fontWeight: 500,
+                transition: 'all 0.2s',
               }}
               onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = '#fde68a';
+                e.currentTarget.style.borderColor = '#2B7CF6';
+                e.currentTarget.style.color = '#2B7CF6';
               }}
               onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = '#fef3c7';
+                e.currentTarget.style.borderColor = '#E2E8F0';
+                e.currentTarget.style.color = '#64748B';
               }}
             >
-              <span style={{ fontSize: '16px' }}>⚙️</span>
               Admin Dashboard
             </Link>
           )}
+          <Link
+            to="/communities"
+            style={{
+              padding: '10px 20px',
+              backgroundColor: 'white',
+              color: '#64748B',
+              border: '1px solid #E2E8F0',
+              borderRadius: '24px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: 500,
+              transition: 'all 0.2s',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = '#2B7CF6';
+              e.currentTarget.style.color = '#2B7CF6';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.borderColor = '#E2E8F0';
+              e.currentTarget.style.color = '#64748B';
+            }}
+          >
+            All Communities
+          </Link>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

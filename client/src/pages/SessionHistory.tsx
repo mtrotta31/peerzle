@@ -65,9 +65,9 @@ export default function SessionHistory() {
 
   const renderStars = (rating: number) => {
     return (
-      <span style={{ color: '#fbbf24', fontSize: '16px' }}>
+      <span style={{ fontSize: '16px' }}>
         {[1, 2, 3, 4, 5].map((star) => (
-          <span key={star} style={{ color: star <= rating ? '#fbbf24' : '#d1d5db' }}>
+          <span key={star} style={{ color: star <= rating ? '#F59E0B' : '#D1D5DB' }}>
             ★
           </span>
         ))}
@@ -76,69 +76,106 @@ export default function SessionHistory() {
   };
 
   if (isLoading) {
-    return <div style={{ padding: '20px' }}>Loading...</div>;
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          backgroundColor: '#F8FAFC',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <p style={{ color: '#64748B' }}>Loading...</p>
+      </div>
+    );
   }
 
   if (error || !community) {
     return (
       <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-        <p style={{ color: 'red' }}>{error || 'Something went wrong'}</p>
-        <Link to="/communities">Back to Communities</Link>
+        <p style={{ color: '#DC2626' }}>{error || 'Something went wrong'}</p>
+        <Link to="/communities" style={{ color: '#2B7CF6' }}>Back to Communities</Link>
       </div>
     );
   }
 
-  const { branding } = community.config;
-
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC' }}>
       {/* Header */}
-      <div
+      <header
         style={{
-          backgroundColor: branding.primaryColor,
-          color: 'white',
-          padding: '20px',
+          backgroundColor: 'white',
+          borderBottom: '1px solid #E2E8F0',
+          padding: '16px 20px',
         }}
       >
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{
+            maxWidth: '800px',
+            margin: '0 auto',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img
+              src="/peerzle-icon.svg"
+              alt="Peerzle"
+              style={{ width: '32px', height: '32px' }}
+            />
             <div>
-              <h1 style={{ margin: 0 }}>Session History</h1>
-              <p style={{ margin: '4px 0 0', opacity: 0.9, fontSize: '14px' }}>
+              <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#1E3A5F' }}>
+                Session History
+              </h1>
+              <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748B' }}>
                 {community.name}
               </p>
             </div>
-            <Link
-              to={`/community/${slug}`}
-              style={{
-                color: 'white',
-                textDecoration: 'none',
-                padding: '8px 16px',
-                border: '1px solid white',
-                borderRadius: '4px',
-              }}
-            >
-              Back to Dashboard
-            </Link>
           </div>
+          <Link
+            to={`/community/${slug}`}
+            style={{
+              color: '#64748B',
+              textDecoration: 'none',
+              padding: '8px 16px',
+              backgroundColor: 'white',
+              border: '1px solid #E2E8F0',
+              borderRadius: '24px',
+              fontSize: '14px',
+              fontWeight: 500,
+              transition: 'all 0.2s',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = '#2B7CF6';
+              e.currentTarget.style.color = '#2B7CF6';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.borderColor = '#E2E8F0';
+              e.currentTarget.style.color = '#64748B';
+            }}
+          >
+            Back to Dashboard
+          </Link>
         </div>
-      </div>
+      </header>
 
       {/* Content */}
-      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+      <div style={{ maxWidth: '800px', margin: '0 auto', padding: '24px 20px' }}>
         {history.length === 0 ? (
           <div
             style={{
               backgroundColor: 'white',
-              borderRadius: '8px',
+              borderRadius: '16px',
               padding: '48px 24px',
               textAlign: 'center',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
             }}
           >
             <div style={{ fontSize: '48px', marginBottom: '16px' }}>📭</div>
-            <h2 style={{ margin: '0 0 8px 0', color: '#374151' }}>No past sessions yet</h2>
-            <p style={{ margin: 0, color: '#6b7280' }}>
+            <h2 style={{ margin: '0 0 8px 0', color: '#1E3A5F' }}>No past sessions yet</h2>
+            <p style={{ margin: 0, color: '#64748B' }}>
               Your completed sessions will appear here.
             </p>
           </div>
@@ -150,18 +187,18 @@ export default function SessionHistory() {
                 onClick={() => navigate(`/chat/${session.id}`)}
                 style={{
                   backgroundColor: 'white',
-                  borderRadius: '8px',
+                  borderRadius: '16px',
                   padding: '20px',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
                   cursor: 'pointer',
                   transition: 'box-shadow 0.2s, transform 0.2s',
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)';
                   e.currentTarget.style.transform = 'translateY(-2px)';
                 }}
                 onMouseOut={(e) => {
-                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.1)';
+                  e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
                   e.currentTarget.style.transform = 'translateY(0)';
                 }}
               >
@@ -169,17 +206,17 @@ export default function SessionHistory() {
                   <div style={{ flex: 1 }}>
                     {/* Topic and Role Badge */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                      <h3 style={{ margin: 0, color: '#1f2937', fontSize: '16px' }}>
+                      <h3 style={{ margin: 0, color: '#1E3A5F', fontSize: '16px', fontWeight: 600 }}>
                         {session.topic || 'General Support'}
                       </h3>
                       <span
                         style={{
-                          padding: '2px 8px',
+                          padding: '4px 10px',
                           borderRadius: '12px',
                           fontSize: '12px',
                           fontWeight: 500,
-                          backgroundColor: session.role === 'seeker' ? '#dbeafe' : '#d1fae5',
-                          color: session.role === 'seeker' ? '#1e40af' : '#065f46',
+                          backgroundColor: session.role === 'seeker' ? '#DCE9FF' : '#E9E0FF',
+                          color: session.role === 'seeker' ? '#1E3A5F' : '#7C5CFC',
                         }}
                       >
                         {session.role === 'seeker' ? 'Seeker' : 'Helper'}
@@ -187,10 +224,10 @@ export default function SessionHistory() {
                     </div>
 
                     {/* Date and Duration */}
-                    <p style={{ margin: '0 0 4px 0', color: '#6b7280', fontSize: '14px' }}>
+                    <p style={{ margin: '0 0 4px 0', color: '#64748B', fontSize: '14px' }}>
                       {session.ended_at ? formatDate(session.ended_at) : formatDate(session.started_at)}
                     </p>
-                    <p style={{ margin: '0 0 8px 0', color: '#9ca3af', fontSize: '13px' }}>
+                    <p style={{ margin: '0 0 8px 0', color: '#64748B', fontSize: '13px' }}>
                       Duration: {formatDuration(session.started_at, session.ended_at)}
                       {session.other_user_email && (
                         <span> · with {session.other_user_email}</span>
@@ -205,12 +242,12 @@ export default function SessionHistory() {
                       {session.rating ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {renderStars(session.rating)}
-                          <span style={{ color: '#6b7280', fontSize: '13px' }}>
+                          <span style={{ color: '#64748B', fontSize: '13px' }}>
                             Your rating
                           </span>
                         </div>
                       ) : (
-                        <span style={{ color: '#9ca3af', fontSize: '13px', fontStyle: 'italic' }}>
+                        <span style={{ color: '#94A3B8', fontSize: '13px', fontStyle: 'italic' }}>
                           No rating
                         </span>
                       )}

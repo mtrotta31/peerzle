@@ -249,14 +249,28 @@ export default function ChatPage() {
   const showFacilitator = userRole === 'helper' && conversation?.status === 'active';
 
   if (isLoading) {
-    return <div style={{ padding: '20px' }}>Loading conversation...</div>;
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          backgroundColor: '#F8FAFC',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <p style={{ color: '#64748B' }}>Loading conversation...</p>
+      </div>
+    );
   }
 
   if (error || !conversation) {
     return (
       <div style={{ padding: '20px' }}>
-        <p style={{ color: 'red' }}>{error || 'Conversation not found'}</p>
-        <Link to="/communities">Back to Communities</Link>
+        <p style={{ color: '#DC2626' }}>{error || 'Conversation not found'}</p>
+        <Link to="/communities" style={{ color: '#2B7CF6' }}>
+          Back to Communities
+        </Link>
       </div>
     );
   }
@@ -267,56 +281,86 @@ export default function ChatPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       {/* Header */}
-      <div
+      <header
         style={{
           padding: '16px 20px',
-          backgroundColor: '#1a365d',
-          color: 'white',
+          backgroundColor: 'white',
+          borderBottom: '1px solid #E2E8F0',
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
         }}
       >
         <div>
-          <h2 style={{ margin: 0, fontSize: '18px' }}>{conversation.topic || 'Support Session'}</h2>
-          <p style={{ margin: '4px 0 0', fontSize: '12px', opacity: 0.8 }}>
+          <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#1E3A5F' }}>
+            {conversation.topic || 'Support Session'}
+          </h2>
+          <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748B' }}>
             {conversation.community_name}
           </p>
         </div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <Link
             to={`/community/${conversation.community_slug}`}
-            style={{ color: 'white', textDecoration: 'none', fontSize: '14px' }}
+            style={{
+              color: '#64748B',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: 500,
+              padding: '8px 16px',
+              borderRadius: '24px',
+              border: '1px solid #E2E8F0',
+              transition: 'all 0.2s',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = '#2B7CF6';
+              e.currentTarget.style.color = '#2B7CF6';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.borderColor = '#E2E8F0';
+              e.currentTarget.style.color = '#64748B';
+            }}
           >
             Back
           </Link>
-          {!isEnded && (
+          {!isEnded && !isAdminViewer && (
             <button
               onClick={handleEndSession}
               disabled={isEnding}
               style={{
                 padding: '8px 16px',
-                backgroundColor: '#c53030',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
+                backgroundColor: 'white',
+                color: '#DC2626',
+                border: '1px solid #DC2626',
+                borderRadius: '24px',
                 cursor: isEnding ? 'not-allowed' : 'pointer',
                 fontSize: '14px',
+                fontWeight: 500,
+                opacity: isEnding ? 0.7 : 1,
+                transition: 'all 0.2s',
+              }}
+              onMouseOver={(e) => {
+                if (!isEnding) {
+                  e.currentTarget.style.backgroundColor = '#FEF2F2';
+                }
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = 'white';
               }}
             >
               {isEnding ? 'Ending...' : 'End Session'}
             </button>
           )}
         </div>
-      </div>
+      </header>
 
       {/* Admin Viewer Banner */}
       {isAdminViewer && (
         <div
           style={{
             padding: '10px 20px',
-            backgroundColor: '#fef3c7',
-            color: '#92400e',
+            backgroundColor: '#FEF3C7',
+            color: '#92400E',
             textAlign: 'center',
             fontSize: '14px',
             fontWeight: 500,
@@ -331,14 +375,15 @@ export default function ChatPage() {
         <div
           style={{
             padding: '16px 20px',
-            backgroundColor: crisisRiskLevel === 'crisis' ? '#dc2626' : '#ea580c',
+            backgroundColor: '#DC2626',
             color: 'white',
+            borderRadius: '0 0 16px 16px',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div>
-              <p style={{ margin: 0, fontWeight: 'bold', fontSize: '16px' }}>
-                If you're in crisis, help is available
+              <p style={{ margin: 0, fontWeight: 600, fontSize: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>If you're in crisis, help is available</span>
               </p>
               <div style={{ marginTop: '8px', fontSize: '14px' }}>
                 <p style={{ margin: '4px 0' }}>
@@ -362,7 +407,7 @@ export default function ChatPage() {
                 backgroundColor: 'rgba(255,255,255,0.2)',
                 color: 'white',
                 border: '1px solid rgba(255,255,255,0.4)',
-                borderRadius: '4px',
+                borderRadius: '24px',
                 cursor: 'pointer',
                 fontSize: '14px',
                 whiteSpace: 'nowrap',
@@ -380,11 +425,24 @@ export default function ChatPage() {
         <div
           style={{
             padding: '12px 20px',
-            backgroundColor: '#d1fae5',
-            color: '#065f46',
+            backgroundColor: '#EDF4FF',
+            color: '#1E3A5F',
             textAlign: 'center',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
           }}
         >
+          <span
+            style={{
+              width: '8px',
+              height: '8px',
+              backgroundColor: '#16A34A',
+              borderRadius: '50%',
+              display: 'inline-block',
+            }}
+          />
           Connected with <strong>{helperJoined}</strong>
         </div>
       )}
@@ -394,8 +452,8 @@ export default function ChatPage() {
         <div
           style={{
             padding: '12px 20px',
-            backgroundColor: '#fef3c7',
-            color: '#92400e',
+            backgroundColor: '#EDF4FF',
+            color: '#1E3A5F',
             textAlign: 'center',
           }}
         >
@@ -408,8 +466,8 @@ export default function ChatPage() {
         <div
           style={{
             padding: '12px 20px',
-            backgroundColor: '#e5e7eb',
-            color: '#374151',
+            backgroundColor: '#EDF4FF',
+            color: '#1E3A5F',
             textAlign: 'center',
           }}
         >
@@ -423,11 +481,11 @@ export default function ChatPage() {
           flex: 1,
           overflowY: 'auto',
           padding: '20px',
-          backgroundColor: '#f9fafb',
+          backgroundColor: '#F8FAFC',
         }}
       >
         {messages.length === 0 ? (
-          <p style={{ textAlign: 'center', color: '#6b7280' }}>
+          <p style={{ textAlign: 'center', color: '#64748B' }}>
             No messages yet. Start the conversation!
           </p>
         ) : (
@@ -449,25 +507,33 @@ export default function ChatPage() {
               return message.sender_email || 'Unknown';
             };
 
-            // Background colors: admin view uses role-based colors
+            // Background colors based on design system
             const getBackgroundColor = () => {
-              if (isMine) return '#1a365d';
-              if (isPeerBot) return '#f3e8ff';
+              if (isMine) return '#7C5CFC'; // Helper bubble (purple) for own messages
+              if (isPeerBot) return '#F0F0F0'; // PeerBot gray
               if (isAdminViewer) {
-                if (isFromSeeker) return '#e0f2fe'; // Light blue for seeker
-                if (isFromHelper) return '#dcfce7'; // Light green for helper
+                if (isFromSeeker) return '#DCE9FF'; // Seeker light blue
+                if (isFromHelper) return '#7C5CFC'; // Helper purple
               }
-              return 'white';
+              return '#DCE9FF'; // Seeker bubble (light blue) for others
+            };
+
+            // Text color
+            const getTextColor = () => {
+              if (isMine) return 'white';
+              if (isPeerBot) return '#1E3A5F';
+              if (isAdminViewer && isFromHelper) return 'white';
+              return '#1E3A5F';
             };
 
             // Label colors based on role
             const getLabelColor = () => {
-              if (isPeerBot) return '#7c3aed';
+              if (isPeerBot) return '#64748B';
               if (isAdminViewer) {
-                if (isFromSeeker) return '#0369a1'; // Blue for seeker
-                if (isFromHelper) return '#15803d'; // Green for helper
+                if (isFromSeeker) return '#2B7CF6';
+                if (isFromHelper) return '#7C5CFC';
               }
-              return '#6b7280';
+              return '#64748B';
             };
 
             return (
@@ -482,35 +548,34 @@ export default function ChatPage() {
                 {isPeerBot && (
                   <div
                     style={{
-                      width: '32px',
-                      height: '32px',
+                      width: '36px',
+                      height: '36px',
                       borderRadius: '50%',
-                      backgroundColor: '#7c3aed',
+                      overflow: 'hidden',
+                      flexShrink: 0,
+                      backgroundColor: 'white',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       marginRight: '8px',
-                      flexShrink: 0,
                     }}
                   >
-                    <span style={{ color: 'white', fontSize: '14px' }}>🤖</span>
+                    <img
+                      src="/peerbot-avatar.png"
+                      alt="PeerBot"
+                      style={{
+                        width: '28px',
+                        height: '28px',
+                        objectFit: 'contain',
+                      }}
+                    />
                   </div>
                 )}
-                <div
-                  style={{
-                    maxWidth: '70%',
-                    padding: '12px 16px',
-                    borderRadius: '12px',
-                    backgroundColor: getBackgroundColor(),
-                    color: isMine ? 'white' : '#1f2937',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                    border: isPeerBot ? '1px solid #c4b5fd' : isAdminViewer ? `1px solid ${isFromSeeker ? '#7dd3fc' : isFromHelper ? '#86efac' : '#e5e7eb'}` : 'none',
-                  }}
-                >
+                <div style={{ maxWidth: '70%' }}>
                   {!isMine && (
                     <p
                       style={{
-                        margin: '0 0 4px',
+                        margin: '0 0 4px 4px',
                         fontSize: '12px',
                         color: getLabelColor(),
                         fontWeight: isPeerBot || isAdminViewer ? 600 : 400,
@@ -519,17 +584,26 @@ export default function ChatPage() {
                       {getSenderLabel()}
                     </p>
                   )}
-                  <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{message.content}</p>
-                  <p
+                  <div
                     style={{
-                      margin: '4px 0 0',
-                      fontSize: '10px',
-                      opacity: 0.7,
-                      textAlign: 'right',
+                      padding: '12px 16px',
+                      borderRadius: '20px',
+                      backgroundColor: getBackgroundColor(),
+                      color: getTextColor(),
                     }}
                   >
-                    {new Date(message.created_at).toLocaleTimeString()}
-                  </p>
+                    <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{message.content}</p>
+                    <p
+                      style={{
+                        margin: '4px 0 0',
+                        fontSize: '10px',
+                        opacity: 0.7,
+                        textAlign: 'right',
+                      }}
+                    >
+                      {new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </p>
+                  </div>
                 </div>
               </div>
             );
@@ -538,8 +612,45 @@ export default function ChatPage() {
 
         {/* Typing indicator */}
         {typingUser && (
-          <div style={{ color: '#6b7280', fontSize: '14px', fontStyle: 'italic' }}>
-            Someone is typing...
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <div
+              style={{
+                padding: '12px 16px',
+                backgroundColor: '#DCE9FF',
+                borderRadius: '20px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  backgroundColor: '#64748B',
+                  borderRadius: '50%',
+                  animation: 'pulse 1.5s infinite',
+                }}
+              />
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  backgroundColor: '#64748B',
+                  borderRadius: '50%',
+                  animation: 'pulse 1.5s infinite 0.3s',
+                }}
+              />
+              <span
+                style={{
+                  width: '6px',
+                  height: '6px',
+                  backgroundColor: '#64748B',
+                  borderRadius: '50%',
+                  animation: 'pulse 1.5s infinite 0.6s',
+                }}
+              />
+            </div>
           </div>
         )}
 
@@ -562,7 +673,7 @@ export default function ChatPage() {
           style={{
             padding: '16px 20px',
             backgroundColor: 'white',
-            borderTop: '1px solid #e5e7eb',
+            borderTop: '1px solid #E2E8F0',
             display: 'flex',
             gap: '12px',
           }}
@@ -574,24 +685,42 @@ export default function ChatPage() {
             placeholder="Type a message..."
             style={{
               flex: 1,
-              padding: '12px 16px',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
+              padding: '14px 20px',
+              border: '1px solid #E2E8F0',
+              borderRadius: '24px',
               fontSize: '16px',
+              outline: 'none',
+              transition: 'border-color 0.2s',
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = '#2B7CF6';
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = '#E2E8F0';
             }}
           />
           <button
             type="submit"
             disabled={isSending || !newMessage.trim()}
             style={{
-              padding: '12px 24px',
-              backgroundColor: '#1a365d',
+              padding: '14px 28px',
+              backgroundColor: '#2B7CF6',
               color: 'white',
               border: 'none',
-              borderRadius: '8px',
+              borderRadius: '24px',
               cursor: isSending || !newMessage.trim() ? 'not-allowed' : 'pointer',
               opacity: isSending || !newMessage.trim() ? 0.5 : 1,
               fontSize: '16px',
+              fontWeight: 600,
+              transition: 'background-color 0.2s',
+            }}
+            onMouseOver={(e) => {
+              if (!isSending && newMessage.trim()) {
+                e.currentTarget.style.backgroundColor = '#1E6AD9';
+              }
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = '#2B7CF6';
             }}
           >
             {isSending ? 'Sending...' : 'Send'}
@@ -602,14 +731,14 @@ export default function ChatPage() {
         <div
           style={{
             padding: '16px 20px',
-            backgroundColor: '#f9fafb',
-            borderTop: '1px solid #e5e7eb',
+            backgroundColor: '#EDF4FF',
+            borderTop: '1px solid #E2E8F0',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
           }}
         >
-          <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>
+          <p style={{ margin: 0, color: '#64748B', fontSize: '14px' }}>
             {isAdminViewer
               ? 'Viewing as admin (read-only)'
               : `This session ended ${
@@ -627,13 +756,10 @@ export default function ChatPage() {
           <Link
             to={isAdminViewer ? `/community/${conversation?.community_slug}/admin` : `/community/${conversation?.community_slug}/history`}
             style={{
-              color: '#1a365d',
+              color: '#2B7CF6',
               textDecoration: 'none',
               fontSize: '14px',
               fontWeight: 500,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
             }}
           >
             {isAdminViewer ? 'Back to Admin Dashboard' : 'Back to History'}

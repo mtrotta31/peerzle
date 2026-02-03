@@ -16,6 +16,7 @@ export default function RatingModal({ conversationId, role, onClose, onSubmitted
   const [feedbackText, setFeedbackText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [textareaFocused, setTextareaFocused] = useState(false);
 
   const handleSubmit = async () => {
     if (rating === 0) {
@@ -68,19 +69,19 @@ export default function RatingModal({ conversationId, role, onClose, onSubmitted
       <div
         style={{
           backgroundColor: 'white',
-          borderRadius: '12px',
+          borderRadius: '20px',
           padding: '32px',
-          maxWidth: '480px',
+          maxWidth: '440px',
           width: '90%',
-          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.15)',
         }}
       >
         <h2
           style={{
             margin: '0 0 8px 0',
-            fontSize: '24px',
+            fontSize: '20px',
             fontWeight: 600,
-            color: '#1f2937',
+            color: '#1E3A5F',
             textAlign: 'center',
           }}
         >
@@ -90,7 +91,7 @@ export default function RatingModal({ conversationId, role, onClose, onSubmitted
           style={{
             margin: '0 0 24px 0',
             fontSize: '14px',
-            color: '#6b7280',
+            color: '#64748B',
             textAlign: 'center',
           }}
         >
@@ -118,9 +119,9 @@ export default function RatingModal({ conversationId, role, onClose, onSubmitted
                 border: 'none',
                 cursor: 'pointer',
                 padding: '4px',
-                fontSize: '36px',
-                color: star <= displayRating ? '#fbbf24' : '#d1d5db',
-                transition: 'color 0.15s ease, transform 0.15s ease',
+                fontSize: '32px',
+                color: star <= displayRating ? '#F59E0B' : '#D1D5DB',
+                transition: 'transform 0.2s',
                 transform: star <= displayRating ? 'scale(1.1)' : 'scale(1)',
               }}
               aria-label={`Rate ${star} star${star > 1 ? 's' : ''}`}
@@ -136,9 +137,9 @@ export default function RatingModal({ conversationId, role, onClose, onSubmitted
             <p
               style={{
                 margin: '0 0 10px 0',
-                fontSize: '15px',
+                fontSize: '14px',
                 fontWeight: 500,
-                color: '#374151',
+                color: '#1E3A5F',
               }}
             >
               Did you feel heard?
@@ -149,15 +150,25 @@ export default function RatingModal({ conversationId, role, onClose, onSubmitted
                 onClick={() => setFeltHeard(true)}
                 style={{
                   flex: 1,
-                  padding: '10px 16px',
-                  backgroundColor: feltHeard === true ? '#059669' : '#f3f4f6',
-                  color: feltHeard === true ? 'white' : '#374151',
-                  border: 'none',
-                  borderRadius: '8px',
+                  padding: '8px 20px',
+                  backgroundColor: feltHeard === true ? '#2B7CF6' : 'white',
+                  color: feltHeard === true ? 'white' : '#64748B',
+                  border: `2px solid ${feltHeard === true ? '#2B7CF6' : '#E2E8F0'}`,
+                  borderRadius: '24px',
                   fontSize: '14px',
                   fontWeight: 500,
                   cursor: 'pointer',
-                  transition: 'background-color 0.15s ease',
+                  transition: 'all 0.2s',
+                }}
+                onMouseOver={(e) => {
+                  if (feltHeard !== true) {
+                    e.currentTarget.style.borderColor = '#2B7CF6';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (feltHeard !== true) {
+                    e.currentTarget.style.borderColor = '#E2E8F0';
+                  }
                 }}
               >
                 Yes
@@ -167,15 +178,25 @@ export default function RatingModal({ conversationId, role, onClose, onSubmitted
                 onClick={() => setFeltHeard(false)}
                 style={{
                   flex: 1,
-                  padding: '10px 16px',
-                  backgroundColor: feltHeard === false ? '#dc2626' : '#f3f4f6',
-                  color: feltHeard === false ? 'white' : '#374151',
-                  border: 'none',
-                  borderRadius: '8px',
+                  padding: '8px 20px',
+                  backgroundColor: feltHeard === false ? '#2B7CF6' : 'white',
+                  color: feltHeard === false ? 'white' : '#64748B',
+                  border: `2px solid ${feltHeard === false ? '#2B7CF6' : '#E2E8F0'}`,
+                  borderRadius: '24px',
                   fontSize: '14px',
                   fontWeight: 500,
                   cursor: 'pointer',
-                  transition: 'background-color 0.15s ease',
+                  transition: 'all 0.2s',
+                }}
+                onMouseOver={(e) => {
+                  if (feltHeard !== false) {
+                    e.currentTarget.style.borderColor = '#2B7CF6';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  if (feltHeard !== false) {
+                    e.currentTarget.style.borderColor = '#E2E8F0';
+                  }
                 }}
               >
                 No
@@ -189,9 +210,9 @@ export default function RatingModal({ conversationId, role, onClose, onSubmitted
           <p
             style={{
               margin: '0 0 10px 0',
-              fontSize: '15px',
+              fontSize: '14px',
               fontWeight: 500,
-              color: '#374151',
+              color: '#1E3A5F',
             }}
           >
             Would you recommend Peerzle?
@@ -202,15 +223,25 @@ export default function RatingModal({ conversationId, role, onClose, onSubmitted
               onClick={() => setWouldRecommend(true)}
               style={{
                 flex: 1,
-                padding: '10px 16px',
-                backgroundColor: wouldRecommend === true ? '#059669' : '#f3f4f6',
-                color: wouldRecommend === true ? 'white' : '#374151',
-                border: 'none',
-                borderRadius: '8px',
+                padding: '8px 20px',
+                backgroundColor: wouldRecommend === true ? '#2B7CF6' : 'white',
+                color: wouldRecommend === true ? 'white' : '#64748B',
+                border: `2px solid ${wouldRecommend === true ? '#2B7CF6' : '#E2E8F0'}`,
+                borderRadius: '24px',
                 fontSize: '14px',
                 fontWeight: 500,
                 cursor: 'pointer',
-                transition: 'background-color 0.15s ease',
+                transition: 'all 0.2s',
+              }}
+              onMouseOver={(e) => {
+                if (wouldRecommend !== true) {
+                  e.currentTarget.style.borderColor = '#2B7CF6';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (wouldRecommend !== true) {
+                  e.currentTarget.style.borderColor = '#E2E8F0';
+                }
               }}
             >
               Yes
@@ -220,15 +251,25 @@ export default function RatingModal({ conversationId, role, onClose, onSubmitted
               onClick={() => setWouldRecommend(false)}
               style={{
                 flex: 1,
-                padding: '10px 16px',
-                backgroundColor: wouldRecommend === false ? '#dc2626' : '#f3f4f6',
-                color: wouldRecommend === false ? 'white' : '#374151',
-                border: 'none',
-                borderRadius: '8px',
+                padding: '8px 20px',
+                backgroundColor: wouldRecommend === false ? '#2B7CF6' : 'white',
+                color: wouldRecommend === false ? 'white' : '#64748B',
+                border: `2px solid ${wouldRecommend === false ? '#2B7CF6' : '#E2E8F0'}`,
+                borderRadius: '24px',
                 fontSize: '14px',
                 fontWeight: 500,
                 cursor: 'pointer',
-                transition: 'background-color 0.15s ease',
+                transition: 'all 0.2s',
+              }}
+              onMouseOver={(e) => {
+                if (wouldRecommend !== false) {
+                  e.currentTarget.style.borderColor = '#2B7CF6';
+                }
+              }}
+              onMouseOut={(e) => {
+                if (wouldRecommend !== false) {
+                  e.currentTarget.style.borderColor = '#E2E8F0';
+                }
               }}
             >
               No
@@ -243,9 +284,9 @@ export default function RatingModal({ conversationId, role, onClose, onSubmitted
             style={{
               display: 'block',
               margin: '0 0 10px 0',
-              fontSize: '15px',
+              fontSize: '14px',
               fontWeight: 500,
-              color: '#374151',
+              color: '#1E3A5F',
             }}
           >
             Any additional feedback? (optional)
@@ -254,17 +295,23 @@ export default function RatingModal({ conversationId, role, onClose, onSubmitted
             id="feedback"
             value={feedbackText}
             onChange={(e) => setFeedbackText(e.target.value)}
+            onFocus={() => setTextareaFocused(true)}
+            onBlur={() => setTextareaFocused(false)}
             placeholder="Share your thoughts..."
             rows={3}
             style={{
               width: '100%',
               padding: '12px',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
+              border: '1px solid #E2E8F0',
+              borderRadius: '12px',
               fontSize: '14px',
               resize: 'vertical',
               fontFamily: 'inherit',
               boxSizing: 'border-box',
+              backgroundColor: textareaFocused ? '#EDF4FF' : 'white',
+              outline: 'none',
+              transition: 'border-color 0.2s',
+              borderColor: textareaFocused ? '#2B7CF6' : '#E2E8F0',
             }}
           />
         </div>
@@ -275,7 +322,7 @@ export default function RatingModal({ conversationId, role, onClose, onSubmitted
             style={{
               margin: '0 0 16px 0',
               fontSize: '14px',
-              color: '#dc2626',
+              color: '#DC2626',
               textAlign: 'center',
             }}
           >
@@ -284,44 +331,61 @@ export default function RatingModal({ conversationId, role, onClose, onSubmitted
         )}
 
         {/* Actions */}
-        <div style={{ display: 'flex', gap: '12px' }}>
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
-            style={{
-              flex: 1,
-              padding: '12px 24px',
-              backgroundColor: 'white',
-              color: '#6b7280',
-              border: '1px solid #d1d5db',
-              borderRadius: '8px',
-              fontSize: '15px',
-              fontWeight: 500,
-              cursor: isSubmitting ? 'not-allowed' : 'pointer',
-              opacity: isSubmitting ? 0.5 : 1,
-            }}
-          >
-            Skip
-          </button>
+        <div>
           <button
             type="button"
             onClick={handleSubmit}
             disabled={isSubmitting || rating === 0}
             style={{
-              flex: 1,
-              padding: '12px 24px',
-              backgroundColor: '#1a365d',
+              width: '100%',
+              padding: '14px',
+              backgroundColor: '#2B7CF6',
               color: 'white',
               border: 'none',
-              borderRadius: '8px',
-              fontSize: '15px',
-              fontWeight: 500,
+              borderRadius: '24px',
+              fontSize: '16px',
+              fontWeight: 600,
               cursor: isSubmitting || rating === 0 ? 'not-allowed' : 'pointer',
               opacity: isSubmitting || rating === 0 ? 0.5 : 1,
+              transition: 'background-color 0.2s',
+            }}
+            onMouseOver={(e) => {
+              if (!isSubmitting && rating !== 0) {
+                e.currentTarget.style.backgroundColor = '#1E6AD9';
+              }
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = '#2B7CF6';
             }}
           >
-            {isSubmitting ? 'Submitting...' : 'Submit'}
+            {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            style={{
+              width: '100%',
+              background: 'none',
+              border: 'none',
+              color: '#64748B',
+              fontSize: '14px',
+              cursor: isSubmitting ? 'not-allowed' : 'pointer',
+              opacity: isSubmitting ? 0.5 : 1,
+              marginTop: '12px',
+              padding: '8px',
+              transition: 'color 0.2s',
+            }}
+            onMouseOver={(e) => {
+              if (!isSubmitting) {
+                e.currentTarget.style.color = '#2B7CF6';
+              }
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.color = '#64748B';
+            }}
+          >
+            Skip for now
           </button>
         </div>
       </div>

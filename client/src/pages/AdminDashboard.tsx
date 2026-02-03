@@ -108,76 +108,113 @@ export default function AdminDashboard() {
   const getRoleBadgeStyle = (role: string) => {
     switch (role) {
       case 'admin':
-        return { backgroundColor: '#fef3c7', color: '#92400e' };
+        return { backgroundColor: '#FEF3C7', color: '#92400E' };
       case 'helper':
-        return { backgroundColor: '#d1fae5', color: '#065f46' };
+        return { backgroundColor: '#E9E0FF', color: '#7C5CFC' };
       default:
-        return { backgroundColor: '#e5e7eb', color: '#374151' };
+        return { backgroundColor: '#F1F5F9', color: '#64748B' };
     }
   };
 
   const getSeverityBadgeStyle = (severity: string, riskLevel: string) => {
     const level = riskLevel || severity;
     if (level === 'critical' || level === 'crisis') {
-      return { backgroundColor: '#fee2e2', color: '#991b1b', borderColor: '#fca5a5' };
+      return { backgroundColor: '#FEF2F2', color: '#DC2626', borderColor: '#DC2626' };
     }
     if (level === 'high' || level === 'moderate_concern') {
-      return { backgroundColor: '#fef3c7', color: '#92400e', borderColor: '#fde047' };
+      return { backgroundColor: '#FEF3C7', color: '#92400E', borderColor: '#F59E0B' };
     }
-    return { backgroundColor: '#e5e7eb', color: '#374151', borderColor: '#d1d5db' };
+    return { backgroundColor: '#DCFCE7', color: '#16A34A', borderColor: '#16A34A' };
   };
 
   if (isLoading) {
-    return <div style={{ padding: '20px' }}>Loading...</div>;
+    return (
+      <div
+        style={{
+          minHeight: '100vh',
+          backgroundColor: '#F8FAFC',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <p style={{ color: '#64748B' }}>Loading...</p>
+      </div>
+    );
   }
 
   if (error || !community) {
     return (
       <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
-        <p style={{ color: 'red' }}>{error || 'Something went wrong'}</p>
-        <Link to={`/community/${slug}`}>Back to Dashboard</Link>
+        <p style={{ color: '#DC2626' }}>{error || 'Something went wrong'}</p>
+        <Link to={`/community/${slug}`} style={{ color: '#2B7CF6' }}>Back to Dashboard</Link>
       </div>
     );
   }
 
-  const { branding } = community.config;
-
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: '#f5f5f5' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC' }}>
       {/* Header */}
-      <div
+      <header
         style={{
-          backgroundColor: branding.primaryColor,
-          color: 'white',
-          padding: '20px',
+          backgroundColor: 'white',
+          borderBottom: '1px solid #E2E8F0',
+          padding: '16px 20px',
         }}
       >
-        <div style={{ maxWidth: '1000px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div
+          style={{
+            maxWidth: '1000px',
+            margin: '0 auto',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img
+              src="/peerzle-icon.svg"
+              alt="Peerzle"
+              style={{ width: '32px', height: '32px' }}
+            />
             <div>
-              <h1 style={{ margin: 0 }}>Admin Dashboard</h1>
-              <p style={{ margin: '4px 0 0', opacity: 0.9, fontSize: '14px' }}>
+              <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#1E3A5F' }}>
+                Admin Dashboard
+              </h1>
+              <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748B' }}>
                 {community.name}
               </p>
             </div>
-            <Link
-              to={`/community/${slug}`}
-              style={{
-                color: 'white',
-                textDecoration: 'none',
-                padding: '8px 16px',
-                border: '1px solid white',
-                borderRadius: '4px',
-              }}
-            >
-              Back to Dashboard
-            </Link>
           </div>
+          <Link
+            to={`/community/${slug}`}
+            style={{
+              color: '#64748B',
+              textDecoration: 'none',
+              padding: '8px 16px',
+              backgroundColor: 'white',
+              border: '1px solid #E2E8F0',
+              borderRadius: '24px',
+              fontSize: '14px',
+              fontWeight: 500,
+              transition: 'all 0.2s',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = '#2B7CF6';
+              e.currentTarget.style.color = '#2B7CF6';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.borderColor = '#E2E8F0';
+              e.currentTarget.style.color = '#64748B';
+            }}
+          >
+            Back to Dashboard
+          </Link>
         </div>
-      </div>
+      </header>
 
       {/* Tabs */}
-      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #e5e7eb' }}>
+      <div style={{ backgroundColor: 'white', borderBottom: '1px solid #E2E8F0' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', gap: '8px', padding: '0 20px' }}>
           {(['overview', 'members', 'alerts'] as TabType[]).map((tab) => (
             <button
@@ -187,12 +224,13 @@ export default function AdminDashboard() {
                 padding: '16px 24px',
                 backgroundColor: 'transparent',
                 border: 'none',
-                borderBottom: activeTab === tab ? `2px solid ${branding.primaryColor}` : '2px solid transparent',
-                color: activeTab === tab ? branding.primaryColor : '#6b7280',
-                fontWeight: activeTab === tab ? 600 : 400,
+                borderBottom: activeTab === tab ? '2px solid #2B7CF6' : '2px solid transparent',
+                color: activeTab === tab ? '#2B7CF6' : '#64748B',
+                fontWeight: 500,
                 cursor: 'pointer',
-                fontSize: '15px',
+                fontSize: '14px',
                 textTransform: 'capitalize',
+                transition: 'color 0.2s',
               }}
             >
               {tab}
@@ -202,7 +240,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '20px' }}>
+      <div style={{ maxWidth: '1000px', margin: '0 auto', padding: '24px 20px' }}>
         {/* Overview Tab */}
         {activeTab === 'overview' && overview && (
           <div
@@ -214,14 +252,14 @@ export default function AdminDashboard() {
           >
             <StatCard icon="👥" label="Total Members" value={overview.totalMembers} />
             <StatCard icon="💬" label="Total Conversations" value={overview.totalConversations} />
-            <StatCard icon="🟢" label="Active Now" value={overview.activeConversations} color="#059669" />
+            <StatCard icon="🟢" label="Active Now" value={overview.activeConversations} color="#16A34A" />
             <StatCard
               icon="⭐"
               label="Average Rating"
               value={overview.averageRating ? overview.averageRating.toFixed(1) : 'N/A'}
             />
             <StatCard icon="⚠️" label="Safety Alerts" value={overview.totalAlerts} />
-            <StatCard icon="🚨" label="Crisis Alerts" value={overview.crisisAlerts} color="#dc2626" />
+            <StatCard icon="🚨" label="Crisis Alerts" value={overview.crisisAlerts} color="#DC2626" />
           </div>
         )}
 
@@ -230,15 +268,15 @@ export default function AdminDashboard() {
           <div
             style={{
               backgroundColor: 'white',
-              borderRadius: '8px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              borderRadius: '16px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
               overflow: 'hidden',
             }}
           >
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-                  <tr style={{ backgroundColor: '#f9fafb' }}>
+                  <tr style={{ backgroundColor: '#F8FAFC' }}>
                     <th style={thStyle}>Email</th>
                     <th style={thStyle}>Role</th>
                     <th style={thStyle}>Available</th>
@@ -249,22 +287,28 @@ export default function AdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  {members.map((member) => (
-                    <tr key={member.id} style={{ borderTop: '1px solid #e5e7eb' }}>
-                      <td style={tdStyle}>{member.email}</td>
+                  {members.map((member, index) => (
+                    <tr
+                      key={member.id}
+                      style={{
+                        backgroundColor: index % 2 === 0 ? 'white' : '#F8FAFC',
+                        borderTop: '1px solid #E2E8F0',
+                      }}
+                    >
+                      <td style={{ ...tdStyle, color: '#64748B' }}>{member.email}</td>
                       <td style={tdStyle}>
                         <select
                           value={member.role === 'seeker' || member.role === 'both' ? 'member' : member.role}
                           onChange={(e) => handleRoleChange(member.id, e.target.value)}
                           disabled={updatingRole === member.id}
                           style={{
-                            padding: '4px 8px',
-                            borderRadius: '4px',
-                            border: '1px solid #d1d5db',
-                            backgroundColor: 'white',
+                            ...getRoleBadgeStyle(member.role),
+                            padding: '6px 10px',
+                            borderRadius: '8px',
+                            border: '1px solid #E2E8F0',
                             fontSize: '13px',
                             cursor: updatingRole === member.id ? 'not-allowed' : 'pointer',
-                            ...getRoleBadgeStyle(member.role),
+                            fontWeight: 500,
                           }}
                         >
                           <option value="member">Member</option>
@@ -274,15 +318,15 @@ export default function AdminDashboard() {
                       </td>
                       <td style={tdStyle}>
                         {member.isAvailable ? (
-                          <span style={{ color: '#059669' }}>Yes</span>
+                          <span style={{ color: '#16A34A', fontWeight: 500 }}>Yes</span>
                         ) : (
-                          <span style={{ color: '#9ca3af' }}>No</span>
+                          <span style={{ color: '#94A3B8' }}>No</span>
                         )}
                       </td>
-                      <td style={tdStyle}>{formatDate(member.joinedAt)}</td>
+                      <td style={{ ...tdStyle, color: '#64748B' }}>{formatDate(member.joinedAt)}</td>
                       <td style={{ ...tdStyle, textAlign: 'center' }}>{member.seekerConversations}</td>
                       <td style={{ ...tdStyle, textAlign: 'center' }}>{member.helperConversations}</td>
-                      <td style={{ ...tdStyle, textAlign: 'center' }}>
+                      <td style={{ ...tdStyle, textAlign: 'center', color: '#64748B' }}>
                         {member.avgHelperRating ? member.avgHelperRating.toFixed(1) : '-'}
                       </td>
                     </tr>
@@ -291,7 +335,7 @@ export default function AdminDashboard() {
               </table>
             </div>
             {members.length === 0 && (
-              <p style={{ padding: '20px', textAlign: 'center', color: '#6b7280' }}>
+              <p style={{ padding: '20px', textAlign: 'center', color: '#64748B' }}>
                 No members found
               </p>
             )}
@@ -305,15 +349,15 @@ export default function AdminDashboard() {
               <div
                 style={{
                   backgroundColor: 'white',
-                  borderRadius: '8px',
+                  borderRadius: '16px',
                   padding: '48px 24px',
                   textAlign: 'center',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
                 }}
               >
                 <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
-                <h3 style={{ margin: '0 0 8px 0', color: '#374151' }}>No safety alerts</h3>
-                <p style={{ margin: 0, color: '#6b7280' }}>
+                <h3 style={{ margin: '0 0 8px 0', color: '#1E3A5F' }}>No safety alerts</h3>
+                <p style={{ margin: 0, color: '#64748B' }}>
                   All conversations are proceeding safely.
                 </p>
               </div>
@@ -325,9 +369,9 @@ export default function AdminDashboard() {
                     key={alert.id}
                     style={{
                       backgroundColor: 'white',
-                      borderRadius: '8px',
+                      borderRadius: '16px',
                       padding: '16px 20px',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
                       borderLeft: `4px solid ${badgeStyle.borderColor}`,
                     }}
                   >
@@ -336,27 +380,28 @@ export default function AdminDashboard() {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
                           <span
                             style={{
-                              padding: '2px 8px',
-                              borderRadius: '4px',
+                              padding: '4px 10px',
+                              borderRadius: '12px',
                               fontSize: '12px',
                               fontWeight: 600,
                               textTransform: 'uppercase',
-                              ...badgeStyle,
+                              backgroundColor: badgeStyle.backgroundColor,
+                              color: badgeStyle.color,
                             }}
                           >
                             {alert.riskLevel || alert.severity}
                           </span>
-                          <span style={{ fontSize: '13px', color: '#6b7280' }}>
+                          <span style={{ fontSize: '13px', color: '#64748B' }}>
                             {formatDateTime(alert.createdAt)}
                           </span>
                         </div>
                         {alert.flags.length > 0 && (
-                          <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#374151' }}>
+                          <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#1E3A5F' }}>
                             <strong>Flags:</strong> {alert.flags.join(', ')}
                           </p>
                         )}
                         {alert.suggestedAction && (
-                          <p style={{ margin: 0, fontSize: '13px', color: '#6b7280' }}>
+                          <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
                             <strong>Suggested:</strong> {alert.suggestedAction}
                           </p>
                         )}
@@ -364,14 +409,24 @@ export default function AdminDashboard() {
                       <button
                         onClick={() => navigate(`/chat/${alert.conversationId}`)}
                         style={{
-                          padding: '6px 12px',
-                          backgroundColor: '#f3f4f6',
-                          color: '#374151',
-                          border: 'none',
-                          borderRadius: '4px',
+                          padding: '6px 14px',
+                          backgroundColor: 'white',
+                          color: '#2B7CF6',
+                          border: '1px solid #2B7CF6',
+                          borderRadius: '16px',
                           cursor: 'pointer',
                           fontSize: '13px',
+                          fontWeight: 500,
                           whiteSpace: 'nowrap',
+                          transition: 'all 0.2s',
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = '#2B7CF6';
+                          e.currentTarget.style.color = 'white';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = 'white';
+                          e.currentTarget.style.color = '#2B7CF6';
                         }}
                       >
                         View Conversation
@@ -404,16 +459,16 @@ function StatCard({
     <div
       style={{
         backgroundColor: 'white',
-        borderRadius: '8px',
+        borderRadius: '16px',
         padding: '20px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
         <span style={{ fontSize: '24px' }}>{icon}</span>
-        <span style={{ fontSize: '14px', color: '#6b7280' }}>{label}</span>
+        <span style={{ fontSize: '14px', color: '#64748B' }}>{label}</span>
       </div>
-      <p style={{ margin: 0, fontSize: '32px', fontWeight: 600, color: color || '#1f2937' }}>
+      <p style={{ margin: 0, fontSize: '32px', fontWeight: 600, color: color || '#1E3A5F' }}>
         {value}
       </p>
     </div>
@@ -426,11 +481,11 @@ const thStyle: React.CSSProperties = {
   textAlign: 'left',
   fontSize: '13px',
   fontWeight: 600,
-  color: '#6b7280',
+  color: '#64748B',
 };
 
 const tdStyle: React.CSSProperties = {
   padding: '12px 16px',
   fontSize: '14px',
-  color: '#1f2937',
+  color: '#1E3A5F',
 };

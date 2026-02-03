@@ -63,8 +63,8 @@ export default function FacilitatorPanel({
   return (
     <div
       style={{
-        backgroundColor: '#f0f9ff',
-        borderTop: '1px solid #bae6fd',
+        backgroundColor: '#EDF4FF',
+        borderTop: '1px solid #E2E8F0',
       }}
     >
       {/* Collapsed Header */}
@@ -73,7 +73,7 @@ export default function FacilitatorPanel({
         style={{
           width: '100%',
           padding: '10px 20px',
-          backgroundColor: 'transparent',
+          backgroundColor: '#EDF4FF',
           border: 'none',
           cursor: 'pointer',
           display: 'flex',
@@ -83,11 +83,11 @@ export default function FacilitatorPanel({
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ fontSize: '16px' }}>🛠️</span>
-          <span style={{ fontWeight: 500, color: '#0369a1', fontSize: '14px' }}>Helper Tools</span>
+          <span style={{ fontWeight: 500, color: '#1E3A5F', fontSize: '14px' }}>Helper Tools</span>
         </div>
         <span
           style={{
-            color: '#0369a1',
+            color: '#64748B',
             fontSize: '12px',
             transform: isExpanded ? 'rotate(180deg)' : 'rotate(0deg)',
             transition: 'transform 0.2s',
@@ -99,28 +99,38 @@ export default function FacilitatorPanel({
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div style={{ padding: '0 20px 16px' }}>
+        <div style={{ padding: '16px 20px', paddingTop: '0' }}>
           {/* Loading State */}
           {isLoading && (
-            <div style={{ textAlign: 'center', padding: '20px', color: '#0369a1' }}>
-              <p style={{ margin: 0, fontSize: '14px' }}>Getting suggestions...</p>
+            <div style={{ textAlign: 'center', padding: '20px' }}>
+              <p style={{ margin: 0, fontSize: '14px', color: '#64748B', fontStyle: 'italic' }}>
+                Getting suggestions...
+              </p>
             </div>
           )}
 
           {/* Error State */}
           {error && !isLoading && (
             <div style={{ textAlign: 'center', padding: '12px' }}>
-              <p style={{ margin: '0 0 8px', color: '#dc2626', fontSize: '14px' }}>{error}</p>
+              <p style={{ margin: '0 0 8px', color: '#DC2626', fontSize: '14px' }}>{error}</p>
               <button
                 onClick={fetchSuggestions}
                 style={{
-                  padding: '6px 12px',
-                  backgroundColor: '#0369a1',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '4px',
+                  padding: '6px 16px',
+                  backgroundColor: 'white',
+                  color: '#2B7CF6',
+                  border: '1px solid #2B7CF6',
+                  borderRadius: '24px',
                   cursor: 'pointer',
                   fontSize: '13px',
+                  fontWeight: 500,
+                  transition: 'background-color 0.2s',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#EDF4FF';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white';
                 }}
               >
                 Try Again
@@ -134,23 +144,33 @@ export default function FacilitatorPanel({
               {/* Suggested Responses */}
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                  <p style={{ margin: 0, fontSize: '13px', fontWeight: 600, color: '#0c4a6e' }}>
+                  <p style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: '#1E3A5F' }}>
                     Suggested Responses
                   </p>
                   <button
                     onClick={fetchSuggestions}
                     disabled={isLoading}
                     style={{
-                      padding: '4px 8px',
-                      backgroundColor: 'transparent',
-                      color: '#0369a1',
-                      border: '1px solid #0369a1',
-                      borderRadius: '4px',
+                      padding: '6px 16px',
+                      backgroundColor: 'white',
+                      color: '#2B7CF6',
+                      border: '1px solid #2B7CF6',
+                      borderRadius: '24px',
                       cursor: isLoading ? 'not-allowed' : 'pointer',
-                      fontSize: '12px',
+                      fontSize: '13px',
+                      fontWeight: 500,
                       display: 'flex',
                       alignItems: 'center',
                       gap: '4px',
+                      transition: 'background-color 0.2s',
+                    }}
+                    onMouseOver={(e) => {
+                      if (!isLoading) {
+                        e.currentTarget.style.backgroundColor = '#EDF4FF';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = 'white';
                     }}
                   >
                     <span style={{ fontSize: '12px' }}>↻</span>
@@ -163,31 +183,31 @@ export default function FacilitatorPanel({
                       key={index}
                       onClick={() => handleSuggestionClick(suggestion)}
                       style={{
-                        padding: '10px 12px',
+                        padding: '12px 16px',
                         backgroundColor: 'white',
-                        border: '1px solid #bae6fd',
-                        borderRadius: '6px',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '12px',
                         textAlign: 'left',
                         cursor: 'pointer',
                         fontSize: '14px',
-                        color: '#1f2937',
+                        color: '#1E3A5F',
                         lineHeight: '1.4',
-                        transition: 'background-color 0.15s, border-color 0.15s',
+                        transition: 'all 0.2s',
                       }}
                       onMouseOver={(e) => {
-                        e.currentTarget.style.backgroundColor = '#e0f2fe';
-                        e.currentTarget.style.borderColor = '#7dd3fc';
+                        e.currentTarget.style.borderColor = '#2B7CF6';
+                        e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
                       }}
                       onMouseOut={(e) => {
-                        e.currentTarget.style.backgroundColor = 'white';
-                        e.currentTarget.style.borderColor = '#bae6fd';
+                        e.currentTarget.style.borderColor = '#E2E8F0';
+                        e.currentTarget.style.boxShadow = 'none';
                       }}
                     >
                       {suggestion}
                     </button>
                   ))}
                 </div>
-                <p style={{ margin: '6px 0 0', fontSize: '11px', color: '#64748b' }}>
+                <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#64748B' }}>
                   Click to add to your message (you can edit before sending)
                 </p>
               </div>
@@ -195,19 +215,19 @@ export default function FacilitatorPanel({
               {/* Tip Section */}
               <div
                 style={{
-                  padding: '12px',
-                  backgroundColor: '#fefce8',
-                  borderRadius: '6px',
-                  border: '1px solid #fde047',
+                  padding: '12px 16px',
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  borderLeft: '3px solid #F59E0B',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
                   <span style={{ fontSize: '14px' }}>💡</span>
                   <div>
-                    <p style={{ margin: '0 0 4px', fontSize: '12px', fontWeight: 600, color: '#854d0e' }}>
+                    <p style={{ margin: '0 0 4px', fontSize: '14px', fontWeight: 600, color: '#1E3A5F' }}>
                       Tip
                     </p>
-                    <p style={{ margin: 0, fontSize: '13px', color: '#713f12', lineHeight: '1.4' }}>
+                    <p style={{ margin: 0, fontSize: '14px', color: '#64748B', lineHeight: '1.4' }}>
                       {suggestions.tip}
                     </p>
                   </div>
@@ -219,19 +239,27 @@ export default function FacilitatorPanel({
           {/* Initial state before first fetch */}
           {!suggestions && !isLoading && !error && (
             <div style={{ textAlign: 'center', padding: '12px' }}>
-              <p style={{ margin: '0 0 8px', color: '#64748b', fontSize: '14px' }}>
+              <p style={{ margin: '0 0 8px', color: '#64748B', fontSize: '14px' }}>
                 Get AI-powered suggestions to help you respond
               </p>
               <button
                 onClick={fetchSuggestions}
                 style={{
-                  padding: '8px 16px',
-                  backgroundColor: '#0369a1',
+                  padding: '8px 20px',
+                  backgroundColor: '#2B7CF6',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '4px',
+                  borderRadius: '24px',
                   cursor: 'pointer',
                   fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'background-color 0.2s',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#1E6AD9';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#2B7CF6';
                 }}
               >
                 Get Suggestions

@@ -1,0 +1,107 @@
+/* Peerzle Design System - Global Styles */
+
+/* CSS Variables */
+:root {
+  --primary-blue: #2B7CF6;
+  --dark-blue: #1E3A5F;
+  --light-blue-bg: #EDF4FF;
+  --chat-seeker: #DCE9FF;
+  --chat-helper: #7C5CFC;
+  --chat-peerbot: #F0F0F0;
+  --crisis-red: #DC2626;
+  --success-green: #16A34A;
+  --warning-yellow: #F59E0B;
+  --text-primary: #1E3A5F;
+  --text-secondary: #64748B;
+  --bg-main: #F8FAFC;
+  --bg-card: #FFFFFF;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --radius-card: 16px;
+  --radius-button: 24px;
+  --radius-bubble: 20px;
+  --radius-input: 12px;
+  --transition: 0.2s ease;
+}
+
+/* Reset & Base */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+/* Focus States */
+*:focus-visible {
+  outline: 2px solid var(--primary-blue);
+  outline-offset: 2px;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--primary-blue);
+  outline-offset: 2px;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Link Styles */
+a {
+  color: var(--primary-blue);
+  text-decoration: none;
+  transition: color var(--transition);
+}
+
+a:hover {
+  color: var(--dark-blue);
+}
+
+/* Transitions */
+button, input, textarea, select, a {
+  transition: all var(--transition);
+}
+
+/* Typography */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--dark-blue);
+  font-weight: 600;
+}
+
+/* Selection */
+::selection {
+  background-color: var(--light-blue-bg);
+  color: var(--dark-blue);
+}
