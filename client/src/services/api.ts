@@ -248,4 +248,27 @@ export async function getHelperDashboard(communitySlug: string): Promise<HelperD
   return response.data;
 }
 
+// Facilitator types
+export interface FacilitatorResponse {
+  suggestions: string[];
+  tip: string;
+}
+
+export interface FacilitatorMessage {
+  content: string;
+  sender_role: 'seeker' | 'helper' | 'peerbot';
+}
+
+// Facilitator API
+export async function getFacilitatorSuggestions(
+  conversationId: string,
+  recentMessages: FacilitatorMessage[]
+): Promise<FacilitatorResponse> {
+  const response = await api.post<FacilitatorResponse>('/api/facilitator/suggestions', {
+    conversationId,
+    recentMessages,
+  });
+  return response.data;
+}
+
 export default api;
