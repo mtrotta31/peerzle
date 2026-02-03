@@ -68,7 +68,7 @@ export interface Membership {
   id: string;
   user_id: string;
   community_id: string;
-  role: 'seeker' | 'helper' | 'both';
+  role: 'seeker' | 'helper' | 'both' | 'admin';
   is_verified_helper: boolean;
   profile: Record<string, unknown>;
   topics: unknown[];
@@ -134,6 +134,56 @@ export async function updateInviteCode(
   isActive: boolean
 ): Promise<InviteCode> {
   const response = await api.put<InviteCode>(`/api/communities/${communitySlug}/invite-codes/${codeId}`, { isActive });
+  return response.data;
+}
+
+// Helper Verification types
+export interface VerificationRequest {
+  id: number;
+  membershipId: string;
+  communityId: string;
+  userId: string;
+  userEmail?: string;
+  qualifications: string;
+  status: 'pending' | 'approved' | 'denied';
+  reviewedBy: string | null;
+  reviewerEmail?: string;
+  reviewedAt: string | null;
+  reviewNotes: string | null;
+  createdAt: string;
+}
+
+// Helper Verification API
+export async function getMyVerificationRequest(communitySlug: string): Promise<VerificationRequest | null> {
+  const response = await api.get<VerificationRequest | null>(`/api/communities/${communitySlug}/verification-request`);
+  return response.data;
+}
+
+export async function submitVerificationRequest(
+  communitySlug: string,
+  qualifications: string
+): Promise<VerificationRequest> {
+  const response = await api.post<VerificationRequest>(`/api/communities/${communitySlug}/verification-request`, {
+    qualifications,
+  });
+  return response.data;
+}
+
+export async function getVerificationRequests(communitySlug: string): Promise<VerificationRequest[]> {
+  const response = await api.get<VerificationRequest[]>(`/api/communities/${communitySlug}/verification-requests`);
+  return response.data;
+}
+
+export async function reviewVerificationRequest(
+  communitySlug: string,
+  requestId: number,
+  status: 'approved' | 'denied',
+  reviewNotes?: string
+): Promise<VerificationRequest> {
+  const response = await api.put<VerificationRequest>(
+    `/api/communities/${communitySlug}/verification-requests/${requestId}`,
+    { status, reviewNotes }
+  );
   return response.data;
 }
 

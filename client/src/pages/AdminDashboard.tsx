@@ -6,6 +6,7 @@ import {
   AdminMember,
   AdminAlert,
   InviteCode,
+  VerificationRequest,
   getCommunity,
   getAdminOverview,
   getAdminMembers,
@@ -14,9 +15,11 @@ import {
   getInviteCodes,
   createInviteCode,
   updateInviteCode,
+  getVerificationRequests,
+  reviewVerificationRequest,
 } from '../services/api';
 
-type TabType = 'overview' | 'members' | 'alerts' | 'inviteCodes';
+type TabType = 'overview' | 'members' | 'verifications' | 'alerts' | 'inviteCodes';
 
 export default function AdminDashboard() {
   const { slug } = useParams<{ slug: string }>();
@@ -27,12 +30,15 @@ export default function AdminDashboard() {
   const [members, setMembers] = useState<AdminMember[]>([]);
   const [alerts, setAlerts] = useState<AdminAlert[]>([]);
   const [inviteCodes, setInviteCodes] = useState<InviteCode[]>([]);
+  const [verificationRequests, setVerificationRequests] = useState<VerificationRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
   const [creatingCode, setCreatingCode] = useState(false);
   const [togglingCode, setTogglingCode] = useState<number | null>(null);
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [reviewingRequest, setReviewingRequest] = useState<number | null>(null);
+  const [reviewNotes, setReviewNotes] = useState<Record<number, string>>({});
 
   useEffect(() => {
     async function loadData() {
@@ -71,6 +77,9 @@ export default function AdminDashboard() {
         } else if (activeTab === 'inviteCodes' && inviteCodes.length === 0) {
           const codesData = await getInviteCodes(slug!);
           setInviteCodes(codesData);
+        } else if (activeTab === 'verifications' && verificationRequests.length === 0) {
+          const requestsData = await getVerificationRequests(slug!);
+          setVerificationRequests(requestsData);
         }
       } catch (err) {
         console.error('Failed to load tab data:', err);
@@ -137,6 +146,29 @@ export default function AdminDashboard() {
       setTimeout(() => setCopiedCode(null), 2000);
     } catch (err) {
       console.error('Failed to copy code:', err);
+    }
+  };
+
+  const handleReviewRequest = async (requestId: number, status: 'approved' | 'denied') => {
+    if (!slug || reviewingRequest !== null) return;
+
+    setReviewingRequest(requestId);
+    try {
+      const updated = await reviewVerificationRequest(slug, requestId, status, reviewNotes[requestId]);
+      setVerificationRequests((prev) =>
+        prev.map((r) => (r.id === requestId ? updated : r))
+      );
+      // Clear the notes for this request
+      setReviewNotes((prev) => {
+        const newNotes = { ...prev };
+        delete newNotes[requestId];
+        return newNotes;
+      });
+    } catch (err) {
+      console.error('Failed to review request:', err);
+      alert('Failed to review verification request');
+    } finally {
+      setReviewingRequest(null);
     }
   };
 
@@ -215,9 +247,12 @@ export default function AdminDashboard() {
   const tabLabels: Record<TabType, string> = {
     overview: 'Overview',
     members: 'Members',
+    verifications: 'Verifications',
     alerts: 'Alerts',
     inviteCodes: 'Invite Codes',
   };
+
+  const pendingVerifications = verificationRequests.filter((r) => r.status === 'pending').length;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC' }}>
@@ -283,7 +318,7 @@ export default function AdminDashboard() {
       {/* Tabs */}
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #E2E8F0' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', gap: '8px', padding: '0 20px' }}>
-          {(['overview', 'members', 'alerts', 'inviteCodes'] as TabType[]).map((tab) => (
+          {(['overview', 'members', 'verifications', 'alerts', 'inviteCodes'] as TabType[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -297,9 +332,28 @@ export default function AdminDashboard() {
                 cursor: 'pointer',
                 fontSize: '14px',
                 transition: 'color 0.2s',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
               }}
             >
               {tabLabels[tab]}
+              {tab === 'verifications' && pendingVerifications > 0 && (
+                <span
+                  style={{
+                    backgroundColor: '#F59E0B',
+                    color: 'white',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '2px 6px',
+                    borderRadius: '10px',
+                    minWidth: '18px',
+                    textAlign: 'center',
+                  }}
+                >
+                  {pendingVerifications}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -498,6 +552,198 @@ export default function AdminDashboard() {
                         View Conversation
                       </button>
                     </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {/* Verifications Tab */}
+        {activeTab === 'verifications' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {verificationRequests.length === 0 ? (
+              <div
+                style={{
+                  backgroundColor: 'white',
+                  borderRadius: '16px',
+                  padding: '48px 24px',
+                  textAlign: 'center',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                }}
+              >
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>✓</div>
+                <h3 style={{ margin: '0 0 8px 0', color: '#1E3A5F' }}>No verification requests</h3>
+                <p style={{ margin: 0, color: '#64748B' }}>
+                  Helper verification requests will appear here.
+                </p>
+              </div>
+            ) : (
+              verificationRequests.map((request) => {
+                const isPending = request.status === 'pending';
+                const statusColor =
+                  request.status === 'approved'
+                    ? '#16A34A'
+                    : request.status === 'denied'
+                    ? '#DC2626'
+                    : '#F59E0B';
+                const statusBg =
+                  request.status === 'approved'
+                    ? '#DCFCE7'
+                    : request.status === 'denied'
+                    ? '#FEF2F2'
+                    : '#FEF3C7';
+
+                return (
+                  <div
+                    key={request.id}
+                    style={{
+                      backgroundColor: 'white',
+                      borderRadius: '16px',
+                      padding: '20px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                      borderLeft: `4px solid ${statusColor}`,
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+                          <span style={{ fontWeight: 600, color: '#1E3A5F' }}>
+                            {request.userEmail}
+                          </span>
+                          <span
+                            style={{
+                              padding: '2px 8px',
+                              borderRadius: '10px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              backgroundColor: statusBg,
+                              color: statusColor,
+                              textTransform: 'capitalize',
+                            }}
+                          >
+                            {request.status}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '13px', color: '#64748B' }}>
+                          Submitted {formatDate(request.createdAt)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div
+                      style={{
+                        backgroundColor: '#F8FAFC',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        marginBottom: isPending ? '16px' : '0',
+                      }}
+                    >
+                      <p style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 600, color: '#64748B', textTransform: 'uppercase' }}>
+                        Qualifications
+                      </p>
+                      <p style={{ margin: 0, fontSize: '14px', color: '#1E3A5F', whiteSpace: 'pre-wrap' }}>
+                        {request.qualifications}
+                      </p>
+                    </div>
+
+                    {!isPending && request.reviewNotes && (
+                      <div
+                        style={{
+                          backgroundColor: statusBg,
+                          borderRadius: '12px',
+                          padding: '12px 16px',
+                          marginTop: '12px',
+                        }}
+                      >
+                        <p style={{ margin: 0, fontSize: '13px', color: statusColor }}>
+                          <strong>Review notes:</strong> {request.reviewNotes}
+                        </p>
+                        <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748B' }}>
+                          Reviewed by {request.reviewerEmail} on {formatDate(request.reviewedAt || '')}
+                        </p>
+                      </div>
+                    )}
+
+                    {isPending && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                        <input
+                          type="text"
+                          placeholder="Add review notes (optional)..."
+                          value={reviewNotes[request.id] || ''}
+                          onChange={(e) =>
+                            setReviewNotes((prev) => ({ ...prev, [request.id]: e.target.value }))
+                          }
+                          style={{
+                            padding: '10px 14px',
+                            border: '1px solid #E2E8F0',
+                            borderRadius: '10px',
+                            fontSize: '14px',
+                            outline: 'none',
+                          }}
+                          onFocus={(e) => {
+                            e.currentTarget.style.borderColor = '#2B7CF6';
+                          }}
+                          onBlur={(e) => {
+                            e.currentTarget.style.borderColor = '#E2E8F0';
+                          }}
+                        />
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                          <button
+                            onClick={() => handleReviewRequest(request.id, 'denied')}
+                            disabled={reviewingRequest === request.id}
+                            style={{
+                              padding: '10px 20px',
+                              backgroundColor: 'white',
+                              color: '#DC2626',
+                              border: '1px solid #DC2626',
+                              borderRadius: '24px',
+                              cursor: reviewingRequest === request.id ? 'not-allowed' : 'pointer',
+                              fontWeight: 500,
+                              fontSize: '14px',
+                              opacity: reviewingRequest === request.id ? 0.6 : 1,
+                              transition: 'all 0.2s',
+                            }}
+                            onMouseOver={(e) => {
+                              if (reviewingRequest !== request.id) {
+                                e.currentTarget.style.backgroundColor = '#FEF2F2';
+                              }
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.backgroundColor = 'white';
+                            }}
+                          >
+                            Deny
+                          </button>
+                          <button
+                            onClick={() => handleReviewRequest(request.id, 'approved')}
+                            disabled={reviewingRequest === request.id}
+                            style={{
+                              padding: '10px 20px',
+                              backgroundColor: '#16A34A',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '24px',
+                              cursor: reviewingRequest === request.id ? 'not-allowed' : 'pointer',
+                              fontWeight: 600,
+                              fontSize: '14px',
+                              opacity: reviewingRequest === request.id ? 0.6 : 1,
+                              transition: 'background-color 0.2s',
+                            }}
+                            onMouseOver={(e) => {
+                              if (reviewingRequest !== request.id) {
+                                e.currentTarget.style.backgroundColor = '#15803D';
+                              }
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.backgroundColor = '#16A34A';
+                            }}
+                          >
+                            {reviewingRequest === request.id ? 'Processing...' : 'Approve'}
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 );
               })

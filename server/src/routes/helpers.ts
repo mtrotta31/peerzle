@@ -23,6 +23,7 @@ interface MembershipRow {
   id: string;
   community_id: string;
   is_available: boolean;
+  is_verified_helper: boolean;
 }
 
 // GET /api/helpers/pending - Get conversations waiting for helpers
@@ -93,7 +94,7 @@ router.post('/accept/:conversationId', authenticate, async (req: AuthenticatedRe
 
     // Get user's membership in this community
     const membershipResult = await query<MembershipRow>(
-      `SELECT id, community_id, is_available FROM memberships
+      `SELECT id, community_id, is_available, is_verified_helper FROM memberships
        WHERE user_id = $1 AND community_id = $2`,
       [userId, conversation.community_id]
     );
@@ -133,6 +134,7 @@ router.post('/accept/:conversationId', authenticate, async (req: AuthenticatedRe
       conversationId,
       helperEmail,
       helperMembershipId: membership.id,
+      isVerifiedHelper: membership.is_verified_helper || false,
     });
 
     console.log(`[HELPER] Accepted conversation ${conversationId}: Helper ${helperEmail}`);

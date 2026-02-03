@@ -15,6 +15,7 @@ interface HelperJoinedEvent {
   conversationId: string;
   helperEmail: string;
   helperMembershipId: string;
+  isVerifiedHelper: boolean;
 }
 
 interface ConversationEndedEvent {
@@ -33,8 +34,9 @@ export default function ChatPage() {
   const [error, setError] = useState('');
   const [typingUser, setTypingUser] = useState<string | null>(null);
   const [showCrisisBanner, setShowCrisisBanner] = useState(false);
-  const [crisisRiskLevel, setCrisisRiskLevel] = useState<'moderate_concern' | 'crisis' | null>(null);
+  const [_crisisRiskLevel, setCrisisRiskLevel] = useState<'moderate_concern' | 'crisis' | null>(null);
   const [helperJoined, setHelperJoined] = useState<string | null>(null);
+  const [helperIsVerified, setHelperIsVerified] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [userRole, setUserRole] = useState<'seeker' | 'helper' | null>(null);
   const [isAdminViewer, setIsAdminViewer] = useState(false);
@@ -112,6 +114,7 @@ export default function ChatPage() {
         socket.on('helper_joined', (event: HelperJoinedEvent) => {
           console.log('Helper joined:', event);
           setHelperJoined(event.helperEmail);
+          setHelperIsVerified(event.isVerifiedHelper);
           setConversation((prev) =>
             prev ? { ...prev, status: 'active', helper_membership_id: event.helperMembershipId } : prev
           );
@@ -425,13 +428,14 @@ export default function ChatPage() {
         <div
           style={{
             padding: '12px 20px',
-            backgroundColor: '#EDF4FF',
+            backgroundColor: helperIsVerified ? '#ECFDF5' : '#EDF4FF',
             color: '#1E3A5F',
             textAlign: 'center',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             gap: '8px',
+            flexWrap: 'wrap',
           }}
         >
           <span
@@ -443,7 +447,30 @@ export default function ChatPage() {
               display: 'inline-block',
             }}
           />
-          Connected with <strong>{helperJoined}</strong>
+          {helperIsVerified ? (
+            <>
+              Connected with a{' '}
+              <span
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  backgroundColor: '#16A34A',
+                  color: 'white',
+                  padding: '2px 8px',
+                  borderRadius: '12px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                }}
+              >
+                ✓ Verified Specialist
+              </span>
+            </>
+          ) : (
+            <>
+              Connected with <strong>{helperJoined}</strong>
+            </>
+          )}
         </div>
       )}
 

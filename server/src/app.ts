@@ -20,6 +20,7 @@ import historyRoutes from './routes/history';
 import dashboardRoutes from './routes/dashboard';
 import facilitatorRoutes from './routes/facilitator';
 import adminRoutes from './routes/admin';
+import verificationRoutes from './routes/verification';
 import { initializeSocket } from './config/socket';
 
 const app = express();
@@ -57,6 +58,7 @@ app.use('/api/history', historyRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/facilitator', facilitatorRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/communities', verificationRoutes);
 
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
