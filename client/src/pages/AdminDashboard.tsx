@@ -5,14 +5,18 @@ import {
   AdminOverview,
   AdminMember,
   AdminAlert,
+  InviteCode,
   getCommunity,
   getAdminOverview,
   getAdminMembers,
   getAdminAlerts,
   updateMemberRole,
+  getInviteCodes,
+  createInviteCode,
+  updateInviteCode,
 } from '../services/api';
 
-type TabType = 'overview' | 'members' | 'alerts';
+type TabType = 'overview' | 'members' | 'alerts' | 'inviteCodes';
 
 export default function AdminDashboard() {
   const { slug } = useParams<{ slug: string }>();
@@ -22,9 +26,13 @@ export default function AdminDashboard() {
   const [overview, setOverview] = useState<AdminOverview | null>(null);
   const [members, setMembers] = useState<AdminMember[]>([]);
   const [alerts, setAlerts] = useState<AdminAlert[]>([]);
+  const [inviteCodes, setInviteCodes] = useState<InviteCode[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [updatingRole, setUpdatingRole] = useState<string | null>(null);
+  const [creatingCode, setCreatingCode] = useState(false);
+  const [togglingCode, setTogglingCode] = useState<number | null>(null);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -60,6 +68,9 @@ export default function AdminDashboard() {
         } else if (activeTab === 'alerts' && alerts.length === 0) {
           const alertsData = await getAdminAlerts(slug!);
           setAlerts(alertsData);
+        } else if (activeTab === 'inviteCodes' && inviteCodes.length === 0) {
+          const codesData = await getInviteCodes(slug!);
+          setInviteCodes(codesData);
         }
       } catch (err) {
         console.error('Failed to load tab data:', err);
@@ -84,6 +95,48 @@ export default function AdminDashboard() {
       alert('Failed to update role. You cannot demote yourself.');
     } finally {
       setUpdatingRole(null);
+    }
+  };
+
+  const handleCreateCode = async () => {
+    if (!slug || creatingCode) return;
+
+    setCreatingCode(true);
+    try {
+      const newCode = await createInviteCode(slug);
+      setInviteCodes((prev) => [newCode, ...prev]);
+    } catch (err) {
+      console.error('Failed to create invite code:', err);
+      alert('Failed to create invite code');
+    } finally {
+      setCreatingCode(false);
+    }
+  };
+
+  const handleToggleCode = async (codeId: number, isActive: boolean) => {
+    if (!slug || togglingCode !== null) return;
+
+    setTogglingCode(codeId);
+    try {
+      const updatedCode = await updateInviteCode(slug, codeId, isActive);
+      setInviteCodes((prev) =>
+        prev.map((c) => (c.id === codeId ? updatedCode : c))
+      );
+    } catch (err) {
+      console.error('Failed to update invite code:', err);
+      alert('Failed to update invite code');
+    } finally {
+      setTogglingCode(null);
+    }
+  };
+
+  const handleCopyCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedCode(code);
+      setTimeout(() => setCopiedCode(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy code:', err);
     }
   };
 
@@ -127,6 +180,13 @@ export default function AdminDashboard() {
     return { backgroundColor: '#DCFCE7', color: '#16A34A', borderColor: '#16A34A' };
   };
 
+  const getCodeStatus = (code: InviteCode) => {
+    if (!code.is_active) return { label: 'Inactive', color: '#94A3B8' };
+    if (code.expires_at && new Date(code.expires_at) < new Date()) return { label: 'Expired', color: '#DC2626' };
+    if (code.max_uses !== null && code.current_uses >= code.max_uses) return { label: 'Max Uses', color: '#F59E0B' };
+    return { label: 'Active', color: '#16A34A' };
+  };
+
   if (isLoading) {
     return (
       <div
@@ -151,6 +211,13 @@ export default function AdminDashboard() {
       </div>
     );
   }
+
+  const tabLabels: Record<TabType, string> = {
+    overview: 'Overview',
+    members: 'Members',
+    alerts: 'Alerts',
+    inviteCodes: 'Invite Codes',
+  };
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC' }}>
@@ -216,7 +283,7 @@ export default function AdminDashboard() {
       {/* Tabs */}
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #E2E8F0' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', gap: '8px', padding: '0 20px' }}>
-          {(['overview', 'members', 'alerts'] as TabType[]).map((tab) => (
+          {(['overview', 'members', 'alerts', 'inviteCodes'] as TabType[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -229,11 +296,10 @@ export default function AdminDashboard() {
                 fontWeight: 500,
                 cursor: 'pointer',
                 fontSize: '14px',
-                textTransform: 'capitalize',
                 transition: 'color 0.2s',
               }}
             >
-              {tab}
+              {tabLabels[tab]}
             </button>
           ))}
         </div>
@@ -436,6 +502,170 @@ export default function AdminDashboard() {
                 );
               })
             )}
+          </div>
+        )}
+
+        {/* Invite Codes Tab */}
+        {activeTab === 'inviteCodes' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Header with Generate Button */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1E3A5F' }}>
+                  Invite Codes
+                </h2>
+                <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#64748B' }}>
+                  Generate and manage invite codes for new members
+                </p>
+              </div>
+              <button
+                onClick={handleCreateCode}
+                disabled={creatingCode}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#2B7CF6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '24px',
+                  cursor: creatingCode ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  opacity: creatingCode ? 0.7 : 1,
+                  transition: 'background-color 0.2s',
+                }}
+                onMouseOver={(e) => {
+                  if (!creatingCode) {
+                    e.currentTarget.style.backgroundColor = '#1E6AD9';
+                  }
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#2B7CF6';
+                }}
+              >
+                {creatingCode ? 'Generating...' : 'Generate New Code'}
+              </button>
+            </div>
+
+            {/* Codes Table */}
+            <div
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '16px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                overflow: 'hidden',
+              }}
+            >
+              {inviteCodes.length === 0 ? (
+                <div style={{ padding: '48px 24px', textAlign: 'center' }}>
+                  <div style={{ fontSize: '48px', marginBottom: '16px' }}>🔑</div>
+                  <h3 style={{ margin: '0 0 8px 0', color: '#1E3A5F' }}>No invite codes yet</h3>
+                  <p style={{ margin: 0, color: '#64748B' }}>
+                    Generate your first invite code to start inviting members.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ backgroundColor: '#F8FAFC' }}>
+                        <th style={thStyle}>Code</th>
+                        <th style={thStyle}>Uses</th>
+                        <th style={thStyle}>Max Uses</th>
+                        <th style={thStyle}>Expires</th>
+                        <th style={thStyle}>Status</th>
+                        <th style={thStyle}>Created</th>
+                        <th style={thStyle}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {inviteCodes.map((code, index) => {
+                        const status = getCodeStatus(code);
+                        return (
+                          <tr
+                            key={code.id}
+                            style={{
+                              backgroundColor: index % 2 === 0 ? 'white' : '#F8FAFC',
+                              borderTop: '1px solid #E2E8F0',
+                            }}
+                          >
+                            <td style={tdStyle}>
+                              <span
+                                style={{
+                                  fontFamily: 'monospace',
+                                  fontSize: '15px',
+                                  fontWeight: 600,
+                                  color: '#1E3A5F',
+                                  letterSpacing: '1px',
+                                }}
+                              >
+                                {code.code}
+                              </span>
+                            </td>
+                            <td style={{ ...tdStyle, textAlign: 'center' }}>{code.current_uses}</td>
+                            <td style={{ ...tdStyle, textAlign: 'center', color: '#64748B' }}>
+                              {code.max_uses ?? '∞'}
+                            </td>
+                            <td style={{ ...tdStyle, color: '#64748B' }}>
+                              {code.expires_at ? formatDate(code.expires_at) : 'Never'}
+                            </td>
+                            <td style={tdStyle}>
+                              <span
+                                style={{
+                                  color: status.color,
+                                  fontWeight: 500,
+                                  fontSize: '13px',
+                                }}
+                              >
+                                {status.label}
+                              </span>
+                            </td>
+                            <td style={{ ...tdStyle, color: '#64748B' }}>{formatDate(code.created_at)}</td>
+                            <td style={tdStyle}>
+                              <div style={{ display: 'flex', gap: '8px' }}>
+                                <button
+                                  onClick={() => handleCopyCode(code.code)}
+                                  style={{
+                                    padding: '4px 10px',
+                                    backgroundColor: copiedCode === code.code ? '#DCFCE7' : 'white',
+                                    color: copiedCode === code.code ? '#16A34A' : '#64748B',
+                                    border: '1px solid #E2E8F0',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 500,
+                                    transition: 'all 0.2s',
+                                  }}
+                                >
+                                  {copiedCode === code.code ? 'Copied!' : 'Copy'}
+                                </button>
+                                <button
+                                  onClick={() => handleToggleCode(code.id, !code.is_active)}
+                                  disabled={togglingCode === code.id}
+                                  style={{
+                                    padding: '4px 10px',
+                                    backgroundColor: code.is_active ? '#FEF2F2' : '#DCFCE7',
+                                    color: code.is_active ? '#DC2626' : '#16A34A',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    cursor: togglingCode === code.id ? 'not-allowed' : 'pointer',
+                                    fontSize: '12px',
+                                    fontWeight: 500,
+                                    opacity: togglingCode === code.id ? 0.7 : 1,
+                                    transition: 'all 0.2s',
+                                  }}
+                                >
+                                  {code.is_active ? 'Deactivate' : 'Activate'}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

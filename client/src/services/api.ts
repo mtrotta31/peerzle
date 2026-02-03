@@ -57,7 +57,9 @@ export interface Community {
   slug: string;
   name: string;
   config: CommunityConfig;
-  verification_method: string;
+  verification_method: 'open' | 'invite_code' | 'email_domain';
+  allowed_email_domains?: string[];
+  is_public: boolean;
   helper_verification_required: boolean;
   created_at: string;
 }
@@ -86,8 +88,52 @@ export async function getCommunity(slug: string): Promise<Community> {
   return response.data;
 }
 
-export async function joinCommunity(slug: string): Promise<Membership> {
-  const response = await api.post<Membership>(`/api/communities/${slug}/join`);
+export interface JoinCommunityResponse {
+  membership?: Membership;
+  error?: string;
+  reason?: 'invite_code_required' | 'invalid_code' | 'code_inactive' | 'code_expired' | 'code_max_uses' | 'email_domain_not_allowed' | 'no_domains_configured';
+  allowedDomains?: string[];
+}
+
+export async function joinCommunity(slug: string, inviteCode?: string): Promise<Membership> {
+  const response = await api.post<Membership>(`/api/communities/${slug}/join`, { inviteCode });
+  return response.data;
+}
+
+// Invite Code types
+export interface InviteCode {
+  id: number;
+  community_id: string;
+  code: string;
+  created_by: string;
+  max_uses: number | null;
+  current_uses: number;
+  expires_at: string | null;
+  is_active: boolean;
+  created_at: string;
+  creator_email?: string;
+}
+
+// Invite Code API
+export async function getInviteCodes(communitySlug: string): Promise<InviteCode[]> {
+  const response = await api.get<InviteCode[]>(`/api/communities/${communitySlug}/invite-codes`);
+  return response.data;
+}
+
+export async function createInviteCode(
+  communitySlug: string,
+  options?: { maxUses?: number; expiresInDays?: number }
+): Promise<InviteCode> {
+  const response = await api.post<InviteCode>(`/api/communities/${communitySlug}/invite-codes`, options || {});
+  return response.data;
+}
+
+export async function updateInviteCode(
+  communitySlug: string,
+  codeId: number,
+  isActive: boolean
+): Promise<InviteCode> {
+  const response = await api.put<InviteCode>(`/api/communities/${communitySlug}/invite-codes/${codeId}`, { isActive });
   return response.data;
 }
 

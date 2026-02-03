@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { query } from '../config/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
+import crypto from 'crypto';
 
 const router = Router();
 
@@ -10,6 +11,8 @@ interface CommunityRow {
   name: string;
   config: Record<string, unknown>;
   verification_method: string;
+  allowed_email_domains: string[];
+  is_public: boolean;
   helper_verification_required: boolean;
   is_active: boolean;
   created_at: Date;
@@ -27,11 +30,32 @@ interface MembershipRow {
   created_at: Date;
 }
 
+interface InviteCodeRow {
+  id: number;
+  community_id: string;
+  code: string;
+  created_by: string;
+  max_uses: number | null;
+  current_uses: number;
+  expires_at: Date | null;
+  is_active: boolean;
+  created_at: Date;
+  creator_email?: string;
+}
+
+// Generate a random 8-character alphanumeric code
+function generateInviteCode(): string {
+  return crypto.randomBytes(4).toString('hex').toUpperCase();
+}
+
 // GET /api/communities - List all active communities
 router.get('/', async (_req: Request, res: Response) => {
   try {
     const result = await query<CommunityRow>(
-      'SELECT id, slug, name, config, verification_method, helper_verification_required, created_at FROM communities WHERE is_active = true ORDER BY name'
+      `SELECT id, slug, name, config, verification_method, allowed_email_domains, is_public, helper_verification_required, created_at
+       FROM communities
+       WHERE is_active = true
+       ORDER BY name`
     );
 
     res.json(result.rows);
@@ -47,7 +71,9 @@ router.get('/:slug', async (req: Request, res: Response) => {
     const { slug } = req.params;
 
     const result = await query<CommunityRow>(
-      'SELECT id, slug, name, config, verification_method, helper_verification_required, created_at FROM communities WHERE slug = $1 AND is_active = true',
+      `SELECT id, slug, name, config, verification_method, allowed_email_domains, is_public, helper_verification_required, created_at
+       FROM communities
+       WHERE slug = $1 AND is_active = true`,
       [slug]
     );
 
@@ -63,15 +89,19 @@ router.get('/:slug', async (req: Request, res: Response) => {
   }
 });
 
-// POST /api/communities/:slug/join - Join a community
+// POST /api/communities/:slug/join - Join a community with verification
 router.post('/:slug/join', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { slug } = req.params;
+    const { inviteCode } = req.body;
     const userId = req.user!.userId;
+    const userEmail = req.user!.email;
 
-    // Get community
+    // Get community with verification settings
     const communityResult = await query<CommunityRow>(
-      'SELECT id FROM communities WHERE slug = $1 AND is_active = true',
+      `SELECT id, verification_method, allowed_email_domains
+       FROM communities
+       WHERE slug = $1 AND is_active = true`,
       [slug]
     );
 
@@ -80,12 +110,12 @@ router.post('/:slug/join', authenticate, async (req: AuthenticatedRequest, res: 
       return;
     }
 
-    const communityId = communityResult.rows[0].id;
+    const community = communityResult.rows[0];
 
     // Check if already a member
     const existingMembership = await query<MembershipRow>(
       'SELECT id FROM memberships WHERE user_id = $1 AND community_id = $2',
-      [userId, communityId]
+      [userId, community.id]
     );
 
     if (existingMembership.rows.length > 0) {
@@ -93,14 +123,100 @@ router.post('/:slug/join', authenticate, async (req: AuthenticatedRequest, res: 
       return;
     }
 
+    // Verify based on verification method
+    if (community.verification_method === 'invite_code') {
+      if (!inviteCode) {
+        res.status(403).json({
+          error: 'Invite code required',
+          reason: 'invite_code_required'
+        });
+        return;
+      }
+
+      // Validate invite code
+      const codeResult = await query<InviteCodeRow>(
+        `SELECT id, max_uses, current_uses, expires_at, is_active
+         FROM invite_codes
+         WHERE code = $1 AND community_id = $2`,
+        [inviteCode.toUpperCase(), community.id]
+      );
+
+      if (codeResult.rows.length === 0) {
+        res.status(403).json({
+          error: 'Invalid invite code',
+          reason: 'invalid_code'
+        });
+        return;
+      }
+
+      const code = codeResult.rows[0];
+
+      if (!code.is_active) {
+        res.status(403).json({
+          error: 'This invite code has been deactivated',
+          reason: 'code_inactive'
+        });
+        return;
+      }
+
+      if (code.expires_at && new Date(code.expires_at) < new Date()) {
+        res.status(403).json({
+          error: 'This invite code has expired',
+          reason: 'code_expired'
+        });
+        return;
+      }
+
+      if (code.max_uses !== null && code.current_uses >= code.max_uses) {
+        res.status(403).json({
+          error: 'This invite code has reached its maximum uses',
+          reason: 'code_max_uses'
+        });
+        return;
+      }
+
+      // Increment code usage
+      await query(
+        'UPDATE invite_codes SET current_uses = current_uses + 1 WHERE id = $1',
+        [code.id]
+      );
+
+    } else if (community.verification_method === 'email_domain') {
+      const allowedDomains = community.allowed_email_domains || [];
+
+      if (allowedDomains.length === 0) {
+        res.status(403).json({
+          error: 'No email domains configured for this community',
+          reason: 'no_domains_configured'
+        });
+        return;
+      }
+
+      const emailDomain = '@' + userEmail.split('@')[1].toLowerCase();
+      const isAllowed = allowedDomains.some(
+        domain => emailDomain.toLowerCase().endsWith(domain.toLowerCase())
+      );
+
+      if (!isAllowed) {
+        res.status(403).json({
+          error: 'Your email domain is not authorized for this community',
+          reason: 'email_domain_not_allowed',
+          allowedDomains: allowedDomains
+        });
+        return;
+      }
+    }
+    // If verification_method === 'open', no additional verification needed
+
     // Create membership
     const result = await query<MembershipRow>(
       `INSERT INTO memberships (user_id, community_id, role)
        VALUES ($1, $2, 'seeker')
        RETURNING id, user_id, community_id, role, is_verified_helper, profile, topics, is_available, created_at`,
-      [userId, communityId]
+      [userId, community.id]
     );
 
+    console.log(`[JOIN] User ${userId} joined community ${slug} via ${community.verification_method}`);
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Join community error:', error);
@@ -177,6 +293,170 @@ router.put('/:slug/availability', authenticate, async (req: AuthenticatedRequest
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Toggle availability error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/communities/:slug/invite-codes - Generate new invite code (admin only)
+router.post('/:slug/invite-codes', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { slug } = req.params;
+    const { maxUses, expiresInDays } = req.body;
+    const userId = req.user!.userId;
+
+    // Get community and verify admin
+    const communityResult = await query<CommunityRow>(
+      'SELECT id FROM communities WHERE slug = $1 AND is_active = true',
+      [slug]
+    );
+
+    if (communityResult.rows.length === 0) {
+      res.status(404).json({ error: 'Community not found' });
+      return;
+    }
+
+    const communityId = communityResult.rows[0].id;
+
+    // Check if user is admin
+    const membershipResult = await query<MembershipRow>(
+      'SELECT role FROM memberships WHERE user_id = $1 AND community_id = $2',
+      [userId, communityId]
+    );
+
+    if (membershipResult.rows.length === 0 || membershipResult.rows[0].role !== 'admin') {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+
+    // Generate unique code
+    let code = generateInviteCode();
+    let attempts = 0;
+    while (attempts < 10) {
+      const existing = await query('SELECT id FROM invite_codes WHERE code = $1', [code]);
+      if (existing.rows.length === 0) break;
+      code = generateInviteCode();
+      attempts++;
+    }
+
+    // Calculate expiration date
+    let expiresAt = null;
+    if (expiresInDays && expiresInDays > 0) {
+      expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+    }
+
+    // Create invite code
+    const result = await query<InviteCodeRow>(
+      `INSERT INTO invite_codes (community_id, code, created_by, max_uses, expires_at)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [communityId, code, userId, maxUses || null, expiresAt]
+    );
+
+    console.log(`[INVITE] Code ${code} created for community ${slug} by user ${userId}`);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Create invite code error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/communities/:slug/invite-codes - List invite codes (admin only)
+router.get('/:slug/invite-codes', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { slug } = req.params;
+    const userId = req.user!.userId;
+
+    // Get community and verify admin
+    const communityResult = await query<CommunityRow>(
+      'SELECT id FROM communities WHERE slug = $1 AND is_active = true',
+      [slug]
+    );
+
+    if (communityResult.rows.length === 0) {
+      res.status(404).json({ error: 'Community not found' });
+      return;
+    }
+
+    const communityId = communityResult.rows[0].id;
+
+    // Check if user is admin
+    const membershipResult = await query<MembershipRow>(
+      'SELECT role FROM memberships WHERE user_id = $1 AND community_id = $2',
+      [userId, communityId]
+    );
+
+    if (membershipResult.rows.length === 0 || membershipResult.rows[0].role !== 'admin') {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+
+    // Get all invite codes with creator email
+    const result = await query<InviteCodeRow>(
+      `SELECT ic.*, u.email as creator_email
+       FROM invite_codes ic
+       JOIN users u ON u.id = ic.created_by
+       WHERE ic.community_id = $1
+       ORDER BY ic.created_at DESC`,
+      [communityId]
+    );
+
+    res.json(result.rows);
+  } catch (error) {
+    console.error('List invite codes error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /api/communities/:slug/invite-codes/:codeId - Update invite code (admin only)
+router.put('/:slug/invite-codes/:codeId', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { slug, codeId } = req.params;
+    const { isActive } = req.body;
+    const userId = req.user!.userId;
+
+    // Get community and verify admin
+    const communityResult = await query<CommunityRow>(
+      'SELECT id FROM communities WHERE slug = $1 AND is_active = true',
+      [slug]
+    );
+
+    if (communityResult.rows.length === 0) {
+      res.status(404).json({ error: 'Community not found' });
+      return;
+    }
+
+    const communityId = communityResult.rows[0].id;
+
+    // Check if user is admin
+    const membershipResult = await query<MembershipRow>(
+      'SELECT role FROM memberships WHERE user_id = $1 AND community_id = $2',
+      [userId, communityId]
+    );
+
+    if (membershipResult.rows.length === 0 || membershipResult.rows[0].role !== 'admin') {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+
+    // Update invite code
+    const result = await query<InviteCodeRow>(
+      `UPDATE invite_codes
+       SET is_active = $1
+       WHERE id = $2 AND community_id = $3
+       RETURNING *`,
+      [isActive, codeId, communityId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Invite code not found' });
+      return;
+    }
+
+    console.log(`[INVITE] Code ${result.rows[0].code} ${isActive ? 'activated' : 'deactivated'} by user ${userId}`);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Update invite code error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

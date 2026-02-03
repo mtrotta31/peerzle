@@ -5,7 +5,7 @@ INSERT INTO communities (slug, name, verification_method, helper_verification_re
 VALUES (
   'first-responders',
   'First Responder Peer Support',
-  'attestation',
+  'invite_code',
   true,
   '{
     "branding": {
