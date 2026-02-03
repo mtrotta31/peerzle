@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, FormEvent } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Conversation, Message, getConversation, sendMessage, endConversation } from '../services/api';
+import { Conversation, Message, getConversation, sendMessage, endConversation, getMembership } from '../services/api';
 import { connectSocket, joinConversation, leaveConversation, sendTypingIndicator, getSocket } from '../services/socket';
 import { useAuth } from '../context/AuthContext';
+import RatingModal from '../components/RatingModal';
 
 interface SafetyAlert {
   riskLevel: 'moderate_concern' | 'crisis';
@@ -13,6 +14,11 @@ interface HelperJoinedEvent {
   conversationId: string;
   helperEmail: string;
   helperMembershipId: string;
+}
+
+interface ConversationEndedEvent {
+  conversationId: string;
+  endedBy: string;
 }
 
 export default function ChatPage() {
@@ -28,6 +34,8 @@ export default function ChatPage() {
   const [showCrisisBanner, setShowCrisisBanner] = useState(false);
   const [crisisRiskLevel, setCrisisRiskLevel] = useState<'moderate_concern' | 'crisis' | null>(null);
   const [helperJoined, setHelperJoined] = useState<string | null>(null);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [userRole, setUserRole] = useState<'seeker' | 'helper' | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { user } = useAuth();
@@ -51,6 +59,20 @@ export default function ChatPage() {
         const data = await getConversation(conversationId!);
         setConversation(data);
         setMessages(data.messages || []);
+
+        // Determine user's role in this conversation
+        if (data.community_slug) {
+          try {
+            const membership = await getMembership(data.community_slug);
+            if (membership.id === data.seeker_membership_id) {
+              setUserRole('seeker');
+            } else if (membership.id === data.helper_membership_id) {
+              setUserRole('helper');
+            }
+          } catch (err) {
+            console.error('Failed to get membership:', err);
+          }
+        }
 
         // Connect to socket and join room
         const socket = connectSocket();
@@ -89,6 +111,20 @@ export default function ChatPage() {
             prev ? { ...prev, status: 'active', helper_membership_id: event.helperMembershipId } : prev
           );
         });
+
+        // Listen for conversation ended (by the other user)
+        socket.on('conversation_ended', (event: ConversationEndedEvent) => {
+          console.log('Conversation ended:', event);
+          if (event.conversationId === conversationId) {
+            setConversation((prev) =>
+              prev ? { ...prev, status: 'ended', ended_at: new Date().toISOString() } : prev
+            );
+            // Show rating modal for the user who didn't end the session
+            if (event.endedBy !== user?.id) {
+              setShowRatingModal(true);
+            }
+          }
+        });
       } catch (err) {
         setError('Failed to load conversation');
         console.error(err);
@@ -109,6 +145,7 @@ export default function ChatPage() {
       socket?.off('user_typing');
       socket?.off('safety_alert');
       socket?.off('helper_joined');
+      socket?.off('conversation_ended');
     };
   }, [conversationId, user?.id]);
 
@@ -154,12 +191,23 @@ export default function ChatPage() {
 
     setIsEnding(true);
     try {
-      await endConversation(conversationId);
-      navigate(`/community/${conversation?.community_slug}`);
+      const endedConversation = await endConversation(conversationId);
+      setConversation(endedConversation);
+      setShowRatingModal(true);
     } catch (err) {
       console.error('Failed to end conversation:', err);
       setIsEnding(false);
     }
+  };
+
+  const handleRatingClose = () => {
+    setShowRatingModal(false);
+    navigate(`/community/${conversation?.community_slug}`);
+  };
+
+  const handleRatingSubmitted = () => {
+    setShowRatingModal(false);
+    navigate(`/community/${conversation?.community_slug}`);
   };
 
   const handleDismissCrisisBanner = () => {
@@ -454,6 +502,16 @@ export default function ChatPage() {
             {isSending ? 'Sending...' : 'Send'}
           </button>
         </form>
+      )}
+
+      {/* Rating Modal */}
+      {showRatingModal && conversationId && userRole && (
+        <RatingModal
+          conversationId={conversationId}
+          role={userRole}
+          onClose={handleRatingClose}
+          onSubmitted={handleRatingSubmitted}
+        />
       )}
     </div>
   );

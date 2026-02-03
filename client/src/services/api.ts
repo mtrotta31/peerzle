@@ -171,4 +171,37 @@ export async function acceptConversation(conversationId: string): Promise<Conver
   return response.data;
 }
 
+// Rating types
+export interface Rating {
+  id: string;
+  conversation_id: string;
+  membership_id: string;
+  role: 'seeker' | 'helper';
+  rating: number;
+  felt_heard: boolean | null;
+  would_recommend: boolean | null;
+  feedback_text: string | null;
+  created_at: string;
+}
+
+export interface SubmitRatingData {
+  conversationId: string;
+  rating: number;
+  role: 'seeker' | 'helper';
+  feltHeard?: boolean;
+  wouldRecommend?: boolean;
+  feedbackText?: string;
+}
+
+// Rating API
+export async function submitRating(data: SubmitRatingData): Promise<Rating> {
+  const response = await api.post<Rating>('/api/ratings', data);
+  return response.data;
+}
+
+export async function getRating(conversationId: string): Promise<Rating> {
+  const response = await api.get<Rating>(`/api/ratings/${conversationId}`);
+  return response.data;
+}
+
 export default api;

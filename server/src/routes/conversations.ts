@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { query } from '../config/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
+import { emitToConversation } from '../config/socket';
 
 const router = Router();
 
@@ -185,16 +186,26 @@ router.post('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Res
       return;
     }
 
-    // End conversation
-    const result = await query<ConversationRow>(
+    // End conversation and get community info
+    const result = await query<ConversationRow & { community_slug: string; community_name: string }>(
       `UPDATE conversations
        SET status = 'ended', ended_at = CURRENT_TIMESTAMP
        WHERE id = $1
-       RETURNING *`,
+       RETURNING *,
+         (SELECT slug FROM communities WHERE id = conversations.community_id) as community_slug,
+         (SELECT name FROM communities WHERE id = conversations.community_id) as community_name`,
       [id]
     );
 
-    res.json(result.rows[0]);
+    const endedConversation = result.rows[0];
+
+    // Emit socket event to notify all participants
+    emitToConversation(id, 'conversation_ended', {
+      conversationId: id,
+      endedBy: userId,
+    });
+
+    res.json(endedConversation);
   } catch (error) {
     console.error('End conversation error:', error);
     res.status(500).json({ error: 'Internal server error' });
