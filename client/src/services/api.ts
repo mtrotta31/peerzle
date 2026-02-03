@@ -223,4 +223,29 @@ export async function getSessionHistory(communitySlug: string): Promise<HistoryC
   return response.data;
 }
 
+// Helper Dashboard types
+export interface RecentHelperSession {
+  id: string;
+  topic: string | null;
+  ended_at: string;
+  seeker_rating: number | null;
+}
+
+export interface HelperDashboardStats {
+  totalSessions: number;
+  activeSessions: number;
+  averageRating: number | null;
+  totalRatings: number;
+  feltHeardPercent: number | null;
+  wouldRecommendPercent: number | null;
+  totalHelpTime: number;
+  recentSessions: RecentHelperSession[];
+}
+
+// Helper Dashboard API
+export async function getHelperDashboard(communitySlug: string): Promise<HelperDashboardStats> {
+  const response = await api.get<HelperDashboardStats>(`/api/dashboard/${communitySlug}/helper`);
+  return response.data;
+}
+
 export default api;

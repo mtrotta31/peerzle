@@ -472,8 +472,8 @@ export default function CommunityDashboard() {
           </div>
         </div>
 
-        {/* Session History Link */}
-        <div style={{ textAlign: 'center' }}>
+        {/* Session History and Helper Dashboard Links */}
+        <div style={{ textAlign: 'center', display: 'flex', justifyContent: 'center', gap: '24px', flexWrap: 'wrap' }}>
           <Link
             to={`/community/${slug}/history`}
             style={{
@@ -495,8 +495,33 @@ export default function CommunityDashboard() {
             }}
           >
             <span style={{ fontSize: '16px' }}>📋</span>
-            View Session History
+            Session History
           </Link>
+          {(membership.is_available || membership.role === 'helper' || membership.role === 'both') && (
+            <Link
+              to={`/community/${slug}/helper-dashboard`}
+              style={{
+                color: '#6b7280',
+                textDecoration: 'none',
+                fontSize: '14px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 16px',
+                borderRadius: '4px',
+                transition: 'color 0.2s',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.color = branding.primaryColor;
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.color = '#6b7280';
+              }}
+            >
+              <span style={{ fontSize: '16px' }}>📊</span>
+              Helper Dashboard
+            </Link>
+          )}
         </div>
       </div>
     </div>
