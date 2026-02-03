@@ -497,7 +497,7 @@ export default function CommunityDashboard() {
             <span style={{ fontSize: '16px' }}>📋</span>
             Session History
           </Link>
-          {(membership.is_available || membership.role === 'helper' || membership.role === 'both') && (
+          {(membership.is_available || membership.role === 'helper' || membership.role === 'both' || membership.role === 'admin') && (
             <Link
               to={`/community/${slug}/helper-dashboard`}
               style={{
@@ -520,6 +520,32 @@ export default function CommunityDashboard() {
             >
               <span style={{ fontSize: '16px' }}>📊</span>
               Helper Dashboard
+            </Link>
+          )}
+          {membership.role === 'admin' && (
+            <Link
+              to={`/community/${slug}/admin`}
+              style={{
+                color: '#92400e',
+                textDecoration: 'none',
+                fontSize: '14px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '8px 16px',
+                borderRadius: '4px',
+                backgroundColor: '#fef3c7',
+                transition: 'background-color 0.2s',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = '#fde68a';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = '#fef3c7';
+              }}
+            >
+              <span style={{ fontSize: '16px' }}>⚙️</span>
+              Admin Dashboard
             </Link>
           )}
         </div>

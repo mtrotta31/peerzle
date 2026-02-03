@@ -271,4 +271,64 @@ export async function getFacilitatorSuggestions(
   return response.data;
 }
 
+// Admin types
+export interface AdminOverview {
+  totalMembers: number;
+  totalConversations: number;
+  activeConversations: number;
+  endedConversations: number;
+  averageRating: number | null;
+  totalAlerts: number;
+  crisisAlerts: number;
+}
+
+export interface AdminMember {
+  id: string;
+  email: string;
+  role: string;
+  isAvailable: boolean;
+  joinedAt: string;
+  seekerConversations: number;
+  helperConversations: number;
+  avgHelperRating: number | null;
+}
+
+export interface AdminAlert {
+  id: string;
+  conversationId: string;
+  severity: string;
+  riskLevel: string;
+  flags: string[];
+  suggestedAction: string;
+  createdAt: string;
+}
+
+// Admin API
+export async function getAdminOverview(communitySlug: string): Promise<AdminOverview> {
+  const response = await api.get<AdminOverview>(`/api/admin/${communitySlug}/overview`);
+  return response.data;
+}
+
+export async function getAdminMembers(communitySlug: string): Promise<AdminMember[]> {
+  const response = await api.get<AdminMember[]>(`/api/admin/${communitySlug}/members`);
+  return response.data;
+}
+
+export async function getAdminAlerts(communitySlug: string): Promise<AdminAlert[]> {
+  const response = await api.get<AdminAlert[]>(`/api/admin/${communitySlug}/alerts`);
+  return response.data;
+}
+
+export async function updateMemberRole(
+  communitySlug: string,
+  membershipId: string,
+  role: string
+): Promise<{ success: boolean; role: string }> {
+  const response = await api.put<{ success: boolean; role: string }>(
+    `/api/admin/${communitySlug}/members/${membershipId}/role`,
+    { role }
+  );
+  return response.data;
+}
+
 export default api;

@@ -6,6 +6,7 @@ import CommunitiesPage from './pages/CommunitiesPage';
 import CommunityDashboard from './pages/CommunityDashboard';
 import SessionHistory from './pages/SessionHistory';
 import HelperDashboard from './pages/HelperDashboard';
+import AdminDashboard from './pages/AdminDashboard';
 import ChatPage from './pages/ChatPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -74,6 +75,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <HelperDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/community/:slug/admin"
+        element={
+          <ProtectedRoute>
+            <AdminDashboard />
           </ProtectedRoute>
         }
       />

@@ -129,8 +129,8 @@ router.get('/:id', authenticate, async (req: AuthenticatedRequest, res: Response
     const { id } = req.params;
     const userId = req.user!.userId;
 
-    // Get conversation and verify user is participant
-    const conversationResult = await query<ConversationRow & { community_slug: string; community_name: string }>(
+    // First, try to get conversation as a participant (seeker or helper)
+    let conversationResult = await query<ConversationRow & { community_slug: string; community_name: string }>(
       `SELECT c.*, cm.slug as community_slug, cm.name as community_name
        FROM conversations c
        JOIN communities cm ON cm.id = c.community_id
@@ -138,6 +138,18 @@ router.get('/:id', authenticate, async (req: AuthenticatedRequest, res: Response
        WHERE c.id = $1 AND m.user_id = $2`,
       [id, userId]
     );
+
+    // If not a participant, check if user is an admin of the conversation's community
+    if (conversationResult.rows.length === 0) {
+      conversationResult = await query<ConversationRow & { community_slug: string; community_name: string }>(
+        `SELECT c.*, cm.slug as community_slug, cm.name as community_name
+         FROM conversations c
+         JOIN communities cm ON cm.id = c.community_id
+         JOIN memberships m ON m.community_id = c.community_id AND m.user_id = $2 AND m.role = 'admin'
+         WHERE c.id = $1`,
+        [id, userId]
+      );
+    }
 
     if (conversationResult.rows.length === 0) {
       res.status(404).json({ error: 'Conversation not found or access denied' });
