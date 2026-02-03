@@ -37,6 +37,7 @@ export default function ChatPage() {
   const [helperJoined, setHelperJoined] = useState<string | null>(null);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [userRole, setUserRole] = useState<'seeker' | 'helper' | null>(null);
+  const [isAdminViewer, setIsAdminViewer] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { user } = useAuth();
@@ -69,6 +70,9 @@ export default function ChatPage() {
               setUserRole('seeker');
             } else if (membership.id === data.helper_membership_id) {
               setUserRole('helper');
+            } else {
+              // User is neither seeker nor helper - they're viewing as admin
+              setIsAdminViewer(true);
             }
           } catch (err) {
             console.error('Failed to get membership:', err);
@@ -306,6 +310,22 @@ export default function ChatPage() {
         </div>
       </div>
 
+      {/* Admin Viewer Banner */}
+      {isAdminViewer && (
+        <div
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#fef3c7',
+            color: '#92400e',
+            textAlign: 'center',
+            fontSize: '14px',
+            fontWeight: 500,
+          }}
+        >
+          Viewing as Admin - You are not a participant in this conversation
+        </div>
+      )}
+
       {/* Crisis Resources Banner */}
       {showCrisisBanner && (
         <div
@@ -413,7 +433,43 @@ export default function ChatPage() {
         ) : (
           messages.map((message) => {
             const isPeerBot = message.moderation_result?.sender === 'peerbot';
-            const isMine = !isPeerBot && message.sender_email === user?.email;
+            const isMine = !isPeerBot && !isAdminViewer && message.sender_email === user?.email;
+
+            // Determine the sender's role based on membership ID
+            const isFromSeeker = message.sender_membership_id === conversation?.seeker_membership_id;
+            const isFromHelper = message.sender_membership_id === conversation?.helper_membership_id;
+
+            // For admin viewers, determine message styling based on role
+            const getSenderLabel = () => {
+              if (isPeerBot) return 'PeerBot';
+              if (isAdminViewer) {
+                const role = isFromSeeker ? 'Seeker' : isFromHelper ? 'Helper' : 'Unknown';
+                return `${role}: ${message.sender_email || 'Unknown'}`;
+              }
+              return message.sender_email || 'Unknown';
+            };
+
+            // Background colors: admin view uses role-based colors
+            const getBackgroundColor = () => {
+              if (isMine) return '#1a365d';
+              if (isPeerBot) return '#f3e8ff';
+              if (isAdminViewer) {
+                if (isFromSeeker) return '#e0f2fe'; // Light blue for seeker
+                if (isFromHelper) return '#dcfce7'; // Light green for helper
+              }
+              return 'white';
+            };
+
+            // Label colors based on role
+            const getLabelColor = () => {
+              if (isPeerBot) return '#7c3aed';
+              if (isAdminViewer) {
+                if (isFromSeeker) return '#0369a1'; // Blue for seeker
+                if (isFromHelper) return '#15803d'; // Green for helper
+              }
+              return '#6b7280';
+            };
+
             return (
               <div
                 key={message.id}
@@ -445,10 +501,10 @@ export default function ChatPage() {
                     maxWidth: '70%',
                     padding: '12px 16px',
                     borderRadius: '12px',
-                    backgroundColor: isMine ? '#1a365d' : isPeerBot ? '#f3e8ff' : 'white',
+                    backgroundColor: getBackgroundColor(),
                     color: isMine ? 'white' : '#1f2937',
                     boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                    border: isPeerBot ? '1px solid #c4b5fd' : 'none',
+                    border: isPeerBot ? '1px solid #c4b5fd' : isAdminViewer ? `1px solid ${isFromSeeker ? '#7dd3fc' : isFromHelper ? '#86efac' : '#e5e7eb'}` : 'none',
                   }}
                 >
                   {!isMine && (
@@ -456,11 +512,11 @@ export default function ChatPage() {
                       style={{
                         margin: '0 0 4px',
                         fontSize: '12px',
-                        color: isPeerBot ? '#7c3aed' : '#6b7280',
-                        fontWeight: isPeerBot ? 600 : 400,
+                        color: getLabelColor(),
+                        fontWeight: isPeerBot || isAdminViewer ? 600 : 400,
                       }}
                     >
-                      {isPeerBot ? 'PeerBot' : message.sender_email}
+                      {getSenderLabel()}
                     </p>
                   )}
                   <p style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{message.content}</p>
@@ -499,8 +555,8 @@ export default function ChatPage() {
         />
       )}
 
-      {/* Message Input - only for active conversations */}
-      {!isEnded ? (
+      {/* Message Input - only for active conversations and non-admin viewers */}
+      {!isEnded && !isAdminViewer ? (
         <form
           onSubmit={handleSendMessage}
           style={{
@@ -542,7 +598,7 @@ export default function ChatPage() {
           </button>
         </form>
       ) : (
-        /* Read-only footer for ended conversations */
+        /* Read-only footer for ended conversations or admin viewers */
         <div
           style={{
             padding: '16px 20px',
@@ -554,19 +610,22 @@ export default function ChatPage() {
           }}
         >
           <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>
-            This session ended{' '}
-            {conversation?.ended_at
-              ? new Date(conversation.ended_at).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                  year: 'numeric',
-                  hour: 'numeric',
-                  minute: '2-digit',
-                })
-              : ''}
+            {isAdminViewer
+              ? 'Viewing as admin (read-only)'
+              : `This session ended ${
+                  conversation?.ended_at
+                    ? new Date(conversation.ended_at).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit',
+                      })
+                    : ''
+                }`}
           </p>
           <Link
-            to={`/community/${conversation?.community_slug}/history`}
+            to={isAdminViewer ? `/community/${conversation?.community_slug}/admin` : `/community/${conversation?.community_slug}/history`}
             style={{
               color: '#1a365d',
               textDecoration: 'none',
@@ -577,7 +636,7 @@ export default function ChatPage() {
               gap: '4px',
             }}
           >
-            Back to History
+            {isAdminViewer ? 'Back to Admin Dashboard' : 'Back to History'}
           </Link>
         </div>
       )}
