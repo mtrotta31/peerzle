@@ -129,6 +129,12 @@ export default function CommunityDashboard() {
   const handleToggleAvailability = async () => {
     if (!slug || !membership || isTogglingAvailability) return;
 
+    // Check if trying to become available without completing training
+    if (!membership.is_available && !membership.training_completed) {
+      navigate(`/community/${slug}/training`);
+      return;
+    }
+
     setIsTogglingAvailability(true);
     try {
       const updated = await toggleAvailability(slug, !membership.is_available);
@@ -141,8 +147,13 @@ export default function CommunityDashboard() {
         setPendingConversations([]);
       }
     } catch (err) {
-      console.error('Failed to toggle availability:', err);
-      alert('Failed to update availability');
+      const axiosError = err as AxiosError<{ error: string; reason?: string }>;
+      if (axiosError.response?.data?.reason === 'training_required') {
+        navigate(`/community/${slug}/training`);
+      } else {
+        console.error('Failed to toggle availability:', err);
+        alert(axiosError.response?.data?.error || 'Failed to update availability');
+      }
     } finally {
       setIsTogglingAvailability(false);
     }
@@ -328,57 +339,129 @@ export default function CommunityDashboard() {
                 gap: '8px',
               }}
             >
-              <label
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  cursor: isTogglingAvailability ? 'not-allowed' : 'pointer',
-                }}
-              >
-                <span
+              {membership.training_completed ? (
+                <label
                   style={{
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    color: membership.is_available ? '#16A34A' : '#64748B',
-                  }}
-                >
-                  {membership.is_available ? 'Available to Help' : 'Not Available'}
-                </span>
-                <div
-                  onClick={handleToggleAvailability}
-                  style={{
-                    width: '52px',
-                    height: '28px',
-                    backgroundColor: membership.is_available ? '#16A34A' : '#CBD5E1',
-                    borderRadius: '14px',
-                    position: 'relative',
-                    transition: 'background-color 0.2s',
-                    opacity: isTogglingAvailability ? 0.5 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
                     cursor: isTogglingAvailability ? 'not-allowed' : 'pointer',
                   }}
                 >
-                  <div
+                  <span
                     style={{
-                      width: '24px',
-                      height: '24px',
-                      backgroundColor: 'white',
-                      borderRadius: '50%',
-                      position: 'absolute',
-                      top: '2px',
-                      left: membership.is_available ? '26px' : '2px',
-                      transition: 'left 0.2s',
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      color: membership.is_available ? '#16A34A' : '#64748B',
                     }}
-                  />
-                </div>
-              </label>
+                  >
+                    {membership.is_available ? 'Available to Help' : 'Not Available'}
+                  </span>
+                  <div
+                    onClick={handleToggleAvailability}
+                    style={{
+                      width: '52px',
+                      height: '28px',
+                      backgroundColor: membership.is_available ? '#16A34A' : '#CBD5E1',
+                      borderRadius: '14px',
+                      position: 'relative',
+                      transition: 'background-color 0.2s',
+                      opacity: isTogglingAvailability ? 0.5 : 1,
+                      cursor: isTogglingAvailability ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '24px',
+                        height: '24px',
+                        backgroundColor: 'white',
+                        borderRadius: '50%',
+                        position: 'absolute',
+                        top: '2px',
+                        left: membership.is_available ? '26px' : '2px',
+                        transition: 'left 0.2s',
+                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                      }}
+                    />
+                  </div>
+                </label>
+              ) : (
+                <Link
+                  to={`/community/${slug}/training`}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: '#EDF4FF',
+                    color: '#2B7CF6',
+                    border: 'none',
+                    borderRadius: '24px',
+                    textDecoration: 'none',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    transition: 'background-color 0.2s',
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#DCE9FF';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#EDF4FF';
+                  }}
+                >
+                  Complete Training
+                </Link>
+              )}
               <span style={{ fontSize: '12px', color: '#94A3B8' }}>
-                Toggle to help others
+                {membership.training_completed ? 'Toggle to help others' : 'Required to help others'}
               </span>
             </div>
           </div>
         </div>
+
+        {/* Training Required Banner */}
+        {!membership.training_completed && (
+          <div
+            style={{
+              backgroundColor: '#EDF4FF',
+              borderRadius: '16px',
+              padding: '20px',
+              marginBottom: '20px',
+              borderLeft: '4px solid #2B7CF6',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: '0 0 4px 0', color: '#1E3A5F', fontSize: '16px' }}>
+                  Complete Helper Training
+                </h3>
+                <p style={{ margin: 0, color: '#64748B', fontSize: '14px' }}>
+                  Finish 3 short modules to start helping others in this community.
+                </p>
+              </div>
+              <Link
+                to={`/community/${slug}/training`}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#2B7CF6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '24px',
+                  textDecoration: 'none',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                  transition: 'background-color 0.2s',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#1E6AD9';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#2B7CF6';
+                }}
+              >
+                Start Training
+              </Link>
+            </div>
+          </div>
+        )}
 
         {/* Verification Status Section - only show if community requires verification */}
         {community.helper_verification_required && !membership.is_verified_helper && (
@@ -879,6 +962,34 @@ export default function CommunityDashboard() {
             }}
           >
             Session History
+          </Link>
+          <Link
+            to={`/community/${slug}/training`}
+            style={{
+              padding: '10px 20px',
+              backgroundColor: membership.training_completed ? 'white' : '#EDF4FF',
+              color: membership.training_completed ? '#64748B' : '#2B7CF6',
+              border: membership.training_completed ? '1px solid #E2E8F0' : 'none',
+              borderRadius: '24px',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: 500,
+              transition: 'all 0.2s',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.borderColor = '#2B7CF6';
+              e.currentTarget.style.color = '#2B7CF6';
+            }}
+            onMouseOut={(e) => {
+              if (membership.training_completed) {
+                e.currentTarget.style.borderColor = '#E2E8F0';
+                e.currentTarget.style.color = '#64748B';
+              } else {
+                e.currentTarget.style.color = '#2B7CF6';
+              }
+            }}
+          >
+            Helper Training
           </Link>
           {(membership.is_available || membership.role === 'helper' || membership.role === 'both' || membership.role === 'admin') && (
             <Link

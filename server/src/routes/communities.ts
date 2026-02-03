@@ -24,6 +24,7 @@ interface MembershipRow {
   community_id: string;
   role: string;
   is_verified_helper: boolean;
+  training_completed: boolean;
   profile: Record<string, unknown>;
   topics: unknown[];
   is_available: boolean;
@@ -231,7 +232,7 @@ router.get('/:slug/membership', authenticate, async (req: AuthenticatedRequest, 
     const userId = req.user!.userId;
 
     const result = await query<MembershipRow & { community_name: string }>(
-      `SELECT m.id, m.user_id, m.community_id, m.role, m.is_verified_helper, m.profile, m.topics, m.is_available, m.created_at, c.name as community_name
+      `SELECT m.id, m.user_id, m.community_id, m.role, m.is_verified_helper, m.training_completed, m.profile, m.topics, m.is_available, m.created_at, c.name as community_name
        FROM memberships m
        JOIN communities c ON c.id = m.community_id
        WHERE m.user_id = $1 AND c.slug = $2 AND c.is_active = true`,
@@ -274,6 +275,27 @@ router.put('/:slug/availability', authenticate, async (req: AuthenticatedRequest
     }
 
     const communityId = communityResult.rows[0].id;
+
+    // Check if trying to become available - must have completed training
+    if (isAvailable) {
+      const memberCheck = await query<{ training_completed: boolean }>(
+        'SELECT training_completed FROM memberships WHERE user_id = $1 AND community_id = $2',
+        [userId, communityId]
+      );
+
+      if (memberCheck.rows.length === 0) {
+        res.status(404).json({ error: 'Not a member of this community' });
+        return;
+      }
+
+      if (!memberCheck.rows[0].training_completed) {
+        res.status(403).json({
+          error: 'Please complete helper training first',
+          reason: 'training_required'
+        });
+        return;
+      }
+    }
 
     // Update membership availability
     const result = await query<MembershipRow>(

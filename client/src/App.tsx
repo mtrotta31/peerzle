@@ -7,6 +7,7 @@ import CommunityDashboard from './pages/CommunityDashboard';
 import SessionHistory from './pages/SessionHistory';
 import HelperDashboard from './pages/HelperDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import HelperTraining from './pages/HelperTraining';
 import ChatPage from './pages/ChatPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -83,6 +84,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/community/:slug/training"
+        element={
+          <ProtectedRoute>
+            <HelperTraining />
           </ProtectedRoute>
         }
       />

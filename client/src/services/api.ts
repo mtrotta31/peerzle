@@ -70,6 +70,7 @@ export interface Membership {
   community_id: string;
   role: 'seeker' | 'helper' | 'both' | 'admin';
   is_verified_helper: boolean;
+  training_completed: boolean;
   profile: Record<string, unknown>;
   topics: unknown[];
   is_available: boolean;
@@ -423,6 +424,82 @@ export async function updateMemberRole(
   const response = await api.put<{ success: boolean; role: string }>(
     `/api/admin/${communitySlug}/members/${membershipId}/role`,
     { role }
+  );
+  return response.data;
+}
+
+// Training types
+export interface TrainingModuleOverview {
+  moduleNumber: number;
+  title: string;
+  description: string;
+  isCompleted: boolean;
+  completedAt: string | null;
+  score: number | null;
+}
+
+export interface TrainingStatus {
+  trainingCompleted: boolean;
+  modules: TrainingModuleOverview[];
+  totalModules: number;
+  completedCount: number;
+}
+
+export interface TrainingQuestion {
+  id: number;
+  question: string;
+  options: string[];
+}
+
+export interface TrainingModule {
+  moduleNumber: number;
+  title: string;
+  description: string;
+  lessonContent: string;
+  questions: TrainingQuestion[];
+  isCompleted: boolean;
+  score: number | null;
+  completedAt: string | null;
+  passingScore: number;
+}
+
+export interface QuizResult {
+  questionId: number;
+  question: string;
+  selectedAnswer: number;
+  correctAnswer: number;
+  isCorrect: boolean;
+  explanation: string;
+}
+
+export interface TrainingCompletionResult {
+  passed: boolean;
+  score: number;
+  passingScore: number;
+  results: QuizResult[];
+  allModulesComplete?: boolean;
+  message?: string;
+}
+
+// Training API
+export async function getTrainingStatus(communitySlug: string): Promise<TrainingStatus> {
+  const response = await api.get<TrainingStatus>(`/api/training/${communitySlug}/status`);
+  return response.data;
+}
+
+export async function getTrainingModule(communitySlug: string, moduleNumber: number): Promise<TrainingModule> {
+  const response = await api.get<TrainingModule>(`/api/training/${communitySlug}/module/${moduleNumber}`);
+  return response.data;
+}
+
+export async function completeTrainingModule(
+  communitySlug: string,
+  moduleNumber: number,
+  answers: number[]
+): Promise<TrainingCompletionResult> {
+  const response = await api.post<TrainingCompletionResult>(
+    `/api/training/${communitySlug}/module/${moduleNumber}/complete`,
+    { answers }
   );
   return response.data;
 }
