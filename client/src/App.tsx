@@ -4,6 +4,7 @@ import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import CommunitiesPage from './pages/CommunitiesPage';
 import CommunityDashboard from './pages/CommunityDashboard';
+import SessionHistory from './pages/SessionHistory';
 import ChatPage from './pages/ChatPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -56,6 +57,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <CommunityDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/community/:slug/history"
+        element={
+          <ProtectedRoute>
+            <SessionHistory />
           </ProtectedRoute>
         }
       />

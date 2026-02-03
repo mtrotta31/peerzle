@@ -460,8 +460,8 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
-      {!isEnded && (
+      {/* Message Input - only for active conversations */}
+      {!isEnded ? (
         <form
           onSubmit={handleSendMessage}
           style={{
@@ -502,6 +502,45 @@ export default function ChatPage() {
             {isSending ? 'Sending...' : 'Send'}
           </button>
         </form>
+      ) : (
+        /* Read-only footer for ended conversations */
+        <div
+          style={{
+            padding: '16px 20px',
+            backgroundColor: '#f9fafb',
+            borderTop: '1px solid #e5e7eb',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+          }}
+        >
+          <p style={{ margin: 0, color: '#6b7280', fontSize: '14px' }}>
+            This session ended{' '}
+            {conversation?.ended_at
+              ? new Date(conversation.ended_at).toLocaleDateString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  year: 'numeric',
+                  hour: 'numeric',
+                  minute: '2-digit',
+                })
+              : ''}
+          </p>
+          <Link
+            to={`/community/${conversation?.community_slug}/history`}
+            style={{
+              color: '#1a365d',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: 500,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+            }}
+          >
+            Back to History
+          </Link>
+        </div>
       )}
 
       {/* Rating Modal */}

@@ -471,6 +471,33 @@ export default function CommunityDashboard() {
             ))}
           </div>
         </div>
+
+        {/* Session History Link */}
+        <div style={{ textAlign: 'center' }}>
+          <Link
+            to={`/community/${slug}/history`}
+            style={{
+              color: '#6b7280',
+              textDecoration: 'none',
+              fontSize: '14px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              padding: '8px 16px',
+              borderRadius: '4px',
+              transition: 'color 0.2s',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.color = branding.primaryColor;
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.color = '#6b7280';
+            }}
+          >
+            <span style={{ fontSize: '16px' }}>📋</span>
+            View Session History
+          </Link>
+        </div>
       </div>
     </div>
   );

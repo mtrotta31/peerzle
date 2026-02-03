@@ -204,4 +204,23 @@ export async function getRating(conversationId: string): Promise<Rating> {
   return response.data;
 }
 
+// History types
+export interface HistoryConversation {
+  id: string;
+  topic: string | null;
+  started_at: string;
+  ended_at: string | null;
+  role: 'seeker' | 'helper';
+  other_user_email: string | null;
+  rating: number | null;
+  felt_heard: boolean | null;
+  would_recommend: boolean | null;
+}
+
+// History API
+export async function getSessionHistory(communitySlug: string): Promise<HistoryConversation[]> {
+  const response = await api.get<HistoryConversation[]>(`/api/history/${communitySlug}`);
+  return response.data;
+}
+
 export default api;

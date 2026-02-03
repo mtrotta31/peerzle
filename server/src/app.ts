@@ -16,6 +16,7 @@ import conversationRoutes from './routes/conversations';
 import messageRoutes from './routes/messages';
 import helperRoutes from './routes/helpers';
 import ratingRoutes from './routes/ratings';
+import historyRoutes from './routes/history';
 import { initializeSocket } from './config/socket';
 
 const app = express();
@@ -49,6 +50,7 @@ app.use('/api/conversations', conversationRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/helpers', helperRoutes);
 app.use('/api/ratings', ratingRoutes);
+app.use('/api/history', historyRoutes);
 
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
