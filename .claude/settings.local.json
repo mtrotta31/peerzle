@@ -6,7 +6,8 @@
       "Bash(psql:*)",
       "Bash(git add:*)",
       "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd conversation ratings: post-session feedback with star ratings, felt-heard, and recommendations\n\n- Add conversation_ratings table migration with rating \\(1-5\\), felt_heard \\(seeker only\\), would_recommend, and feedback_text fields\n- Create /api/ratings routes for submitting and retrieving ratings\n- Add RatingModal component with interactive star rating, Yes/No toggles, and optional feedback\n- Integrate rating modal into ChatPage after session ends\n- Emit conversation_ended socket event so both participants see rating modal\n- Return community_slug from end conversation endpoint for proper navigation\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
-      "Bash(git push:*)"
+      "Bash(git push:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
