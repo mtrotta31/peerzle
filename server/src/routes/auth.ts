@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { query } from '../config/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
+import { CURRENT_TOS_VERSION } from '../data/legal-content';
 
 const router = Router();
 
@@ -28,7 +29,7 @@ function generateToken(userId: string, email: string): string {
 // POST /api/auth/signup
 router.post('/signup', async (req: Request, res: Response) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, acceptedTermsVersion } = req.body;
 
     if (!email || !password) {
       res.status(400).json({ error: 'Email and password are required' });
@@ -45,6 +46,12 @@ router.post('/signup', async (req: Request, res: Response) => {
       return;
     }
 
+    // Validate terms acceptance
+    if (!acceptedTermsVersion || acceptedTermsVersion !== CURRENT_TOS_VERSION) {
+      res.status(400).json({ error: 'You must accept the current Terms of Service to create an account' });
+      return;
+    }
+
     const existing = await query<UserRow>(
       'SELECT id FROM users WHERE email = $1',
       [email.toLowerCase()]
@@ -57,12 +64,29 @@ router.post('/signup', async (req: Request, res: Response) => {
 
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
+    // Insert user with TOS acceptance
     const result = await query<UserRow>(
-      'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING id, email, created_at',
-      [email.toLowerCase(), passwordHash]
+      `INSERT INTO users (email, password_hash, tos_accepted_at, tos_version)
+       VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
+       RETURNING id, email, created_at`,
+      [email.toLowerCase(), passwordHash, CURRENT_TOS_VERSION]
     );
 
     const user = result.rows[0];
+
+    // Get IP address for audit log
+    const ipAddress =
+      (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() ||
+      req.socket.remoteAddress ||
+      null;
+
+    // Log the acceptance for audit trail
+    await query(
+      `INSERT INTO tos_acceptance_log (user_id, version, ip_address)
+       VALUES ($1, $2, $3)`,
+      [user.id, CURRENT_TOS_VERSION, ipAddress]
+    );
+
     const token = generateToken(user.id, user.email);
 
     res.status(201).json({

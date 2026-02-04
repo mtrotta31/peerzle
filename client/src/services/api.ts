@@ -23,8 +23,8 @@ export interface AuthResponse {
   token: string;
 }
 
-export async function signup(email: string, password: string): Promise<AuthResponse> {
-  const response = await api.post<AuthResponse>('/api/auth/signup', { email, password });
+export async function signup(email: string, password: string, acceptedTermsVersion: string): Promise<AuthResponse> {
+  const response = await api.post<AuthResponse>('/api/auth/signup', { email, password, acceptedTermsVersion });
   return response.data;
 }
 
@@ -45,6 +45,40 @@ export async function forgotPassword(email: string): Promise<{ message: string }
 
 export async function resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
   const response = await api.post<{ message: string }>('/api/auth/reset-password', { token, newPassword });
+  return response.data;
+}
+
+// Legal types
+export interface LegalContent {
+  version: string;
+  content: string;
+}
+
+export interface AcceptanceStatus {
+  accepted: boolean;
+  version: string | null;
+  acceptedAt: string | null;
+  currentVersion: string;
+}
+
+// Legal API
+export async function getLegalTerms(): Promise<LegalContent> {
+  const response = await api.get<LegalContent>('/api/legal/terms');
+  return response.data;
+}
+
+export async function getLegalPrivacy(): Promise<LegalContent> {
+  const response = await api.get<LegalContent>('/api/legal/privacy');
+  return response.data;
+}
+
+export async function getAcceptanceStatus(): Promise<AcceptanceStatus> {
+  const response = await api.get<AcceptanceStatus>('/api/legal/acceptance-status');
+  return response.data;
+}
+
+export async function acceptTerms(version: string): Promise<{ success: boolean; version: string }> {
+  const response = await api.post<{ success: boolean; version: string }>('/api/legal/accept', { version });
   return response.data;
 }
 

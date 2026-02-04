@@ -3,10 +3,13 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AxiosError } from 'axios';
 
+const CURRENT_TOS_VERSION = '1.0';
+
 export default function SignupPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { signup } = useAuth();
@@ -21,10 +24,15 @@ export default function SignupPage() {
       return;
     }
 
+    if (!acceptedTerms) {
+      setError('You must accept the Terms of Service and Privacy Policy');
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      await signup(email, password);
+      await signup(email, password, CURRENT_TOS_VERSION);
       navigate('/communities');
     } catch (err) {
       const axiosError = err as AxiosError<{ error: string }>;
@@ -166,7 +174,7 @@ export default function SignupPage() {
               />
             </div>
 
-            <div style={{ marginBottom: '24px' }}>
+            <div style={{ marginBottom: '20px' }}>
               <label
                 htmlFor="confirmPassword"
                 style={{
@@ -190,6 +198,49 @@ export default function SignupPage() {
                 onFocus={handleFocus}
                 onBlur={handleBlur}
               />
+            </div>
+
+            <div style={{ marginBottom: '24px' }}>
+              <label
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '10px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  color: '#475569',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={acceptedTerms}
+                  onChange={(e) => setAcceptedTerms(e.target.checked)}
+                  style={{
+                    width: '18px',
+                    height: '18px',
+                    marginTop: '2px',
+                    cursor: 'pointer',
+                  }}
+                />
+                <span>
+                  I agree to the{' '}
+                  <Link
+                    to="/terms"
+                    target="_blank"
+                    style={{ color: '#2B7CF6', textDecoration: 'underline' }}
+                  >
+                    Terms of Service
+                  </Link>{' '}
+                  and{' '}
+                  <Link
+                    to="/privacy"
+                    target="_blank"
+                    style={{ color: '#2B7CF6', textDecoration: 'underline' }}
+                  >
+                    Privacy Policy
+                  </Link>
+                </span>
+              </label>
             </div>
 
             <button

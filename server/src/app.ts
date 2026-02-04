@@ -23,6 +23,7 @@ import facilitatorRoutes from './routes/facilitator';
 import adminRoutes from './routes/admin';
 import verificationRoutes from './routes/verification';
 import trainingRoutes from './routes/training';
+import legalRoutes from './routes/legal';
 import { initializeSocket } from './config/socket';
 
 const app = express();
@@ -63,6 +64,7 @@ app.use('/api/facilitator', facilitatorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/communities', verificationRoutes);
 app.use('/api/training', trainingRoutes);
+app.use('/api/legal', legalRoutes);
 
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

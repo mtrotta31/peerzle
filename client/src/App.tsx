@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { getAcceptanceStatus } from './services/api';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
 import ForgotPassword from './pages/ForgotPassword';
@@ -11,16 +13,54 @@ import HelperDashboard from './pages/HelperDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import HelperTraining from './pages/HelperTraining';
 import ChatPage from './pages/ChatPage';
+import TermsOfService from './pages/TermsOfService';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsAcceptanceModal from './components/TermsAcceptanceModal';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
+  const [termsAccepted, setTermsAccepted] = useState<boolean | null>(null);
+  const [currentVersion, setCurrentVersion] = useState<string>('');
+  const [checkingTerms, setCheckingTerms] = useState(true);
 
-  if (isLoading) {
+  useEffect(() => {
+    if (isAuthenticated) {
+      getAcceptanceStatus()
+        .then((status) => {
+          setTermsAccepted(status.accepted);
+          setCurrentVersion(status.currentVersion);
+        })
+        .catch(() => {
+          // If we can't check, assume accepted to not block the user
+          setTermsAccepted(true);
+        })
+        .finally(() => {
+          setCheckingTerms(false);
+        });
+    } else {
+      setCheckingTerms(false);
+    }
+  }, [isAuthenticated]);
+
+  if (isLoading || checkingTerms) {
     return <div style={{ padding: '20px' }}>Loading...</div>;
   }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Show terms acceptance modal if terms not accepted
+  if (termsAccepted === false) {
+    return (
+      <>
+        {children}
+        <TermsAcceptanceModal
+          currentVersion={currentVersion}
+          onAccepted={() => setTermsAccepted(true)}
+        />
+      </>
+    );
   }
 
   return <>{children}</>;
@@ -55,6 +95,10 @@ function AppRoutes() {
         path="/reset-password"
         element={isAuthenticated ? <Navigate to="/communities" replace /> : <ResetPassword />}
       />
+
+      {/* Public legal routes */}
+      <Route path="/terms" element={<TermsOfService />} />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
 
       {/* Protected routes */}
       <Route

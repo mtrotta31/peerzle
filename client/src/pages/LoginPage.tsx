@@ -247,11 +247,44 @@ export default function LoginPage() {
             fontSize: '14px',
           }}
         >
-          Already have an account?{' '}
-          <Link to="/login" style={{ color: '#2B7CF6', fontWeight: 500 }}>
-            Sign in
+          Don't have an account?{' '}
+          <Link to="/signup" style={{ color: '#2B7CF6', fontWeight: 500 }}>
+            Sign up
           </Link>
         </p>
+
+        {/* Footer Links */}
+        <div
+          style={{
+            marginTop: '32px',
+            paddingTop: '24px',
+            borderTop: '1px solid #E2E8F0',
+            display: 'flex',
+            justifyContent: 'center',
+            gap: '24px',
+          }}
+        >
+          <Link
+            to="/terms"
+            style={{
+              color: '#64748B',
+              fontSize: '13px',
+              textDecoration: 'none',
+            }}
+          >
+            Terms of Service
+          </Link>
+          <Link
+            to="/privacy"
+            style={{
+              color: '#64748B',
+              fontSize: '13px',
+              textDecoration: 'none',
+            }}
+          >
+            Privacy Policy
+          </Link>
+        </div>
       </div>
     </div>
   );
