@@ -11,6 +11,7 @@ import { createServer } from 'http';
 import cors from 'cors';
 import helmet from 'helmet';
 import authRoutes from './routes/auth';
+import passwordResetRoutes from './routes/password-reset';
 import communityRoutes from './routes/communities';
 import conversationRoutes from './routes/conversations';
 import messageRoutes from './routes/messages';
@@ -50,6 +51,7 @@ app.get('/api/health', (_req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/auth', passwordResetRoutes);
 app.use('/api/communities', communityRoutes);
 app.use('/api/conversations', conversationRoutes);
 app.use('/api/messages', messageRoutes);

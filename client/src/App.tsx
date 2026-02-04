@@ -2,6 +2,8 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import CommunitiesPage from './pages/CommunitiesPage';
 import CommunityDashboard from './pages/CommunityDashboard';
 import SessionHistory from './pages/SessionHistory';
@@ -44,6 +46,14 @@ function AppRoutes() {
       <Route
         path="/signup"
         element={isAuthenticated ? <Navigate to="/communities" replace /> : <SignupPage />}
+      />
+      <Route
+        path="/forgot-password"
+        element={isAuthenticated ? <Navigate to="/communities" replace /> : <ForgotPassword />}
+      />
+      <Route
+        path="/reset-password"
+        element={isAuthenticated ? <Navigate to="/communities" replace /> : <ResetPassword />}
       />
 
       {/* Protected routes */}

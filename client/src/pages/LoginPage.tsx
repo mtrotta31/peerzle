@@ -127,7 +127,7 @@ export default function LoginPage() {
               />
             </div>
 
-            <div style={{ marginBottom: '24px' }}>
+            <div style={{ marginBottom: '16px' }}>
               <label
                 htmlFor="password"
                 style={{
@@ -164,6 +164,20 @@ export default function LoginPage() {
                   e.currentTarget.style.backgroundColor = 'white';
                 }}
               />
+            </div>
+
+            <div style={{ marginBottom: '24px', textAlign: 'right' }}>
+              <Link
+                to="/forgot-password"
+                style={{
+                  color: '#2B7CF6',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                }}
+              >
+                Forgot password?
+              </Link>
             </div>
 
             <button

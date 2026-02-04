@@ -38,6 +38,16 @@ export async function getCurrentUser(): Promise<User> {
   return response.data;
 }
 
+export async function forgotPassword(email: string): Promise<{ message: string }> {
+  const response = await api.post<{ message: string }>('/api/auth/forgot-password', { email });
+  return response.data;
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<{ message: string }> {
+  const response = await api.post<{ message: string }>('/api/auth/reset-password', { token, newPassword });
+  return response.data;
+}
+
 // Community types
 export interface CommunityConfig {
   branding: {
