@@ -5,6 +5,7 @@ import { connectSocket, joinConversation, leaveConversation, sendTypingIndicator
 import { useAuth } from '../context/AuthContext';
 import RatingModal from '../components/RatingModal';
 import FacilitatorPanel from '../components/FacilitatorPanel';
+import ReportUserModal from '../components/ReportUserModal';
 
 interface SafetyAlert {
   riskLevel: 'moderate_concern' | 'crisis';
@@ -38,6 +39,8 @@ export default function ChatPage() {
   const [helperJoined, setHelperJoined] = useState<string | null>(null);
   const [helperIsVerified, setHelperIsVerified] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportSubmitted, setReportSubmitted] = useState(false);
   const [userRole, setUserRole] = useState<'seeker' | 'helper' | null>(null);
   const [isAdminViewer, setIsAdminViewer] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -326,6 +329,37 @@ export default function ChatPage() {
           >
             Back
           </Link>
+          {!isAdminViewer && !reportSubmitted && (
+            <button
+              onClick={() => setShowReportModal(true)}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: 'white',
+                color: '#64748B',
+                border: '1px solid #E2E8F0',
+                borderRadius: '24px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500,
+                transition: 'all 0.2s',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.borderColor = '#DC2626';
+                e.currentTarget.style.color = '#DC2626';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.borderColor = '#E2E8F0';
+                e.currentTarget.style.color = '#64748B';
+              }}
+            >
+              Report
+            </button>
+          )}
+          {reportSubmitted && (
+            <span style={{ fontSize: '13px', color: '#16A34A', fontWeight: 500, padding: '8px 0' }}>
+              Report submitted
+            </span>
+          )}
           {!isEnded && !isAdminViewer && (
             <button
               onClick={handleEndSession}
@@ -806,6 +840,18 @@ export default function ChatPage() {
           role={userRole}
           onClose={handleRatingClose}
           onSubmitted={handleRatingSubmitted}
+        />
+      )}
+
+      {/* Report User Modal */}
+      {showReportModal && conversationId && (
+        <ReportUserModal
+          conversationId={conversationId}
+          onClose={() => setShowReportModal(false)}
+          onSubmitted={() => {
+            setShowReportModal(false);
+            setReportSubmitted(true);
+          }}
         />
       )}
     </div>

@@ -13,11 +13,6 @@ interface MembershipRow {
   role: string;
 }
 
-interface CommunityRow {
-  id: string;
-  name: string;
-}
-
 // Helper to get membership for user in community
 async function getMembership(userId: string, communitySlug: string): Promise<MembershipRow | null> {
   const result = await query<MembershipRow>(

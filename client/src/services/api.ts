@@ -599,4 +599,57 @@ export async function completeOnboarding(
   return response.data;
 }
 
+// Report types
+export interface UserReport {
+  id: number;
+  conversationId: string;
+  reporterEmail: string;
+  reportedEmail: string;
+  category: string;
+  description: string | null;
+  status: 'pending' | 'reviewed' | 'dismissed';
+  adminNotes: string | null;
+  reviewerEmail: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+  conversationTopic: string | null;
+}
+
+export interface SubmitReportResponse {
+  id: number;
+  conversationId: string;
+  category: string;
+  description: string | null;
+  status: string;
+  createdAt: string;
+}
+
+// Report API
+export async function submitReport(
+  conversationId: string,
+  category: string,
+  description?: string
+): Promise<SubmitReportResponse> {
+  const response = await api.post<SubmitReportResponse>(`/api/reports/${conversationId}`, { category, description });
+  return response.data;
+}
+
+export async function getReports(communitySlug: string): Promise<UserReport[]> {
+  const response = await api.get<UserReport[]>(`/api/reports/${communitySlug}/list`);
+  return response.data;
+}
+
+export async function updateReport(
+  communitySlug: string,
+  reportId: number,
+  status: 'reviewed' | 'dismissed',
+  adminNotes?: string
+): Promise<{ id: number; status: string; adminNotes: string | null; reviewedAt: string }> {
+  const response = await api.put<{ id: number; status: string; adminNotes: string | null; reviewedAt: string }>(
+    `/api/reports/${communitySlug}/${reportId}`,
+    { status, adminNotes }
+  );
+  return response.data;
+}
+
 export default api;

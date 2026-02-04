@@ -7,6 +7,7 @@ import {
   AdminAlert,
   InviteCode,
   VerificationRequest,
+  UserReport,
   getCommunity,
   getAdminOverview,
   getAdminMembers,
@@ -17,6 +18,8 @@ import {
   updateInviteCode,
   getVerificationRequests,
   reviewVerificationRequest,
+  getReports,
+  updateReport,
 } from '../services/api';
 
 type TabType = 'overview' | 'members' | 'verifications' | 'alerts' | 'inviteCodes';
@@ -39,6 +42,9 @@ export default function AdminDashboard() {
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [reviewingRequest, setReviewingRequest] = useState<number | null>(null);
   const [reviewNotes, setReviewNotes] = useState<Record<number, string>>({});
+  const [reports, setReports] = useState<UserReport[]>([]);
+  const [updatingReport, setUpdatingReport] = useState<number | null>(null);
+  const [reportNotes, setReportNotes] = useState<Record<number, string>>({});
 
   useEffect(() => {
     async function loadData() {
@@ -71,9 +77,13 @@ export default function AdminDashboard() {
         if (activeTab === 'members' && members.length === 0) {
           const membersData = await getAdminMembers(slug!);
           setMembers(membersData);
-        } else if (activeTab === 'alerts' && alerts.length === 0) {
-          const alertsData = await getAdminAlerts(slug!);
+        } else if (activeTab === 'alerts' && alerts.length === 0 && reports.length === 0) {
+          const [alertsData, reportsData] = await Promise.all([
+            getAdminAlerts(slug!),
+            getReports(slug!),
+          ]);
           setAlerts(alertsData);
+          setReports(reportsData);
         } else if (activeTab === 'inviteCodes' && inviteCodes.length === 0) {
           const codesData = await getInviteCodes(slug!);
           setInviteCodes(codesData);
@@ -172,6 +182,49 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleReportAction = async (reportId: number, status: 'reviewed' | 'dismissed') => {
+    if (!slug || updatingReport !== null) return;
+
+    setUpdatingReport(reportId);
+    try {
+      const updated = await updateReport(slug, reportId, status, reportNotes[reportId]);
+      setReports((prev) =>
+        prev.map((r) =>
+          r.id === reportId
+            ? { ...r, status: updated.status as 'reviewed' | 'dismissed', adminNotes: updated.adminNotes, reviewedAt: updated.reviewedAt }
+            : r
+        )
+      );
+      setReportNotes((prev) => {
+        const newNotes = { ...prev };
+        delete newNotes[reportId];
+        return newNotes;
+      });
+    } catch (err) {
+      console.error('Failed to update report:', err);
+      alert('Failed to update report');
+    } finally {
+      setUpdatingReport(null);
+    }
+  };
+
+  const getCategoryLabel = (category: string) => {
+    const labels: Record<string, string> = {
+      inappropriate_behavior: 'Inappropriate Behavior',
+      harmful_content: 'Harmful Content',
+      spam: 'Spam',
+      crisis_concerns: 'Crisis Concerns',
+      other: 'Other',
+    };
+    return labels[category] || category;
+  };
+
+  const getReportStatusStyle = (status: string) => {
+    if (status === 'reviewed') return { backgroundColor: '#DCFCE7', color: '#16A34A' };
+    if (status === 'dismissed') return { backgroundColor: '#F1F5F9', color: '#64748B' };
+    return { backgroundColor: '#FEF3C7', color: '#92400E' };
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
@@ -253,6 +306,7 @@ export default function AdminDashboard() {
   };
 
   const pendingVerifications = verificationRequests.filter((r) => r.status === 'pending').length;
+  const pendingReports = reports.filter((r) => r.status === 'pending').length;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC' }}>
@@ -352,6 +406,22 @@ export default function AdminDashboard() {
                   }}
                 >
                   {pendingVerifications}
+                </span>
+              )}
+              {tab === 'alerts' && pendingReports > 0 && (
+                <span
+                  style={{
+                    backgroundColor: '#DC2626',
+                    color: 'white',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    padding: '2px 6px',
+                    borderRadius: '10px',
+                    minWidth: '18px',
+                    textAlign: 'center',
+                  }}
+                >
+                  {pendingReports}
                 </span>
               )}
             </button>
@@ -464,98 +534,329 @@ export default function AdminDashboard() {
 
         {/* Alerts Tab */}
         {activeTab === 'alerts' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {alerts.length === 0 ? (
-              <div
-                style={{
-                  backgroundColor: 'white',
-                  borderRadius: '16px',
-                  padding: '48px 24px',
-                  textAlign: 'center',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-                }}
-              >
-                <div style={{ fontSize: '48px', marginBottom: '16px' }}>✅</div>
-                <h3 style={{ margin: '0 0 8px 0', color: '#1E3A5F' }}>No safety alerts</h3>
-                <p style={{ margin: 0, color: '#64748B' }}>
-                  All conversations are proceeding safely.
-                </p>
-              </div>
-            ) : (
-              alerts.map((alert) => {
-                const badgeStyle = getSeverityBadgeStyle(alert.severity, alert.riskLevel);
-                return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+            {/* User Reports Section */}
+            <div>
+              <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 600, color: '#1E3A5F' }}>
+                User Reports
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {reports.length === 0 ? (
                   <div
-                    key={alert.id}
                     style={{
                       backgroundColor: 'white',
                       borderRadius: '16px',
-                      padding: '16px 20px',
+                      padding: '32px 24px',
+                      textAlign: 'center',
                       boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-                      borderLeft: `4px solid ${badgeStyle.borderColor}`,
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                          <span
-                            style={{
-                              padding: '4px 10px',
-                              borderRadius: '12px',
-                              fontSize: '12px',
-                              fontWeight: 600,
-                              textTransform: 'uppercase',
-                              backgroundColor: badgeStyle.backgroundColor,
-                              color: badgeStyle.color,
-                            }}
-                          >
-                            {alert.riskLevel || alert.severity}
-                          </span>
-                          <span style={{ fontSize: '13px', color: '#64748B' }}>
-                            {formatDateTime(alert.createdAt)}
-                          </span>
-                        </div>
-                        {alert.flags.length > 0 && (
-                          <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#1E3A5F' }}>
-                            <strong>Flags:</strong> {alert.flags.join(', ')}
-                          </p>
-                        )}
-                        {alert.suggestedAction && (
-                          <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
-                            <strong>Suggested:</strong> {alert.suggestedAction}
-                          </p>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => navigate(`/chat/${alert.conversationId}`)}
+                    <p style={{ margin: 0, color: '#64748B', fontSize: '14px' }}>
+                      No user reports have been submitted.
+                    </p>
+                  </div>
+                ) : (
+                  reports.map((report) => {
+                    const statusStyle = getReportStatusStyle(report.status);
+                    const isPending = report.status === 'pending';
+                    return (
+                      <div
+                        key={report.id}
                         style={{
-                          padding: '6px 14px',
                           backgroundColor: 'white',
-                          color: '#2B7CF6',
-                          border: '1px solid #2B7CF6',
                           borderRadius: '16px',
-                          cursor: 'pointer',
-                          fontSize: '13px',
-                          fontWeight: 500,
-                          whiteSpace: 'nowrap',
-                          transition: 'all 0.2s',
-                        }}
-                        onMouseOver={(e) => {
-                          e.currentTarget.style.backgroundColor = '#2B7CF6';
-                          e.currentTarget.style.color = 'white';
-                        }}
-                        onMouseOut={(e) => {
-                          e.currentTarget.style.backgroundColor = 'white';
-                          e.currentTarget.style.color = '#2B7CF6';
+                          padding: '16px 20px',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                          borderLeft: `4px solid ${isPending ? '#DC2626' : statusStyle.color}`,
                         }}
                       >
-                        View Conversation
-                      </button>
-                    </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                              <span
+                                style={{
+                                  padding: '4px 10px',
+                                  borderRadius: '12px',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  backgroundColor: '#FEF2F2',
+                                  color: '#DC2626',
+                                }}
+                              >
+                                {getCategoryLabel(report.category)}
+                              </span>
+                              <span
+                                style={{
+                                  padding: '4px 10px',
+                                  borderRadius: '12px',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  textTransform: 'capitalize',
+                                  ...statusStyle,
+                                }}
+                              >
+                                {report.status}
+                              </span>
+                              <span style={{ fontSize: '13px', color: '#64748B' }}>
+                                {formatDateTime(report.createdAt)}
+                              </span>
+                            </div>
+                            <p style={{ margin: '0 0 4px', fontSize: '14px', color: '#1E3A5F' }}>
+                              <strong>Reported:</strong> {report.reportedEmail}
+                            </p>
+                            <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#64748B' }}>
+                              <strong>By:</strong> {report.reporterEmail}
+                            </p>
+                            {report.conversationTopic && (
+                              <p style={{ margin: '0 0 4px', fontSize: '13px', color: '#64748B' }}>
+                                <strong>Topic:</strong> {report.conversationTopic}
+                              </p>
+                            )}
+                            {report.description && (
+                              <div
+                                style={{
+                                  backgroundColor: '#F8FAFC',
+                                  borderRadius: '10px',
+                                  padding: '10px 14px',
+                                  marginTop: '8px',
+                                }}
+                              >
+                                <p style={{ margin: 0, fontSize: '13px', color: '#1E3A5F', whiteSpace: 'pre-wrap' }}>
+                                  {report.description}
+                                </p>
+                              </div>
+                            )}
+
+                            {/* Admin notes for reviewed/dismissed */}
+                            {!isPending && report.adminNotes && (
+                              <div
+                                style={{
+                                  backgroundColor: statusStyle.backgroundColor,
+                                  borderRadius: '10px',
+                                  padding: '10px 14px',
+                                  marginTop: '8px',
+                                }}
+                              >
+                                <p style={{ margin: 0, fontSize: '13px', color: statusStyle.color }}>
+                                  <strong>Admin notes:</strong> {report.adminNotes}
+                                </p>
+                                {report.reviewerEmail && (
+                                  <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748B' }}>
+                                    Reviewed by {report.reviewerEmail} on {formatDate(report.reviewedAt || '')}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+
+                            {/* Action area for pending reports */}
+                            {isPending && (
+                              <div style={{ marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                <input
+                                  type="text"
+                                  placeholder="Add admin notes (optional)..."
+                                  value={reportNotes[report.id] || ''}
+                                  onChange={(e) =>
+                                    setReportNotes((prev) => ({ ...prev, [report.id]: e.target.value }))
+                                  }
+                                  style={{
+                                    padding: '10px 14px',
+                                    border: '1px solid #E2E8F0',
+                                    borderRadius: '10px',
+                                    fontSize: '14px',
+                                    outline: 'none',
+                                  }}
+                                  onFocus={(e) => { e.currentTarget.style.borderColor = '#2B7CF6'; }}
+                                  onBlur={(e) => { e.currentTarget.style.borderColor = '#E2E8F0'; }}
+                                />
+                                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
+                                  <button
+                                    onClick={() => handleReportAction(report.id, 'dismissed')}
+                                    disabled={updatingReport === report.id}
+                                    style={{
+                                      padding: '8px 16px',
+                                      backgroundColor: 'white',
+                                      color: '#64748B',
+                                      border: '1px solid #E2E8F0',
+                                      borderRadius: '24px',
+                                      cursor: updatingReport === report.id ? 'not-allowed' : 'pointer',
+                                      fontWeight: 500,
+                                      fontSize: '13px',
+                                      opacity: updatingReport === report.id ? 0.6 : 1,
+                                      transition: 'all 0.2s',
+                                    }}
+                                    onMouseOver={(e) => {
+                                      if (updatingReport !== report.id) {
+                                        e.currentTarget.style.borderColor = '#94A3B8';
+                                      }
+                                    }}
+                                    onMouseOut={(e) => {
+                                      e.currentTarget.style.borderColor = '#E2E8F0';
+                                    }}
+                                  >
+                                    Dismiss
+                                  </button>
+                                  <button
+                                    onClick={() => handleReportAction(report.id, 'reviewed')}
+                                    disabled={updatingReport === report.id}
+                                    style={{
+                                      padding: '8px 16px',
+                                      backgroundColor: '#2B7CF6',
+                                      color: 'white',
+                                      border: 'none',
+                                      borderRadius: '24px',
+                                      cursor: updatingReport === report.id ? 'not-allowed' : 'pointer',
+                                      fontWeight: 600,
+                                      fontSize: '13px',
+                                      opacity: updatingReport === report.id ? 0.6 : 1,
+                                      transition: 'background-color 0.2s',
+                                    }}
+                                    onMouseOver={(e) => {
+                                      if (updatingReport !== report.id) {
+                                        e.currentTarget.style.backgroundColor = '#1E6AD9';
+                                      }
+                                    }}
+                                    onMouseOut={(e) => {
+                                      e.currentTarget.style.backgroundColor = '#2B7CF6';
+                                    }}
+                                  >
+                                    {updatingReport === report.id ? 'Processing...' : 'Mark Reviewed'}
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => navigate(`/chat/${report.conversationId}`)}
+                            style={{
+                              padding: '6px 14px',
+                              backgroundColor: 'white',
+                              color: '#2B7CF6',
+                              border: '1px solid #2B7CF6',
+                              borderRadius: '16px',
+                              cursor: 'pointer',
+                              fontSize: '13px',
+                              fontWeight: 500,
+                              whiteSpace: 'nowrap',
+                              transition: 'all 0.2s',
+                              marginLeft: '12px',
+                              flexShrink: 0,
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.backgroundColor = '#2B7CF6';
+                              e.currentTarget.style.color = 'white';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.backgroundColor = 'white';
+                              e.currentTarget.style.color = '#2B7CF6';
+                            }}
+                          >
+                            View Conversation
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+
+            {/* Safety Alerts Section */}
+            <div>
+              <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 600, color: '#1E3A5F' }}>
+                Safety Alerts
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {alerts.length === 0 ? (
+                  <div
+                    style={{
+                      backgroundColor: 'white',
+                      borderRadius: '16px',
+                      padding: '32px 24px',
+                      textAlign: 'center',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                    }}
+                  >
+                    <p style={{ margin: 0, color: '#64748B', fontSize: '14px' }}>
+                      No safety alerts. All conversations are proceeding safely.
+                    </p>
                   </div>
-                );
-              })
-            )}
+                ) : (
+                  alerts.map((alert) => {
+                    const badgeStyle = getSeverityBadgeStyle(alert.severity, alert.riskLevel);
+                    return (
+                      <div
+                        key={alert.id}
+                        style={{
+                          backgroundColor: 'white',
+                          borderRadius: '16px',
+                          padding: '16px 20px',
+                          boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                          borderLeft: `4px solid ${badgeStyle.borderColor}`,
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                              <span
+                                style={{
+                                  padding: '4px 10px',
+                                  borderRadius: '12px',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  textTransform: 'uppercase',
+                                  backgroundColor: badgeStyle.backgroundColor,
+                                  color: badgeStyle.color,
+                                }}
+                              >
+                                {alert.riskLevel || alert.severity}
+                              </span>
+                              <span style={{ fontSize: '13px', color: '#64748B' }}>
+                                {formatDateTime(alert.createdAt)}
+                              </span>
+                            </div>
+                            {alert.flags.length > 0 && (
+                              <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#1E3A5F' }}>
+                                <strong>Flags:</strong> {alert.flags.join(', ')}
+                              </p>
+                            )}
+                            {alert.suggestedAction && (
+                              <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
+                                <strong>Suggested:</strong> {alert.suggestedAction}
+                              </p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => navigate(`/chat/${alert.conversationId}`)}
+                            style={{
+                              padding: '6px 14px',
+                              backgroundColor: 'white',
+                              color: '#2B7CF6',
+                              border: '1px solid #2B7CF6',
+                              borderRadius: '16px',
+                              cursor: 'pointer',
+                              fontSize: '13px',
+                              fontWeight: 500,
+                              whiteSpace: 'nowrap',
+                              transition: 'all 0.2s',
+                            }}
+                            onMouseOver={(e) => {
+                              e.currentTarget.style.backgroundColor = '#2B7CF6';
+                              e.currentTarget.style.color = 'white';
+                            }}
+                            onMouseOut={(e) => {
+                              e.currentTarget.style.backgroundColor = 'white';
+                              e.currentTarget.style.color = '#2B7CF6';
+                            }}
+                          >
+                            View Conversation
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
           </div>
         )}
 
