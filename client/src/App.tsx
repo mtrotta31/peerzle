@@ -16,6 +16,7 @@ import ChatPage from './pages/ChatPage';
 import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsAcceptanceModal from './components/TermsAcceptanceModal';
+import OnboardingFlow from './pages/OnboardingFlow';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -114,6 +115,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <CommunityDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/community/:slug/onboarding"
+        element={
+          <ProtectedRoute>
+            <OnboardingFlow />
           </ProtectedRoute>
         }
       />

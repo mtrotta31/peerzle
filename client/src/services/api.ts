@@ -548,4 +548,55 @@ export async function completeTrainingModule(
   return response.data;
 }
 
+// Onboarding types
+export interface OnboardingStatus {
+  onboardingCompleted: boolean;
+  displayName: string | null;
+}
+
+export interface TopicRating {
+  topic: string;
+  historyRating: number;
+  knowledgeRating: number;
+  copingRating: number;
+}
+
+export interface OnboardingData {
+  displayName: string;
+  topics: TopicRating[];
+  demographics?: Record<string, unknown>;
+  role: 'seeker' | 'both';
+}
+
+export interface OnboardingResult {
+  success: boolean;
+  displayName: string;
+  topicsCount: number;
+  role: string;
+}
+
+// Onboarding API
+export async function getOnboardingStatus(communitySlug: string): Promise<OnboardingStatus> {
+  const response = await api.get<OnboardingStatus>(`/api/onboarding/${communitySlug}/status`);
+  return response.data;
+}
+
+export async function getCommunityTopics(communitySlug: string): Promise<string[]> {
+  const response = await api.get<{ topics: string[] }>(`/api/onboarding/${communitySlug}/topics`);
+  return response.data.topics;
+}
+
+export async function generateDisplayName(communitySlug: string): Promise<string> {
+  const response = await api.post<{ displayName: string }>(`/api/onboarding/${communitySlug}/generate-name`);
+  return response.data.displayName;
+}
+
+export async function completeOnboarding(
+  communitySlug: string,
+  data: OnboardingData
+): Promise<OnboardingResult> {
+  const response = await api.post<OnboardingResult>(`/api/onboarding/${communitySlug}/complete`, data);
+  return response.data;
+}
+
 export default api;

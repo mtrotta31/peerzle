@@ -463,12 +463,12 @@ export default function ChatPage() {
                   fontWeight: 600,
                 }}
               >
-                ✓ Verified Specialist
+                Verified Peer Supporter
               </span>
             </>
           ) : (
             <>
-              Connected with <strong>{helperJoined}</strong>
+              Connected with a <strong>Peer Supporter</strong>
             </>
           )}
         </div>
@@ -529,9 +529,14 @@ export default function ChatPage() {
               if (isPeerBot) return 'PeerBot';
               if (isAdminViewer) {
                 const role = isFromSeeker ? 'Seeker' : isFromHelper ? 'Helper' : 'Unknown';
-                return `${role}: ${message.sender_email || 'Unknown'}`;
+                return `${role}: ${message.sender_email || 'Anonymous'}`;
               }
-              return message.sender_email || 'Unknown';
+              // Show friendly label instead of email for privacy
+              if (userRole === 'seeker') {
+                return isFromHelper ? 'Peer Supporter' : 'Anonymous';
+              } else {
+                return isFromSeeker ? 'Your Peer' : 'Anonymous';
+              }
             };
 
             // Background colors based on design system

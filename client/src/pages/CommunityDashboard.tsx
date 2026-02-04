@@ -15,6 +15,7 @@ import {
   acceptConversation,
   getMyVerificationRequest,
   submitVerificationRequest,
+  getOnboardingStatus,
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { AxiosError } from 'axios';
@@ -57,6 +58,14 @@ export default function CommunityDashboard() {
       if (!slug) return;
 
       try {
+        // First check onboarding status
+        const onboardingStatus = await getOnboardingStatus(slug);
+        if (!onboardingStatus.onboardingCompleted) {
+          // Redirect to onboarding if not completed
+          navigate(`/community/${slug}/onboarding`);
+          return;
+        }
+
         const [communityData, membershipData, activeConvs, verificationData] = await Promise.all([
           getCommunity(slug),
           getMembership(slug),
@@ -93,7 +102,7 @@ export default function CommunityDashboard() {
     }
 
     loadData();
-  }, [slug]);
+  }, [slug, navigate]);
 
   // Refresh pending conversations when availability changes
   useEffect(() => {
