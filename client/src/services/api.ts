@@ -260,6 +260,7 @@ export interface Conversation {
   seeker_rating: number | null;
   helper_rating: number | null;
   safety_flags: unknown[];
+  match_score?: number | null;
   community_slug?: string;
   community_name?: string;
   messages?: Message[];
@@ -300,6 +301,7 @@ export async function toggleAvailability(communitySlug: string, isAvailable: boo
 
 export interface PendingConversation extends Conversation {
   seeker_email: string;
+  match_score?: number;
 }
 
 export async function getPendingConversations(): Promise<PendingConversation[]> {

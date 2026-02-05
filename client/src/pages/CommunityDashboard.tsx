@@ -17,6 +17,7 @@ import {
   submitVerificationRequest,
   getOnboardingStatus,
 } from '../services/api';
+import { connectSocket, getSocket, HelpRequestEvent } from '../services/socket';
 import { useAuth } from '../context/AuthContext';
 import { AxiosError } from 'axios';
 
@@ -108,11 +109,57 @@ export default function CommunityDashboard() {
   useEffect(() => {
     if (membership?.is_available && community) {
       loadPendingConversations();
-      // Poll for new pending conversations every 10 seconds
+      // Poll for new pending conversations every 10 seconds (fallback)
       const interval = setInterval(loadPendingConversations, 10000);
       return () => clearInterval(interval);
     }
     return undefined;
+  }, [membership?.is_available, community?.id]);
+
+  // Listen for real-time help_request socket events
+  useEffect(() => {
+    if (!membership?.is_available || !community) return;
+
+    const socket = connectSocket();
+
+    const handleHelpRequest = (event: HelpRequestEvent) => {
+      // Only handle requests for this community
+      if (event.communityId !== community.id) return;
+
+      setPendingConversations((prev) => {
+        // Avoid duplicates
+        if (prev.some((p) => p.id === event.conversationId)) return prev;
+
+        const newPending: PendingConversation = {
+          id: event.conversationId,
+          community_id: event.communityId,
+          seeker_membership_id: '',
+          helper_membership_id: null,
+          topic: event.topic,
+          status: 'matching',
+          started_at: event.startedAt,
+          ended_at: null,
+          seeker_rating: null,
+          helper_rating: null,
+          safety_flags: [],
+          seeker_email: '',
+          match_score: event.matchScore,
+        };
+
+        // Insert sorted by match score descending
+        const updated = [...prev, newPending].sort(
+          (a, b) => (b.match_score ?? 0) - (a.match_score ?? 0)
+        );
+        return updated;
+      });
+    };
+
+    socket.on('help_request', handleHelpRequest);
+
+    return () => {
+      const s = getSocket();
+      s?.off('help_request', handleHelpRequest);
+    };
   }, [membership?.is_available, community?.id]);
 
   const handleStartConversation = async (topic: string) => {
@@ -729,7 +776,15 @@ export default function CommunityDashboard() {
               Pending Requests ({pendingConversations.length})
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {pendingConversations.map((conv) => (
+              {pendingConversations.map((conv) => {
+                const score = conv.match_score;
+                const scoreColor = score != null && score >= 80
+                  ? '#16A34A'
+                  : score != null && score >= 60
+                  ? '#D97706'
+                  : '#94A3B8';
+
+                return (
                 <div
                   key={conv.id}
                   style={{
@@ -742,11 +797,34 @@ export default function CommunityDashboard() {
                   }}
                 >
                   <div>
-                    <p style={{ margin: 0, fontWeight: 500, color: '#1E3A5F' }}>
-                      {conv.topic || 'General Support'}
-                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <p style={{ margin: 0, fontWeight: 500, color: '#1E3A5F' }}>
+                        {conv.topic || 'General Support'}
+                      </p>
+                      {score != null && (
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: 'white',
+                            backgroundColor: scoreColor,
+                          }}
+                          title="Shared experience in this topic"
+                        >
+                          {score}% match
+                        </span>
+                      )}
+                    </div>
                     <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748B' }}>
                       Waiting {formatTimeWaiting(conv.started_at)}
+                      {score != null && (
+                        <span style={{ marginLeft: '8px', color: '#94A3B8' }}>
+                          &middot; Shared experience in this topic
+                        </span>
+                      )}
                     </p>
                   </div>
                   <button
@@ -776,7 +854,8 @@ export default function CommunityDashboard() {
                     {isAccepting === conv.id ? 'Accepting...' : 'Accept'}
                   </button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

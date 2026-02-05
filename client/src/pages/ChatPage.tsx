@@ -43,6 +43,8 @@ export default function ChatPage() {
   const [reportSubmitted, setReportSubmitted] = useState(false);
   const [userRole, setUserRole] = useState<'seeker' | 'helper' | null>(null);
   const [isAdminViewer, setIsAdminViewer] = useState(false);
+  const [matchingElapsed, setMatchingElapsed] = useState(0);
+  const [peerbotFallbackActive, setPeerbotFallbackActive] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { user } = useAuth();
@@ -136,6 +138,13 @@ export default function ChatPage() {
             }
           }
         });
+
+        // Listen for PeerBot fallback
+        socket.on('peerbot_fallback', (event: { conversationId: string }) => {
+          if (event.conversationId === conversationId) {
+            setPeerbotFallbackActive(true);
+          }
+        });
       } catch (err) {
         setError('Failed to load conversation');
         console.error(err);
@@ -157,8 +166,24 @@ export default function ChatPage() {
       socket?.off('safety_alert');
       socket?.off('helper_joined');
       socket?.off('conversation_ended');
+      socket?.off('peerbot_fallback');
     };
   }, [conversationId, user?.id]);
+
+  // Matching elapsed timer - ticks every second while in matching state
+  useEffect(() => {
+    if (conversation?.status !== 'matching' || helperJoined) return;
+
+    const updateElapsed = () => {
+      const startedAt = new Date(conversation.started_at).getTime();
+      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
+      setMatchingElapsed(elapsed);
+    };
+
+    updateElapsed();
+    const interval = setInterval(updateElapsed, 1000);
+    return () => clearInterval(interval);
+  }, [conversation?.status, conversation?.started_at, helperJoined]);
 
   const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
@@ -481,7 +506,29 @@ export default function ChatPage() {
               display: 'inline-block',
             }}
           />
-          {helperIsVerified ? (
+          {peerbotFallbackActive ? (
+            <>
+              A <strong>Peer Supporter</strong> has joined
+              {helperIsVerified && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    backgroundColor: '#16A34A',
+                    color: 'white',
+                    padding: '2px 8px',
+                    borderRadius: '12px',
+                    fontSize: '12px',
+                    fontWeight: 600,
+                    marginLeft: '4px',
+                  }}
+                >
+                  Verified
+                </span>
+              )}
+            </>
+          ) : helperIsVerified ? (
             <>
               Connected with a{' '}
               <span
@@ -508,17 +555,23 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Matching Status Banner */}
+      {/* Matching Status Banner - progressive messages */}
       {isMatching && !helperJoined && (
         <div
           style={{
             padding: '12px 20px',
-            backgroundColor: '#EDF4FF',
+            backgroundColor: peerbotFallbackActive ? '#ECFDF5' : '#EDF4FF',
             color: '#1E3A5F',
             textAlign: 'center',
           }}
         >
-          Waiting for a Peer Support Specialist to join...
+          {peerbotFallbackActive || matchingElapsed >= 90
+            ? 'Connecting you with PeerBot while we keep searching...'
+            : matchingElapsed >= 60
+            ? 'Looking for any available helper...'
+            : matchingElapsed >= 30
+            ? 'Expanding search...'
+            : 'Finding your best match...'}
         </div>
       )}
 

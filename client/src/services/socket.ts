@@ -1,5 +1,13 @@
 import { io, Socket } from 'socket.io-client';
 
+export interface HelpRequestEvent {
+  conversationId: string;
+  communityId: string;
+  topic: string | null;
+  matchScore: number;
+  startedAt: string;
+}
+
 const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 let socket: Socket | null = null;

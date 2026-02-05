@@ -2,6 +2,8 @@ import { Router, Response } from 'express';
 import { query } from '../config/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { emitToConversation } from '../config/socket';
+import { cancelMatchingProcess } from '../services/matching-queue';
+import { calculateMatchScore } from '../services/matching';
 
 const router = Router();
 
@@ -53,6 +55,40 @@ router.get('/pending', authenticate, async (req: AuthenticatedRequest, res: Resp
     );
 
     console.log(`[HELPER] Found ${result.rows.length} pending conversations`);
+
+    // Get this helper's membership to compute match scores
+    const membershipResult = await query<{ id: string }>(
+      `SELECT m.id FROM memberships m
+       WHERE m.user_id = $1
+         AND m.is_available = true
+         AND m.role IN ('helper', 'both')
+       LIMIT 1`,
+      [userId]
+    );
+
+    if (membershipResult.rows.length > 0 && result.rows.length > 0) {
+      const helperMembershipId = membershipResult.rows[0].id;
+
+      // Compute match scores for each pending conversation
+      const pendingWithScores = await Promise.all(
+        result.rows.map(async (conv) => {
+          try {
+            const score = await calculateMatchScore(
+              helperMembershipId,
+              conv.topic,
+              conv.seeker_membership_id
+            );
+            return { ...conv, match_score: score };
+          } catch {
+            return { ...conv, match_score: undefined };
+          }
+        })
+      );
+
+      res.json(pendingWithScores);
+      return;
+    }
+
     res.json(result.rows);
   } catch (error) {
     console.error('Get pending conversations error:', error);
@@ -112,14 +148,37 @@ router.post('/accept/:conversationId', authenticate, async (req: AuthenticatedRe
       return;
     }
 
-    // Update conversation with helper
+    // Update conversation with helper - use conditional UPDATE for race condition protection
     const updateResult = await query<ConversationRow>(
       `UPDATE conversations
        SET helper_membership_id = $1, status = 'active'
-       WHERE id = $2
+       WHERE id = $2 AND status = 'matching' AND helper_membership_id IS NULL
        RETURNING *`,
       [membership.id, conversationId]
     );
+
+    if (updateResult.rows.length === 0) {
+      res.status(409).json({ error: 'Conversation was already accepted by another helper' });
+      return;
+    }
+
+    // Cancel the matching process
+    cancelMatchingProcess(conversationId);
+
+    // Compute and persist match score
+    try {
+      const matchScore = await calculateMatchScore(
+        membership.id,
+        conversation.topic,
+        conversation.seeker_membership_id
+      );
+      await query(
+        `UPDATE conversations SET match_score = $1 WHERE id = $2`,
+        [matchScore, conversationId]
+      );
+    } catch (err) {
+      console.error('Failed to persist match score:', err);
+    }
 
     // Get helper email for the socket event
     const helperResult = await query<{ email: string }>(

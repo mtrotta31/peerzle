@@ -15,6 +15,9 @@ interface AuthenticatedSocket extends Socket {
 
 let io: Server;
 
+// Track userId -> Set of socketIds for multi-tab support
+const userSockets = new Map<string, Set<string>>();
+
 export function initializeSocket(httpServer: HttpServer): Server {
   io = new Server(httpServer, {
     cors: {
@@ -44,6 +47,14 @@ export function initializeSocket(httpServer: HttpServer): Server {
 
   io.on('connection', async (socket: AuthenticatedSocket) => {
     console.log(`User connected: ${socket.userId}`);
+
+    // Track this socket for the user
+    if (socket.userId) {
+      if (!userSockets.has(socket.userId)) {
+        userSockets.set(socket.userId, new Set());
+      }
+      userSockets.get(socket.userId)!.add(socket.id);
+    }
 
     // Join user to their active conversation rooms
     try {
@@ -85,6 +96,17 @@ export function initializeSocket(httpServer: HttpServer): Server {
 
     socket.on('disconnect', () => {
       console.log(`User disconnected: ${socket.userId}`);
+
+      // Remove this socket from the user's set
+      if (socket.userId) {
+        const sockets = userSockets.get(socket.userId);
+        if (sockets) {
+          sockets.delete(socket.id);
+          if (sockets.size === 0) {
+            userSockets.delete(socket.userId);
+          }
+        }
+      }
     });
   });
 
@@ -101,5 +123,24 @@ export function getIO(): Server {
 export function emitToConversation(conversationId: string, event: string, data: unknown): void {
   if (io) {
     io.to(`conversation:${conversationId}`).emit(event, data);
+  }
+}
+
+/**
+ * Get all active socket IDs for a given user.
+ */
+export function getUserSocketIds(userId: string): string[] {
+  const sockets = userSockets.get(userId);
+  return sockets ? Array.from(sockets) : [];
+}
+
+/**
+ * Emit an event to all of a user's connected sockets.
+ */
+export function emitToUser(userId: string, event: string, data: unknown): void {
+  if (!io) return;
+  const socketIds = getUserSocketIds(userId);
+  for (const socketId of socketIds) {
+    io.to(socketId).emit(event, data);
   }
 }

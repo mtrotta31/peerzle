@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { query } from '../config/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { emitToConversation } from '../config/socket';
+import { startMatchingProcess, cancelMatchingProcess } from '../services/matching-queue';
 
 const router = Router();
 
@@ -94,7 +95,14 @@ router.post('/start', authenticate, async (req: AuthenticatedRequest, res: Respo
       [communityId, seekerMembershipId, topic || null]
     );
 
-    res.status(201).json(result.rows[0]);
+    const newConversation = result.rows[0];
+
+    // Fire-and-forget: start the smart matching process
+    startMatchingProcess(newConversation.id).catch((err) => {
+      console.error('Smart matching error:', err);
+    });
+
+    res.status(201).json(newConversation);
   } catch (error) {
     console.error('Start conversation error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -197,6 +205,9 @@ router.post('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Res
       res.status(404).json({ error: 'Conversation not found or already ended' });
       return;
     }
+
+    // Cancel any active matching process
+    cancelMatchingProcess(id);
 
     // End conversation and get community info
     const result = await query<ConversationRow & { community_slug: string; community_name: string }>(
