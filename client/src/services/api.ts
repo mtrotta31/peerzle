@@ -694,4 +694,36 @@ export async function updateReport(
   return response.data;
 }
 
+// Suggestions types
+export interface SuggestionsMessage {
+  role: 'seeker' | 'helper' | 'peerbot';
+  content: string;
+}
+
+// Suggestions API
+export async function generateSuggestions(
+  conversationId: string,
+  recentMessages: SuggestionsMessage[],
+  mode: 'helper' | 'seeker'
+): Promise<{ suggestions: string[] }> {
+  const response = await api.post<{ suggestions: string[] }>('/api/suggestions/generate', {
+    conversation_id: conversationId,
+    recent_messages: recentMessages,
+    mode,
+  });
+  return response.data;
+}
+
+export async function generateCoachingTip(
+  conversationId: string,
+  recentMessages: SuggestionsMessage[]
+): Promise<{ tip: string }> {
+  const response = await api.post<{ tip: string }>('/api/suggestions/generate', {
+    conversation_id: conversationId,
+    recent_messages: recentMessages,
+    mode: 'coaching',
+  });
+  return response.data;
+}
+
 export default api;

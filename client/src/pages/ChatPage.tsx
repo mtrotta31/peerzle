@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, FormEvent, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Conversation, ConnectionData, Message, getConversation, sendMessage, endConversation, getMembership, FacilitatorMessage } from '../services/api';
+import { Conversation, ConnectionData, Message, getConversation, sendMessage, endConversation, getMembership, SuggestionsMessage } from '../services/api';
 import { connectSocket, joinConversation, leaveConversation, sendTypingIndicator, getSocket } from '../services/socket';
 import { useAuth } from '../context/AuthContext';
 import RatingModal from '../components/RatingModal';
 import PostChatModal from '../components/PostChatModal';
 import MoodCheckModal from '../components/MoodCheckModal';
-import FacilitatorPanel from '../components/FacilitatorPanel';
+import SuggestionsPanel from '../components/SuggestionsPanel';
 import ReportUserModal from '../components/ReportUserModal';
 import ConnectionCard from '../components/ConnectionCard';
 
@@ -277,30 +277,30 @@ export default function ChatPage() {
     setNewMessage(suggestion);
   };
 
-  // Prepare recent messages for facilitator (last 6 messages)
-  const recentMessagesForFacilitator: FacilitatorMessage[] = useMemo(() => {
-    return messages.slice(-6).map((msg) => {
+  // Prepare recent messages for suggestions panel (last 10 messages)
+  const recentMessagesForSuggestions: SuggestionsMessage[] = useMemo(() => {
+    return messages.slice(-10).map((msg) => {
       const isPeerBot = msg.moderation_result?.sender === 'peerbot';
       const isMine = !isPeerBot && msg.sender_email === user?.email;
 
-      let sender_role: 'seeker' | 'helper' | 'peerbot';
+      let role: 'seeker' | 'helper' | 'peerbot';
       if (isPeerBot) {
-        sender_role = 'peerbot';
+        role = 'peerbot';
       } else if (userRole === 'helper') {
-        sender_role = isMine ? 'helper' : 'seeker';
+        role = isMine ? 'helper' : 'seeker';
       } else {
-        sender_role = isMine ? 'seeker' : 'helper';
+        role = isMine ? 'seeker' : 'helper';
       }
 
       return {
         content: msg.content,
-        sender_role,
+        role,
       };
     });
   }, [messages, user?.email, userRole]);
 
-  // Should show facilitator panel for helpers in active conversations
-  const showFacilitator = userRole === 'helper' && conversation?.status === 'active';
+  // Should show suggestions panel for helpers and seekers in active conversations
+  const showSuggestions = (userRole === 'helper' || userRole === 'seeker') && conversation?.status === 'active';
 
   if (isLoading) {
     return (
@@ -807,11 +807,12 @@ export default function ChatPage() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Facilitator Panel - only for helpers in active conversations */}
-      {showFacilitator && conversationId && (
-        <FacilitatorPanel
+      {/* Suggestions Panel - for helpers and seekers in active conversations */}
+      {showSuggestions && conversationId && userRole && (
+        <SuggestionsPanel
           conversationId={conversationId}
-          recentMessages={recentMessagesForFacilitator}
+          recentMessages={recentMessagesForSuggestions}
+          mode={userRole}
           onSuggestionClick={handleSuggestionClick}
         />
       )}

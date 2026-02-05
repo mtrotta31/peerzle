@@ -26,6 +26,7 @@ import trainingRoutes from './routes/training';
 import legalRoutes from './routes/legal';
 import onboardingRoutes from './routes/onboarding';
 import reportsRoutes from './routes/reports';
+import suggestionsRoutes from './routes/suggestions';
 import { initializeSocket } from './config/socket';
 
 const app = express();
@@ -69,6 +70,7 @@ app.use('/api/training', trainingRoutes);
 app.use('/api/legal', legalRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/suggestions', suggestionsRoutes);
 
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
