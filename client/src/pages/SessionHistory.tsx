@@ -2,6 +2,32 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Community, HistoryConversation, getCommunity, getSessionHistory } from '../services/api';
 
+const MOOD_EMOJIS: Record<number, string> = {
+  1: '\uD83D\uDE2B',
+  2: '\uD83D\uDE1F',
+  3: '\uD83D\uDE10',
+  4: '\uD83D\uDE42',
+  5: '\uD83D\uDE0A',
+};
+
+const BADGE_EMOJIS: Record<string, string> = {
+  great_listener: '\uD83C\uDFAF',
+  helpful_advice: '\uD83D\uDCA1',
+  felt_heard: '\u2764\uFE0F',
+  above_beyond: '\uD83C\uDF1F',
+  easy_to_talk: '\uD83E\uDD1D',
+  understood_me: '\uD83E\uDDE0',
+};
+
+const BADGE_LABELS: Record<string, string> = {
+  great_listener: 'Great Listener',
+  helpful_advice: 'Helpful Advice',
+  felt_heard: 'Made Me Feel Heard',
+  above_beyond: 'Above & Beyond',
+  easy_to_talk: 'Easy to Talk To',
+  understood_me: 'Understood Me',
+};
+
 export default function SessionHistory() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -9,6 +35,7 @@ export default function SessionHistory() {
   const [history, setHistory] = useState<HistoryConversation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [showSavedOnly, setShowSavedOnly] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -163,6 +190,42 @@ export default function SessionHistory() {
 
       {/* Content */}
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '24px 20px' }}>
+        {/* Saved filter */}
+        {history.length > 0 && history.some((s) => s.is_saved) && (
+          <div style={{ marginBottom: '16px', display: 'flex', gap: '8px' }}>
+            <button
+              onClick={() => setShowSavedOnly(false)}
+              style={{
+                padding: '6px 16px',
+                borderRadius: '20px',
+                border: `1px solid ${!showSavedOnly ? '#2B7CF6' : '#E2E8F0'}`,
+                backgroundColor: !showSavedOnly ? '#EDF4FF' : 'white',
+                color: !showSavedOnly ? '#2B7CF6' : '#64748B',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              All Sessions
+            </button>
+            <button
+              onClick={() => setShowSavedOnly(true)}
+              style={{
+                padding: '6px 16px',
+                borderRadius: '20px',
+                border: `1px solid ${showSavedOnly ? '#2B7CF6' : '#E2E8F0'}`,
+                backgroundColor: showSavedOnly ? '#EDF4FF' : 'white',
+                color: showSavedOnly ? '#2B7CF6' : '#64748B',
+                fontSize: '13px',
+                fontWeight: 500,
+                cursor: 'pointer',
+              }}
+            >
+              Saved
+            </button>
+          </div>
+        )}
+
         {history.length === 0 ? (
           <div
             style={{
@@ -181,7 +244,14 @@ export default function SessionHistory() {
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {history.map((session) => (
+            {history
+              .filter((s) => !showSavedOnly || s.is_saved)
+              .map((session) => {
+              const moodChange = (session.seeker_pre_mood != null && session.seeker_post_mood != null)
+                ? session.seeker_post_mood - session.seeker_pre_mood
+                : null;
+
+              return (
               <div
                 key={session.id}
                 onClick={() => navigate(`/chat/${session.id}`)}
@@ -205,7 +275,7 @@ export default function SessionHistory() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                   <div style={{ flex: 1 }}>
                     {/* Topic and Role Badge */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
                       <h3 style={{ margin: 0, color: '#1E3A5F', fontSize: '16px', fontWeight: 600 }}>
                         {session.topic || 'General Support'}
                       </h3>
@@ -221,6 +291,20 @@ export default function SessionHistory() {
                       >
                         {session.role === 'seeker' ? 'Seeker' : 'Helper'}
                       </span>
+                      {session.is_saved && (
+                        <span
+                          style={{
+                            padding: '4px 10px',
+                            borderRadius: '12px',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                            backgroundColor: '#ECFDF5',
+                            color: '#16A34A',
+                          }}
+                        >
+                          Saved
+                        </span>
+                      )}
                     </div>
 
                     {/* Date and Duration */}
@@ -237,8 +321,52 @@ export default function SessionHistory() {
                       )}
                     </p>
 
+                    {/* Mood Change */}
+                    {session.seeker_pre_mood != null && session.seeker_post_mood != null && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                        <span style={{ fontSize: '16px' }}>
+                          {MOOD_EMOJIS[session.seeker_pre_mood]} → {MOOD_EMOJIS[session.seeker_post_mood]}
+                        </span>
+                        {moodChange != null && moodChange !== 0 && (
+                          <span
+                            style={{
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              color: moodChange > 0 ? '#16A34A' : '#DC2626',
+                            }}
+                          >
+                            {moodChange > 0 ? '+' : ''}{moodChange} mood
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Compliment Badges */}
+                    {session.helper_compliment_badges && session.helper_compliment_badges.length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '8px' }}>
+                        {session.helper_compliment_badges.map((badge) => (
+                          <span
+                            key={badge}
+                            title={BADGE_LABELS[badge] || badge}
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                              padding: '2px 8px',
+                              borderRadius: '10px',
+                              backgroundColor: '#F8FAFC',
+                              fontSize: '12px',
+                              color: '#64748B',
+                            }}
+                          >
+                            {BADGE_EMOJIS[badge] || ''} {BADGE_LABELS[badge] || badge}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+
                     {/* Rating */}
-                    <div style={{ marginTop: '8px' }}>
+                    <div style={{ marginTop: '4px' }}>
                       {session.rating ? (
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {renderStars(session.rating)}
@@ -255,7 +383,8 @@ export default function SessionHistory() {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

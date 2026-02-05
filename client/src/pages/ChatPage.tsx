@@ -4,6 +4,8 @@ import { Conversation, ConnectionData, Message, getConversation, sendMessage, en
 import { connectSocket, joinConversation, leaveConversation, sendTypingIndicator, getSocket } from '../services/socket';
 import { useAuth } from '../context/AuthContext';
 import RatingModal from '../components/RatingModal';
+import PostChatModal from '../components/PostChatModal';
+import MoodCheckModal from '../components/MoodCheckModal';
 import FacilitatorPanel from '../components/FacilitatorPanel';
 import ReportUserModal from '../components/ReportUserModal';
 import ConnectionCard from '../components/ConnectionCard';
@@ -47,6 +49,7 @@ export default function ChatPage() {
   const [matchingElapsed, setMatchingElapsed] = useState(0);
   const [peerbotFallbackActive, setPeerbotFallbackActive] = useState(false);
   const [connectionData, setConnectionData] = useState<ConnectionData | null>(null);
+  const [showMoodCheck, setShowMoodCheck] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { user } = useAuth();
@@ -82,6 +85,10 @@ export default function ChatPage() {
             const membership = await getMembership(data.community_slug);
             if (membership.id === data.seeker_membership_id) {
               setUserRole('seeker');
+              // Show mood check for seekers who haven't set pre_mood yet and conversation is not ended
+              if (data.seeker_pre_mood == null && data.status !== 'ended') {
+                setShowMoodCheck(true);
+              }
             } else if (membership.id === data.helper_membership_id) {
               setUserRole('helper');
             } else {
@@ -910,11 +917,36 @@ export default function ChatPage() {
         </div>
       )}
 
-      {/* Rating Modal */}
-      {showRatingModal && conversationId && userRole && (
+      {/* Mood Check Modal - shown to seekers before conversation */}
+      {showMoodCheck && conversationId && userRole === 'seeker' && (
+        <MoodCheckModal
+          conversationId={conversationId}
+          onComplete={() => {
+            setShowMoodCheck(false);
+            // Re-fetch conversation to get updated pre_mood
+            getConversation(conversationId).then((refreshed) => {
+              setConversation(refreshed);
+            }).catch(() => {});
+          }}
+        />
+      )}
+
+      {/* Post-Chat Modal - multi-step for seekers */}
+      {showRatingModal && conversationId && userRole === 'seeker' && (
+        <PostChatModal
+          conversationId={conversationId}
+          preMood={conversation?.seeker_pre_mood ?? null}
+          helperDisplayName={connectionData?.helper_display_name ?? null}
+          onClose={handleRatingClose}
+          onComplete={handleRatingSubmitted}
+        />
+      )}
+
+      {/* Rating Modal - for helpers */}
+      {showRatingModal && conversationId && userRole === 'helper' && (
         <RatingModal
           conversationId={conversationId}
-          role={userRole}
+          role="helper"
           onClose={handleRatingClose}
           onSubmitted={handleRatingSubmitted}
         />

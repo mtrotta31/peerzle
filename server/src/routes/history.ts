@@ -14,6 +14,10 @@ interface HistoryRow {
   rating: number | null;
   felt_heard: boolean | null;
   would_recommend: boolean | null;
+  seeker_pre_mood: number | null;
+  seeker_post_mood: number | null;
+  helper_compliment_badges: string[] | null;
+  is_saved: boolean;
 }
 
 // GET /api/history/:communitySlug - Get past conversations for the current user in a community
@@ -48,7 +52,7 @@ router.get('/:communitySlug', authenticate, async (req: AuthenticatedRequest, re
 
     const membershipId = membershipResult.rows[0].id;
 
-    // Get past conversations with ratings
+    // Get past conversations with ratings, mood data, badges, and saved status
     const result = await query<HistoryRow>(
       `SELECT
         c.id,
@@ -69,7 +73,14 @@ router.get('/:communitySlug', authenticate, async (req: AuthenticatedRequest, re
         END as other_user_email,
         cr.rating,
         cr.felt_heard,
-        cr.would_recommend
+        cr.would_recommend,
+        c.seeker_pre_mood,
+        c.seeker_post_mood,
+        c.helper_compliment_badges,
+        CASE
+          WHEN $3::uuid = ANY(COALESCE(c.conversation_saved_by, ARRAY[]::uuid[])) THEN true
+          ELSE false
+        END as is_saved
       FROM conversations c
       LEFT JOIN conversation_ratings cr ON cr.conversation_id = c.id AND cr.membership_id = $1
       WHERE c.community_id = $2
@@ -77,7 +88,7 @@ router.get('/:communitySlug', authenticate, async (req: AuthenticatedRequest, re
         AND (c.seeker_membership_id = $1 OR c.helper_membership_id = $1)
       ORDER BY c.ended_at DESC
       LIMIT 50`,
-      [membershipId, communityId]
+      [membershipId, communityId, userId]
     );
 
     res.json(result.rows);

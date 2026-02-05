@@ -2,6 +2,15 @@ import { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Community, HelperDashboardStats, getCommunity, getHelperDashboard } from '../services/api';
 
+const BADGE_DISPLAY: Record<string, { emoji: string; label: string }> = {
+  great_listener: { emoji: '\uD83C\uDFAF', label: 'Great Listener' },
+  helpful_advice: { emoji: '\uD83D\uDCA1', label: 'Helpful Advice' },
+  felt_heard: { emoji: '\u2764\uFE0F', label: 'Made Me Feel Heard' },
+  above_beyond: { emoji: '\uD83C\uDF1F', label: 'Above & Beyond' },
+  easy_to_talk: { emoji: '\uD83E\uDD1D', label: 'Easy to Talk To' },
+  understood_me: { emoji: '\uD83E\uDDE0', label: 'Understood Me' },
+};
+
 export default function HelperDashboard() {
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
@@ -316,6 +325,93 @@ export default function HelperDashboard() {
                 </p>
               </div>
             </div>
+
+            {/* Average Mood Improvement */}
+            {stats.averageMoodImprovement !== null && (
+              <div
+                style={{
+                  backgroundColor: 'white',
+                  borderRadius: '16px',
+                  padding: '16px 20px',
+                  marginBottom: '16px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                  borderLeft: `4px solid ${stats.averageMoodImprovement >= 0 ? '#16A34A' : '#F59E0B'}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '20px' }}>
+                    {stats.averageMoodImprovement >= 0 ? '\u2B06\uFE0F' : '\u2B07\uFE0F'}
+                  </span>
+                  <span style={{ color: '#1E3A5F' }}>Avg Mood Change</span>
+                </div>
+                <span
+                  style={{
+                    fontSize: '24px',
+                    fontWeight: 600,
+                    color: stats.averageMoodImprovement >= 0 ? '#16A34A' : '#F59E0B',
+                  }}
+                >
+                  {stats.averageMoodImprovement > 0 ? '+' : ''}{stats.averageMoodImprovement.toFixed(1)}
+                </span>
+              </div>
+            )}
+
+            {/* Badges Received */}
+            {stats.badgeCounts.length > 0 && (
+              <div
+                style={{
+                  backgroundColor: 'white',
+                  borderRadius: '16px',
+                  padding: '20px',
+                  marginBottom: '16px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                }}
+              >
+                <h3 style={{ margin: '0 0 16px 0', color: '#1E3A5F', fontWeight: 600 }}>Badges Received</h3>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                  {stats.badgeCounts.map(({ badge, count }) => {
+                    const display = BADGE_DISPLAY[badge] || { emoji: '', label: badge };
+                    return (
+                      <div
+                        key={badge}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          padding: '8px 14px',
+                          backgroundColor: '#F8FAFC',
+                          borderRadius: '12px',
+                          border: '1px solid #E2E8F0',
+                        }}
+                      >
+                        <span style={{ fontSize: '18px' }}>{display.emoji}</span>
+                        <span style={{ fontSize: '13px', color: '#1E3A5F', fontWeight: 500 }}>{display.label}</span>
+                        <span
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            minWidth: '20px',
+                            height: '20px',
+                            borderRadius: '10px',
+                            backgroundColor: '#2B7CF6',
+                            color: 'white',
+                            fontSize: '11px',
+                            fontWeight: 700,
+                            padding: '0 5px',
+                          }}
+                        >
+                          {count}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {/* Would Recommend (if available) */}
             {stats.wouldRecommendPercent !== null && (

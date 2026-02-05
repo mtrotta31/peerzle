@@ -269,6 +269,11 @@ export interface Conversation {
   helper_rating: number | null;
   safety_flags: unknown[];
   match_score?: number | null;
+  seeker_pre_mood?: number | null;
+  seeker_post_mood?: number | null;
+  helper_compliment_badges?: string[] | null;
+  conversation_saved_by?: string[] | null;
+  mood_change?: number | null;
   community_slug?: string;
   community_name?: string;
   messages?: Message[];
@@ -293,6 +298,21 @@ export async function getActiveConversations(): Promise<Conversation[]> {
 
 export async function endConversation(id: string): Promise<Conversation> {
   const response = await api.post<Conversation>(`/api/conversations/${id}/end`);
+  return response.data;
+}
+
+export async function setPreMood(conversationId: string, mood: number): Promise<Conversation> {
+  const response = await api.put<Conversation>(`/api/conversations/${conversationId}/pre-mood`, { mood });
+  return response.data;
+}
+
+export async function setPostMood(conversationId: string, mood: number, badges?: string[]): Promise<Conversation> {
+  const response = await api.put<Conversation>(`/api/conversations/${conversationId}/post-mood`, { mood, badges });
+  return response.data;
+}
+
+export async function saveConversation(conversationId: string): Promise<{ success: boolean }> {
+  const response = await api.post<{ success: boolean }>(`/api/conversations/${conversationId}/save`);
   return response.data;
 }
 
@@ -367,6 +387,10 @@ export interface HistoryConversation {
   rating: number | null;
   felt_heard: boolean | null;
   would_recommend: boolean | null;
+  seeker_pre_mood: number | null;
+  seeker_post_mood: number | null;
+  helper_compliment_badges: string[] | null;
+  is_saved: boolean;
 }
 
 // History API
@@ -383,6 +407,11 @@ export interface RecentHelperSession {
   seeker_rating: number | null;
 }
 
+export interface BadgeCount {
+  badge: string;
+  count: number;
+}
+
 export interface HelperDashboardStats {
   totalSessions: number;
   activeSessions: number;
@@ -392,6 +421,8 @@ export interface HelperDashboardStats {
   wouldRecommendPercent: number | null;
   totalHelpTime: number;
   recentSessions: RecentHelperSession[];
+  averageMoodImprovement: number | null;
+  badgeCounts: BadgeCount[];
 }
 
 // Helper Dashboard API

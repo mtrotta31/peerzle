@@ -4,6 +4,11 @@ import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 
 const router = Router();
 
+interface BadgeCount {
+  badge: string;
+  count: number;
+}
+
 interface HelperStats {
   totalSessions: number;
   activeSessions: number;
@@ -13,6 +18,8 @@ interface HelperStats {
   wouldRecommendPercent: number | null;
   totalHelpTime: number;
   recentSessions: RecentSession[];
+  averageMoodImprovement: number | null;
+  badgeCounts: BadgeCount[];
 }
 
 interface RecentSession {
@@ -136,6 +143,38 @@ router.get('/:communitySlug/helper', authenticate, async (req: AuthenticatedRequ
       [membershipId, communityId]
     );
 
+    // Get average mood improvement
+    const moodResult = await query<{ avg_improvement: string | null }>(
+      `SELECT AVG(seeker_post_mood - seeker_pre_mood)::numeric(3,1) as avg_improvement
+       FROM conversations
+       WHERE helper_membership_id = $1
+         AND community_id = $2
+         AND status = 'ended'
+         AND seeker_pre_mood IS NOT NULL
+         AND seeker_post_mood IS NOT NULL`,
+      [membershipId, communityId]
+    );
+    const averageMoodImprovement = moodResult.rows[0].avg_improvement
+      ? parseFloat(moodResult.rows[0].avg_improvement)
+      : null;
+
+    // Get badge counts
+    const badgeResult = await query<{ badge: string; count: string }>(
+      `SELECT unnest(helper_compliment_badges) as badge, COUNT(*) as count
+       FROM conversations
+       WHERE helper_membership_id = $1
+         AND community_id = $2
+         AND status = 'ended'
+         AND helper_compliment_badges IS NOT NULL
+       GROUP BY badge
+       ORDER BY count DESC`,
+      [membershipId, communityId]
+    );
+    const badgeCounts: BadgeCount[] = badgeResult.rows.map((r) => ({
+      badge: r.badge,
+      count: parseInt(r.count, 10),
+    }));
+
     const helperStats: HelperStats = {
       totalSessions,
       activeSessions,
@@ -145,6 +184,8 @@ router.get('/:communitySlug/helper', authenticate, async (req: AuthenticatedRequ
       wouldRecommendPercent,
       totalHelpTime,
       recentSessions: recentSessionsResult.rows,
+      averageMoodImprovement,
+      badgeCounts,
     };
 
     res.json(helperStats);

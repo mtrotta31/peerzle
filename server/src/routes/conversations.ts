@@ -19,6 +19,10 @@ interface ConversationRow {
   helper_rating: number | null;
   safety_flags: unknown[];
   match_score: number | null;
+  seeker_pre_mood: number | null;
+  seeker_post_mood: number | null;
+  helper_compliment_badges: string[] | null;
+  conversation_saved_by: string[] | null;
 }
 
 interface MessageRow {
@@ -217,10 +221,15 @@ router.get('/:id', authenticate, async (req: AuthenticatedRequest, res: Response
       };
     }
 
+    const moodChange = (conversation.seeker_pre_mood != null && conversation.seeker_post_mood != null)
+      ? conversation.seeker_post_mood - conversation.seeker_pre_mood
+      : null;
+
     res.json({
       ...conversation,
       messages: messagesResult.rows,
       connection_data,
+      mood_change: moodChange,
     });
   } catch (error) {
     console.error('Get conversation error:', error);
@@ -272,6 +281,132 @@ router.post('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Res
     res.json(endedConversation);
   } catch (error) {
     console.error('End conversation error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /api/conversations/:id/pre-mood - Set seeker's pre-chat mood
+router.put('/:id/pre-mood', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { mood } = req.body;
+    const userId = req.user!.userId;
+
+    if (!mood || mood < 1 || mood > 5 || !Number.isInteger(mood)) {
+      res.status(400).json({ error: 'Mood must be an integer between 1 and 5' });
+      return;
+    }
+
+    // Verify user is the seeker
+    const convResult = await query<ConversationRow>(
+      `SELECT c.* FROM conversations c
+       JOIN memberships m ON m.id = c.seeker_membership_id
+       WHERE c.id = $1 AND m.user_id = $2`,
+      [id, userId]
+    );
+
+    if (convResult.rows.length === 0) {
+      res.status(404).json({ error: 'Conversation not found or you are not the seeker' });
+      return;
+    }
+
+    const conversation = convResult.rows[0];
+    if (conversation.status !== 'matching' && conversation.status !== 'active') {
+      res.status(400).json({ error: 'Mood can only be set during matching or active conversations' });
+      return;
+    }
+
+    const updateResult = await query<ConversationRow>(
+      `UPDATE conversations SET seeker_pre_mood = $1 WHERE id = $2 RETURNING *`,
+      [mood, id]
+    );
+
+    res.json(updateResult.rows[0]);
+  } catch (error) {
+    console.error('Set pre-mood error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PUT /api/conversations/:id/post-mood - Set seeker's post-chat mood and helper badges
+router.put('/:id/post-mood', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { mood, badges } = req.body;
+    const userId = req.user!.userId;
+
+    if (!mood || mood < 1 || mood > 5 || !Number.isInteger(mood)) {
+      res.status(400).json({ error: 'Mood must be an integer between 1 and 5' });
+      return;
+    }
+
+    // Verify user is the seeker
+    const convResult = await query<ConversationRow>(
+      `SELECT c.* FROM conversations c
+       JOIN memberships m ON m.id = c.seeker_membership_id
+       WHERE c.id = $1 AND m.user_id = $2`,
+      [id, userId]
+    );
+
+    if (convResult.rows.length === 0) {
+      res.status(404).json({ error: 'Conversation not found or you are not the seeker' });
+      return;
+    }
+
+    const conversation = convResult.rows[0];
+    if (conversation.status !== 'ended') {
+      res.status(400).json({ error: 'Post-mood can only be set after conversation has ended' });
+      return;
+    }
+
+    const badgesArray = Array.isArray(badges) ? badges : null;
+
+    const updateResult = await query<ConversationRow>(
+      `UPDATE conversations SET seeker_post_mood = $1, helper_compliment_badges = $2 WHERE id = $3 RETURNING *`,
+      [mood, badgesArray, id]
+    );
+
+    const updated = updateResult.rows[0];
+    const moodChange = updated.seeker_pre_mood != null ? mood - updated.seeker_pre_mood : null;
+
+    res.json({ ...updated, mood_change: moodChange });
+  } catch (error) {
+    console.error('Set post-mood error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/conversations/:id/save - Save conversation for personal reflection
+router.post('/:id/save', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.userId;
+
+    // Verify user is a participant
+    const verifyResult = await query(
+      `SELECT c.id FROM conversations c
+       JOIN memberships m ON m.id = c.seeker_membership_id OR m.id = c.helper_membership_id
+       WHERE c.id = $1 AND m.user_id = $2`,
+      [id, userId]
+    );
+
+    if (verifyResult.rows.length === 0) {
+      res.status(404).json({ error: 'Conversation not found' });
+      return;
+    }
+
+    // Add user to saved_by array (using array_append + COALESCE for null safety)
+    await query(
+      `UPDATE conversations
+       SET conversation_saved_by = array_append(COALESCE(conversation_saved_by, ARRAY[]::uuid[]), $1::uuid)
+       WHERE id = $2
+         AND NOT ($1::uuid = ANY(COALESCE(conversation_saved_by, ARRAY[]::uuid[])))`,
+      [userId, id]
+    );
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Save conversation error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
