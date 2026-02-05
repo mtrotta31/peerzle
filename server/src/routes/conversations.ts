@@ -18,6 +18,7 @@ interface ConversationRow {
   seeker_rating: number | null;
   helper_rating: number | null;
   safety_flags: unknown[];
+  match_score: number | null;
 }
 
 interface MessageRow {
@@ -177,9 +178,49 @@ router.get('/:id', authenticate, async (req: AuthenticatedRequest, res: Response
       [id]
     );
 
+    // Build connection_data when a helper has joined
+    let connection_data = null;
+    if (conversation.helper_membership_id) {
+      // Get display names and verification status for both participants
+      const participantsResult = await query<{
+        id: string;
+        display_name: string | null;
+        is_verified_helper: boolean;
+      }>(
+        `SELECT id, display_name, is_verified_helper FROM memberships WHERE id = ANY($1)`,
+        [[conversation.seeker_membership_id, conversation.helper_membership_id]]
+      );
+
+      const seekerMembership = participantsResult.rows.find(
+        (r) => r.id === conversation.seeker_membership_id
+      );
+      const helperMembership = participantsResult.rows.find(
+        (r) => r.id === conversation.helper_membership_id
+      );
+
+      // Find shared topics (topics both participants selected during onboarding)
+      const sharedTopicsResult = await query<{ topic: string }>(
+        `SELECT s.topic
+         FROM user_experience_topics s
+         JOIN user_experience_topics h ON h.topic = s.topic
+         WHERE s.membership_id = $1 AND h.membership_id = $2
+         ORDER BY s.topic ASC`,
+        [conversation.seeker_membership_id, conversation.helper_membership_id]
+      );
+
+      connection_data = {
+        match_score: conversation.match_score ?? null,
+        seeker_display_name: seekerMembership?.display_name || null,
+        helper_display_name: helperMembership?.display_name || null,
+        helper_is_verified: helperMembership?.is_verified_helper || false,
+        shared_topics: sharedTopicsResult.rows.map((r) => r.topic),
+      };
+    }
+
     res.json({
       ...conversation,
       messages: messagesResult.rows,
+      connection_data,
     });
   } catch (error) {
     console.error('Get conversation error:', error);

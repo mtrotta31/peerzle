@@ -248,6 +248,14 @@ export interface Message {
   sender_email: string | null;
 }
 
+export interface ConnectionData {
+  match_score: number | null;
+  seeker_display_name: string | null;
+  helper_display_name: string | null;
+  helper_is_verified: boolean;
+  shared_topics: string[];
+}
+
 export interface Conversation {
   id: string;
   community_id: string;
@@ -264,6 +272,7 @@ export interface Conversation {
   community_slug?: string;
   community_name?: string;
   messages?: Message[];
+  connection_data?: ConnectionData | null;
 }
 
 // Conversation API

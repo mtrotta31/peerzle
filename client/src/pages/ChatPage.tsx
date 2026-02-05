@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, FormEvent, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Conversation, Message, getConversation, sendMessage, endConversation, getMembership, FacilitatorMessage } from '../services/api';
+import { Conversation, ConnectionData, Message, getConversation, sendMessage, endConversation, getMembership, FacilitatorMessage } from '../services/api';
 import { connectSocket, joinConversation, leaveConversation, sendTypingIndicator, getSocket } from '../services/socket';
 import { useAuth } from '../context/AuthContext';
 import RatingModal from '../components/RatingModal';
 import FacilitatorPanel from '../components/FacilitatorPanel';
 import ReportUserModal from '../components/ReportUserModal';
+import ConnectionCard from '../components/ConnectionCard';
 
 interface SafetyAlert {
   riskLevel: 'moderate_concern' | 'crisis';
@@ -45,6 +46,7 @@ export default function ChatPage() {
   const [isAdminViewer, setIsAdminViewer] = useState(false);
   const [matchingElapsed, setMatchingElapsed] = useState(0);
   const [peerbotFallbackActive, setPeerbotFallbackActive] = useState(false);
+  const [connectionData, setConnectionData] = useState<ConnectionData | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { user } = useAuth();
@@ -68,6 +70,11 @@ export default function ChatPage() {
         const data = await getConversation(conversationId!);
         setConversation(data);
         setMessages(data.messages || []);
+
+        // Set connection data if helper has already joined
+        if (data.connection_data) {
+          setConnectionData(data.connection_data);
+        }
 
         // Determine user's role in this conversation
         if (data.community_slug) {
@@ -123,6 +130,15 @@ export default function ChatPage() {
           setConversation((prev) =>
             prev ? { ...prev, status: 'active', helper_membership_id: event.helperMembershipId } : prev
           );
+
+          // Fetch connection data now that a helper has joined
+          getConversation(conversationId!).then((refreshed) => {
+            if (refreshed.connection_data) {
+              setConnectionData(refreshed.connection_data);
+            }
+          }).catch((err) => {
+            console.error('Failed to fetch connection data:', err);
+          });
         });
 
         // Listen for conversation ended (by the other user)
@@ -587,6 +603,14 @@ export default function ChatPage() {
         >
           This session has ended.
         </div>
+      )}
+
+      {/* Connection Card - shown once helper has joined */}
+      {connectionData && userRole && !isAdminViewer && (
+        <ConnectionCard
+          connectionData={connectionData}
+          userRole={userRole}
+        />
       )}
 
       {/* Messages */}
