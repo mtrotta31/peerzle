@@ -11,6 +11,7 @@ import CommunityDashboard from './pages/CommunityDashboard';
 import SessionHistory from './pages/SessionHistory';
 import HelperDashboard from './pages/HelperDashboard';
 import AdminDashboard from './pages/AdminDashboard';
+import AdminStats from './pages/AdminStats';
 import HelperTraining from './pages/HelperTraining';
 import ChatPage from './pages/ChatPage';
 import TermsOfService from './pages/TermsOfService';
@@ -147,6 +148,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/community/:slug/admin/stats"
+        element={
+          <ProtectedRoute>
+            <AdminStats />
           </ProtectedRoute>
         }
       />

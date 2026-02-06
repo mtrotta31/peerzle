@@ -342,30 +342,57 @@ export default function AdminDashboard() {
               </p>
             </div>
           </div>
-          <Link
-            to={`/community/${slug}`}
-            style={{
-              color: '#64748B',
-              textDecoration: 'none',
-              padding: '8px 16px',
-              backgroundColor: 'white',
-              border: '1px solid #E2E8F0',
-              borderRadius: '24px',
-              fontSize: '14px',
-              fontWeight: 500,
-              transition: 'all 0.2s',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.borderColor = '#2B7CF6';
-              e.currentTarget.style.color = '#2B7CF6';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.borderColor = '#E2E8F0';
-              e.currentTarget.style.color = '#64748B';
-            }}
-          >
-            Back to Dashboard
-          </Link>
+          <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+            <Link
+              to={`/community/${slug}/admin/stats`}
+              style={{
+                color: 'white',
+                textDecoration: 'none',
+                padding: '8px 16px',
+                backgroundColor: '#2B7CF6',
+                border: 'none',
+                borderRadius: '24px',
+                fontSize: '14px',
+                fontWeight: 600,
+                transition: 'all 0.2s',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = '#1E6AD9';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = '#2B7CF6';
+              }}
+            >
+              Platform Stats
+            </Link>
+            <Link
+              to={`/community/${slug}`}
+              style={{
+                color: '#64748B',
+                textDecoration: 'none',
+                padding: '8px 16px',
+                backgroundColor: 'white',
+                border: '1px solid #E2E8F0',
+                borderRadius: '24px',
+                fontSize: '14px',
+                fontWeight: 500,
+                transition: 'all 0.2s',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.borderColor = '#2B7CF6';
+                e.currentTarget.style.color = '#2B7CF6';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.borderColor = '#E2E8F0';
+                e.currentTarget.style.color = '#64748B';
+              }}
+            >
+              Back to Dashboard
+            </Link>
+          </div>
         </div>
       </header>
 

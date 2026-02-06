@@ -465,6 +465,56 @@ export interface AdminOverview {
   crisisAlerts: number;
 }
 
+export interface AdminStatsUsage {
+  totalConversations: number;
+  activeHelpers: number;
+  totalHelpers: number;
+  totalMembers: number;
+  conversationsThisWeek: number;
+  conversationsThisMonth: number;
+  avgConversationDurationMinutes: number | null;
+  conversationsWithHumanHelper: number;
+  conversationsPeerbotOnly: number;
+}
+
+export interface AdminStatsOutcomes {
+  avgMoodImprovement: number | null;
+  pctMoodImproved: number;
+  pctFeltHeard: number;
+  avgRating: number | null;
+  totalRatedConversations: number;
+  pctWouldRecommend: number | null;
+}
+
+export interface AdminStatsSafety {
+  totalAlerts: number;
+  alertsThisMonth: number;
+  alertsBySeverity: Record<string, number>;
+  totalReports: number;
+  reportsThisMonth: number;
+}
+
+export interface AdminStatsTopTopic {
+  topic: string;
+  conversationCount: number;
+}
+
+export interface AdminStatsEngagement {
+  avgConversationsPerUser: number | null;
+  repeatUsers: number;
+  pctRepeatUsers: number;
+  uniqueSeekers: number;
+}
+
+export interface AdminStats {
+  firstConversationDate: string | null;
+  usage: AdminStatsUsage;
+  outcomes: AdminStatsOutcomes;
+  safety: AdminStatsSafety;
+  topTopics: AdminStatsTopTopic[];
+  engagement: AdminStatsEngagement;
+}
+
 export interface AdminMember {
   id: string;
   email: string;
@@ -489,6 +539,11 @@ export interface AdminAlert {
 // Admin API
 export async function getAdminOverview(communitySlug: string): Promise<AdminOverview> {
   const response = await api.get<AdminOverview>(`/api/admin/${communitySlug}/overview`);
+  return response.data;
+}
+
+export async function getAdminStats(communitySlug: string): Promise<AdminStats> {
+  const response = await api.get<AdminStats>(`/api/admin/stats/${communitySlug}`);
   return response.data;
 }
 

@@ -12,7 +12,9 @@
       "Bash(curl:*)",
       "Bash(npm run build:*)",
       "Bash(lsof:*)",
-      "Bash(ps:*)"
+      "Bash(ps:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)"
     ]
   }
 }
