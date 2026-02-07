@@ -58,7 +58,23 @@ router.get('/:communitySlug/topics', authenticate, async (req: AuthenticatedRequ
       return;
     }
 
-    const topics = getTopicsForCommunity(communitySlug);
+    // Get topics from community config (database) instead of hardcoded list
+    const communityResult = await query<{ config: { topics?: string[] } }>(
+      'SELECT config FROM communities WHERE slug = $1',
+      [communitySlug]
+    );
+
+    if (communityResult.rows.length === 0) {
+      res.status(404).json({ error: 'Community not found' });
+      return;
+    }
+
+    // Use community's config.topics, fall back to hardcoded list if not set
+    const configTopics = communityResult.rows[0].config?.topics;
+    const topics = configTopics && configTopics.length > 0
+      ? configTopics
+      : getTopicsForCommunity(communitySlug);
+
     res.json({ topics });
   } catch (error) {
     console.error('Error getting community topics:', error);

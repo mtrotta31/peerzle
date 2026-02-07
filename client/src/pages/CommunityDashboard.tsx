@@ -5,7 +5,6 @@ import {
   Membership,
   Conversation,
   PendingConversation,
-  VerificationRequest,
   getCommunity,
   getMembership,
   startConversation,
@@ -13,8 +12,6 @@ import {
   toggleAvailability,
   getPendingConversations,
   acceptConversation,
-  getMyVerificationRequest,
-  submitVerificationRequest,
   getOnboardingStatus,
 } from '../services/api';
 import { connectSocket, getSocket, HelpRequestEvent } from '../services/socket';
@@ -39,11 +36,6 @@ export default function CommunityDashboard() {
   const [isTogglingAvailability, setIsTogglingAvailability] = useState(false);
   const [isAccepting, setIsAccepting] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [verificationRequest, setVerificationRequest] = useState<VerificationRequest | null>(null);
-  const [showVerificationModal, setShowVerificationModal] = useState(false);
-  const [qualifications, setQualifications] = useState('');
-  const [isSubmittingVerification, setIsSubmittingVerification] = useState(false);
-  const [verificationError, setVerificationError] = useState('');
   const [showPushBanner, setShowPushBanner] = useState(false);
   const [isEnablingPush, setIsEnablingPush] = useState(false);
   const { user, logout } = useAuth();
@@ -147,15 +139,13 @@ export default function CommunityDashboard() {
           return;
         }
 
-        const [communityData, membershipData, activeConvs, verificationData] = await Promise.all([
+        const [communityData, membershipData, activeConvs] = await Promise.all([
           getCommunity(slug),
           getMembership(slug),
           getActiveConversations(),
-          getMyVerificationRequest(slug),
         ]);
         setCommunity(communityData);
         setMembership(membershipData);
-        setVerificationRequest(verificationData);
 
         // Check if user has an active conversation in this community
         const existingConv = activeConvs.find(
@@ -312,30 +302,6 @@ export default function CommunityDashboard() {
     }
   };
 
-  const handleSubmitVerification = async () => {
-    if (!slug || isSubmittingVerification) return;
-
-    if (qualifications.trim().length < 10) {
-      setVerificationError('Please provide at least 10 characters describing your qualifications');
-      return;
-    }
-
-    setIsSubmittingVerification(true);
-    setVerificationError('');
-
-    try {
-      const request = await submitVerificationRequest(slug, qualifications.trim());
-      setVerificationRequest(request);
-      setShowVerificationModal(false);
-      setQualifications('');
-    } catch (err) {
-      const axiosError = err as AxiosError<{ error: string }>;
-      setVerificationError(axiosError.response?.data?.error || 'Failed to submit request');
-    } finally {
-      setIsSubmittingVerification(false);
-    }
-  };
-
   const formatTimeWaiting = (startedAt: string) => {
     const start = new Date(startedAt);
     const now = new Date();
@@ -444,6 +410,109 @@ export default function CommunityDashboard() {
           </div>
         </div>
       </header>
+
+      {/* Navigation Tabs */}
+      <div
+        style={{
+          backgroundColor: 'white',
+          borderBottom: '1px solid #E2E8F0',
+          padding: '0 24px',
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '800px',
+            margin: '0 auto',
+            display: 'flex',
+            gap: '4px',
+          }}
+        >
+          <button
+            style={{
+              padding: '14px 20px',
+              backgroundColor: 'transparent',
+              color: '#2B7CF6',
+              border: 'none',
+              borderBottom: '2px solid #2B7CF6',
+              cursor: 'pointer',
+              fontSize: '14px',
+              fontWeight: 600,
+            }}
+          >
+            Home
+          </button>
+          <Link
+            to={`/community/${slug}/history`}
+            style={{
+              padding: '14px 20px',
+              backgroundColor: 'transparent',
+              color: '#64748B',
+              border: 'none',
+              borderBottom: '2px solid transparent',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: 500,
+              transition: 'all 0.2s',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.color = '#2B7CF6';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.color = '#64748B';
+            }}
+          >
+            Past Sessions
+          </Link>
+          {(membership.is_available || membership.role === 'helper' || membership.role === 'both' || membership.role === 'admin') && (
+            <Link
+              to={`/community/${slug}/helper-dashboard`}
+              style={{
+                padding: '14px 20px',
+                backgroundColor: 'transparent',
+                color: '#64748B',
+                border: 'none',
+                borderBottom: '2px solid transparent',
+                textDecoration: 'none',
+                fontSize: '14px',
+                fontWeight: 500,
+                transition: 'all 0.2s',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.color = '#2B7CF6';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.color = '#64748B';
+              }}
+            >
+              Helper Dashboard
+            </Link>
+          )}
+          {membership.role === 'admin' && (
+            <Link
+              to={`/community/${slug}/admin`}
+              style={{
+                padding: '14px 20px',
+                backgroundColor: 'transparent',
+                color: '#64748B',
+                border: 'none',
+                borderBottom: '2px solid transparent',
+                textDecoration: 'none',
+                fontSize: '14px',
+                fontWeight: 500,
+                transition: 'all 0.2s',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.color = '#2B7CF6';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.color = '#64748B';
+              }}
+            >
+              Admin
+            </Link>
+          )}
+        </div>
+      </div>
 
       {/* Push Notification Banner */}
       {showPushBanner && (
@@ -668,238 +737,6 @@ export default function CommunityDashboard() {
               >
                 Start Training
               </Link>
-            </div>
-          </div>
-        )}
-
-        {/* Verification Status Section - only show if community requires verification */}
-        {community.helper_verification_required && !membership.is_verified_helper && (
-          <div
-            style={{
-              backgroundColor: 'white',
-              borderRadius: '16px',
-              padding: '20px',
-              marginBottom: '20px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-              borderLeft: verificationRequest?.status === 'pending'
-                ? '4px solid #F59E0B'
-                : verificationRequest?.status === 'denied'
-                ? '4px solid #DC2626'
-                : '4px solid #2B7CF6',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <h3 style={{ margin: '0 0 8px 0', color: '#1E3A5F', fontSize: '16px' }}>
-                  {terminology.helper} Verification
-                </h3>
-                {!verificationRequest && (
-                  <p style={{ margin: 0, color: '#64748B', fontSize: '14px' }}>
-                    Get verified to show your expertise and build trust with those you help.
-                  </p>
-                )}
-                {verificationRequest?.status === 'pending' && (
-                  <p style={{ margin: 0, color: '#F59E0B', fontSize: '14px', fontWeight: 500 }}>
-                    Your verification request is pending review.
-                  </p>
-                )}
-                {verificationRequest?.status === 'denied' && (
-                  <div>
-                    <p style={{ margin: '0 0 8px 0', color: '#DC2626', fontSize: '14px', fontWeight: 500 }}>
-                      Your verification request was not approved.
-                    </p>
-                    {verificationRequest.reviewNotes && (
-                      <p style={{ margin: 0, color: '#64748B', fontSize: '13px', fontStyle: 'italic' }}>
-                        "{verificationRequest.reviewNotes}"
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-              {(!verificationRequest || verificationRequest.status === 'denied') && (
-                <button
-                  onClick={() => {
-                    setShowVerificationModal(true);
-                    setVerificationError('');
-                    setQualifications('');
-                  }}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: '#2B7CF6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '24px',
-                    cursor: 'pointer',
-                    fontWeight: 500,
-                    fontSize: '14px',
-                    whiteSpace: 'nowrap',
-                    transition: 'background-color 0.2s',
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#1E6AD9';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = '#2B7CF6';
-                  }}
-                >
-                  {verificationRequest?.status === 'denied' ? 'Reapply' : 'Apply for Verification'}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Verified Helper Badge */}
-        {community.helper_verification_required && membership.is_verified_helper && (
-          <div
-            style={{
-              backgroundColor: '#ECFDF5',
-              borderRadius: '16px',
-              padding: '16px 20px',
-              marginBottom: '20px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '12px',
-            }}
-          >
-            <span style={{ fontSize: '20px' }}>✓</span>
-            <div>
-              <p style={{ margin: 0, color: '#16A34A', fontSize: '14px', fontWeight: 600 }}>
-                Verified {terminology.helper}
-              </p>
-              <p style={{ margin: '2px 0 0', color: '#64748B', fontSize: '13px' }}>
-                Your expertise has been verified by community administrators.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Verification Application Modal */}
-        {showVerificationModal && (
-          <div
-            style={{
-              position: 'fixed',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              backgroundColor: 'rgba(0, 0, 0, 0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 1000,
-              padding: '20px',
-            }}
-            onClick={(e) => {
-              if (e.target === e.currentTarget) {
-                setShowVerificationModal(false);
-              }
-            }}
-          >
-            <div
-              style={{
-                backgroundColor: 'white',
-                borderRadius: '16px',
-                padding: '24px',
-                maxWidth: '500px',
-                width: '100%',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
-              }}
-            >
-              <h2 style={{ margin: '0 0 8px 0', color: '#1E3A5F', fontSize: '20px' }}>
-                Apply for Verification
-              </h2>
-              <p style={{ margin: '0 0 20px 0', color: '#64748B', fontSize: '14px' }}>
-                Tell us about your qualifications, training, certifications, or relevant experience
-                that makes you suited to be a verified {terminology.helper.toLowerCase()}.
-              </p>
-
-              <textarea
-                value={qualifications}
-                onChange={(e) => setQualifications(e.target.value)}
-                placeholder="Describe your qualifications, certifications, training, and relevant experience..."
-                style={{
-                  width: '100%',
-                  minHeight: '150px',
-                  padding: '12px 16px',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '12px',
-                  fontSize: '14px',
-                  resize: 'vertical',
-                  boxSizing: 'border-box',
-                  outline: 'none',
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = '#2B7CF6';
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = '#E2E8F0';
-                }}
-              />
-
-              {verificationError && (
-                <p style={{ margin: '12px 0 0', color: '#DC2626', fontSize: '13px' }}>
-                  {verificationError}
-                </p>
-              )}
-
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'flex-end',
-                  gap: '12px',
-                  marginTop: '20px',
-                }}
-              >
-                <button
-                  onClick={() => setShowVerificationModal(false)}
-                  style={{
-                    padding: '10px 20px',
-                    backgroundColor: 'white',
-                    color: '#64748B',
-                    border: '1px solid #E2E8F0',
-                    borderRadius: '24px',
-                    cursor: 'pointer',
-                    fontWeight: 500,
-                    fontSize: '14px',
-                    transition: 'all 0.2s',
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#F8FAFC';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = 'white';
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSubmitVerification}
-                  disabled={isSubmittingVerification}
-                  style={{
-                    padding: '10px 24px',
-                    backgroundColor: '#2B7CF6',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '24px',
-                    cursor: isSubmittingVerification ? 'not-allowed' : 'pointer',
-                    fontWeight: 500,
-                    fontSize: '14px',
-                    opacity: isSubmittingVerification ? 0.6 : 1,
-                    transition: 'background-color 0.2s',
-                  }}
-                  onMouseOver={(e) => {
-                    if (!isSubmittingVerification) {
-                      e.currentTarget.style.backgroundColor = '#1E6AD9';
-                    }
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = '#2B7CF6';
-                  }}
-                >
-                  {isSubmittingVerification ? 'Submitting...' : 'Submit Application'}
-                </button>
-              </div>
             </div>
           </div>
         )}
@@ -1200,144 +1037,6 @@ export default function CommunityDashboard() {
           )}
         </div>
 
-        {/* Navigation Links */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '12px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <Link
-            to={`/community/${slug}/history`}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: 'white',
-              color: '#64748B',
-              border: '1px solid #E2E8F0',
-              borderRadius: '24px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: 500,
-              transition: 'all 0.2s',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.borderColor = '#2B7CF6';
-              e.currentTarget.style.color = '#2B7CF6';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.borderColor = '#E2E8F0';
-              e.currentTarget.style.color = '#64748B';
-            }}
-          >
-            Session History
-          </Link>
-          <Link
-            to={`/community/${slug}/training`}
-            style={{
-              padding: '10px 20px',
-              backgroundColor: membership.training_completed ? 'white' : '#EDF4FF',
-              color: membership.training_completed ? '#64748B' : '#2B7CF6',
-              border: membership.training_completed ? '1px solid #E2E8F0' : 'none',
-              borderRadius: '24px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: 500,
-              transition: 'all 0.2s',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.borderColor = '#2B7CF6';
-              e.currentTarget.style.color = '#2B7CF6';
-            }}
-            onMouseOut={(e) => {
-              if (membership.training_completed) {
-                e.currentTarget.style.borderColor = '#E2E8F0';
-                e.currentTarget.style.color = '#64748B';
-              } else {
-                e.currentTarget.style.color = '#2B7CF6';
-              }
-            }}
-          >
-            Helper Training
-          </Link>
-          {(membership.is_available || membership.role === 'helper' || membership.role === 'both' || membership.role === 'admin') && (
-            <Link
-              to={`/community/${slug}/helper-dashboard`}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: 'white',
-                color: '#64748B',
-                border: '1px solid #E2E8F0',
-                borderRadius: '24px',
-                textDecoration: 'none',
-                fontSize: '14px',
-                fontWeight: 500,
-                transition: 'all 0.2s',
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.borderColor = '#2B7CF6';
-                e.currentTarget.style.color = '#2B7CF6';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.borderColor = '#E2E8F0';
-                e.currentTarget.style.color = '#64748B';
-              }}
-            >
-              Helper Dashboard
-            </Link>
-          )}
-          {membership.role === 'admin' && (
-            <Link
-              to={`/community/${slug}/admin`}
-              style={{
-                padding: '10px 20px',
-                backgroundColor: 'white',
-                color: '#64748B',
-                border: '1px solid #E2E8F0',
-                borderRadius: '24px',
-                textDecoration: 'none',
-                fontSize: '14px',
-                fontWeight: 500,
-                transition: 'all 0.2s',
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.borderColor = '#2B7CF6';
-                e.currentTarget.style.color = '#2B7CF6';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.borderColor = '#E2E8F0';
-                e.currentTarget.style.color = '#64748B';
-              }}
-            >
-              Admin Dashboard
-            </Link>
-          )}
-          <Link
-            to="/communities"
-            style={{
-              padding: '10px 20px',
-              backgroundColor: 'white',
-              color: '#64748B',
-              border: '1px solid #E2E8F0',
-              borderRadius: '24px',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: 500,
-              transition: 'all 0.2s',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.borderColor = '#2B7CF6';
-              e.currentTarget.style.color = '#2B7CF6';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.borderColor = '#E2E8F0';
-              e.currentTarget.style.color = '#64748B';
-            }}
-          >
-            All Communities
-          </Link>
-        </div>
       </main>
     </div>
   );

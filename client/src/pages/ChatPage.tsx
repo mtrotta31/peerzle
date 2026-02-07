@@ -343,6 +343,19 @@ export default function ChatPage() {
   const isMatching = conversation.status === 'matching';
   const isEnded = conversation.status === 'ended';
 
+  // PeerBot intro message - shown once at the start of active conversations
+  const peerbotIntroMessage = `Welcome to your conversation! 👋 Here are a few things to know:
+
+• This is a safe, anonymous space. Neither of you can see the other's identity.
+• Use the suggested responses panel if you're unsure what to say — they're written by licensed counselors.
+• You can end the conversation at any time using the menu.
+• If either of you needs immediate crisis support, resources are always available.
+
+Take your time, be yourself, and remember — you're not alone.`;
+
+  // Only show intro if conversation is active and there are no regular messages yet (fresh start)
+  const showPeerbotIntro = (conversation.status === 'active' || helperJoined) && messages.length === 0;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
       {/* Header */}
@@ -640,11 +653,61 @@ export default function ChatPage() {
           backgroundColor: '#F8FAFC',
         }}
       >
-        {messages.length === 0 ? (
+        {/* PeerBot Intro Message */}
+        {showPeerbotIntro && (
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              marginBottom: '20px',
+            }}
+          >
+            <div
+              style={{
+                maxWidth: '85%',
+                backgroundColor: '#F0FDF4',
+                borderRadius: '16px',
+                padding: '20px',
+                border: '1px solid #BBF7D0',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+                <div
+                  style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    overflow: 'hidden',
+                    backgroundColor: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <img
+                    src="/peerbot-avatar.png"
+                    alt="PeerBot"
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      objectFit: 'contain',
+                    }}
+                  />
+                </div>
+                <span style={{ fontWeight: 600, color: '#16A34A', fontSize: '14px' }}>PeerBot</span>
+              </div>
+              <p style={{ margin: 0, color: '#1E3A5F', whiteSpace: 'pre-wrap', lineHeight: '1.6', fontSize: '14px' }}>
+                {peerbotIntroMessage}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {messages.length === 0 && !showPeerbotIntro ? (
           <p style={{ textAlign: 'center', color: '#64748B' }}>
             No messages yet. Start the conversation!
           </p>
-        ) : (
+        ) : messages.length > 0 ? (
           messages.map((message) => {
             const isPeerBot = message.moderation_result?.sender === 'peerbot';
             const isMine = !isPeerBot && !isAdminViewer && message.sender_email === user?.email;
@@ -769,7 +832,7 @@ export default function ChatPage() {
               </div>
             );
           })
-        )}
+        ) : null}
 
         {/* Typing indicator */}
         {typingUser && (
@@ -1014,7 +1077,7 @@ export default function ChatPage() {
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <button
-                onClick={() => navigate(`/community/${conversation.community_slug}/start`)}
+                onClick={() => navigate(`/community/${conversation.community_slug}`)}
                 style={{
                   padding: '14px 24px',
                   backgroundColor: '#2B7CF6',
