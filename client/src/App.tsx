@@ -19,6 +19,8 @@ import TermsOfService from './pages/TermsOfService';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsAcceptanceModal from './components/TermsAcceptanceModal';
 import OnboardingFlow from './pages/OnboardingFlow';
+import SuperAdminPanel from './pages/SuperAdminPanel';
+import CommunityManagement from './pages/CommunityManagement';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -64,6 +66,24 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
         />
       </>
     );
+  }
+
+  return <>{children}</>;
+}
+
+function SuperAdminRoute({ children }: { children: React.ReactNode }) {
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  if (isLoading) {
+    return <div style={{ padding: '20px' }}>Loading...</div>;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (!user?.isSuperAdmin) {
+    return <Navigate to="/communities" replace />;
   }
 
   return <>{children}</>;
@@ -182,6 +202,24 @@ function AppRoutes() {
           <ProtectedRoute>
             <ChatPage />
           </ProtectedRoute>
+        }
+      />
+
+      {/* Super Admin routes */}
+      <Route
+        path="/super-admin"
+        element={
+          <SuperAdminRoute>
+            <SuperAdminPanel />
+          </SuperAdminRoute>
+        }
+      />
+      <Route
+        path="/super-admin/community/:slug"
+        element={
+          <SuperAdminRoute>
+            <CommunityManagement />
+          </SuperAdminRoute>
         }
       />
     </Routes>

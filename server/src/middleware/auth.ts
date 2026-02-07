@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 export interface JwtPayload {
   userId: string;
   email: string;
+  isSuperAdmin?: boolean;
 }
 
 export interface AuthenticatedRequest extends Request {

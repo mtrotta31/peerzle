@@ -16,11 +16,12 @@ interface UserRow {
   email: string;
   password_hash: string;
   created_at: Date;
+  is_super_admin: boolean;
 }
 
-function generateToken(userId: string, email: string): string {
+function generateToken(userId: string, email: string, isSuperAdmin: boolean = false): string {
   return jwt.sign(
-    { userId, email },
+    { userId, email, isSuperAdmin },
     process.env.JWT_SECRET!,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
@@ -114,7 +115,7 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 
     const result = await query<UserRow>(
-      'SELECT id, email, password_hash, created_at FROM users WHERE email = $1',
+      'SELECT id, email, password_hash, created_at, COALESCE(is_super_admin, false) as is_super_admin FROM users WHERE email = $1',
       [email.toLowerCase()]
     );
 
@@ -136,13 +137,14 @@ router.post('/login', async (req: Request, res: Response) => {
       [user.id]
     );
 
-    const token = generateToken(user.id, user.email);
+    const token = generateToken(user.id, user.email, user.is_super_admin);
 
     res.json({
       user: {
         id: user.id,
         email: user.email,
         createdAt: user.created_at,
+        isSuperAdmin: user.is_super_admin,
       },
       token,
     });
@@ -156,7 +158,7 @@ router.post('/login', async (req: Request, res: Response) => {
 router.get('/me', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const result = await query<UserRow>(
-      'SELECT id, email, created_at FROM users WHERE id = $1',
+      'SELECT id, email, created_at, COALESCE(is_super_admin, false) as is_super_admin FROM users WHERE id = $1',
       [req.user!.userId]
     );
 
@@ -171,6 +173,7 @@ router.get('/me', authenticate, async (req: AuthenticatedRequest, res: Response)
       id: user.id,
       email: user.email,
       createdAt: user.created_at,
+      isSuperAdmin: user.is_super_admin,
     });
   } catch (error) {
     console.error('Get user error:', error);

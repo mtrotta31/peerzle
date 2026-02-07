@@ -30,6 +30,7 @@ import onboardingRoutes from './routes/onboarding';
 import reportsRoutes from './routes/reports';
 import suggestionsRoutes from './routes/suggestions';
 import pushRoutes from './routes/push';
+import superAdminRoutes from './routes/super-admin';
 import { initializeSocket } from './config/socket';
 
 const app = express();
@@ -77,6 +78,7 @@ app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/suggestions', suggestionsRoutes);
 app.use('/api/push', pushRoutes);
+app.use('/api/super-admin', superAdminRoutes);
 
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

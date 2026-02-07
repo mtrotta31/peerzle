@@ -161,6 +161,32 @@ export default function CommunitiesPage() {
           />
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <span style={{ color: '#64748B', fontSize: '14px' }}>{user?.email}</span>
+            {user?.isSuperAdmin && (
+              <button
+                onClick={() => navigate('/super-admin')}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: 'white',
+                  color: '#64748B',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '24px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#F8FAFC';
+                  e.currentTarget.style.borderColor = '#CBD5E1';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white';
+                  e.currentTarget.style.borderColor = '#E2E8F0';
+                }}
+              >
+                Admin
+              </button>
+            )}
             <button
               onClick={logout}
               style={{

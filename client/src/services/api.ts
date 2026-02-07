@@ -16,6 +16,7 @@ export interface User {
   id: string;
   email: string;
   createdAt: string;
+  isSuperAdmin?: boolean;
 }
 
 export interface AuthResponse {
@@ -924,6 +925,143 @@ export async function getVapidPublicKey(): Promise<string> {
 
 export async function testPushNotification(): Promise<{ success: boolean; message: string }> {
   const response = await api.post<{ success: boolean; message: string }>('/api/push/test');
+  return response.data;
+}
+
+// ============================================================================
+// SUPER ADMIN API
+// ============================================================================
+
+// Platform overview
+export interface PlatformOverview {
+  totalCommunities: number;
+  totalOrganizations: number;
+  totalUsers: number;
+  totalConversations: number;
+  conversationsThisWeek: number;
+  conversationsThisMonth: number;
+  activeCommunities: number;
+}
+
+export async function getSuperAdminOverview(): Promise<PlatformOverview> {
+  const response = await api.get<PlatformOverview>('/api/super-admin/overview');
+  return response.data;
+}
+
+// Community types
+export interface SuperAdminCommunity {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  verificationMethod: string;
+  isPublic: boolean;
+  branding: { primaryColor?: string; secondaryColor?: string };
+  terminology: { helper?: string; seeker?: string };
+  createdAt: string;
+  memberCount: number;
+  orgCount: number;
+  conversationCount: number;
+  initialInviteCode?: string;
+}
+
+export interface CreateCommunityData {
+  name: string;
+  slug: string;
+  description?: string;
+  topics: { name: string; description?: string }[];
+  verificationMethod: 'invite_code' | 'email_domain' | 'open';
+  branding?: { primaryColor?: string; secondaryColor?: string };
+  terminology?: { helperTerm?: string; seekerTerm?: string };
+}
+
+export interface CommunityTopic {
+  id: number;
+  name: string;
+  description: string | null;
+  sortOrder: number;
+}
+
+// Community API
+export async function getSuperAdminCommunities(): Promise<SuperAdminCommunity[]> {
+  const response = await api.get<SuperAdminCommunity[]>('/api/super-admin/communities');
+  return response.data;
+}
+
+export async function getSuperAdminCommunity(slug: string): Promise<SuperAdminCommunity> {
+  const response = await api.get<SuperAdminCommunity>(`/api/super-admin/communities/${slug}`);
+  return response.data;
+}
+
+export async function createCommunity(data: CreateCommunityData): Promise<SuperAdminCommunity> {
+  const response = await api.post<SuperAdminCommunity>('/api/super-admin/communities', data);
+  return response.data;
+}
+
+export async function updateCommunity(
+  slug: string,
+  data: Partial<{
+    name: string;
+    description: string;
+    branding: { primaryColor?: string; secondaryColor?: string };
+    terminology: { helperTerm?: string; seekerTerm?: string };
+    verificationMethod: string;
+  }>
+): Promise<{ success: boolean }> {
+  const response = await api.put<{ success: boolean }>(`/api/super-admin/communities/${slug}`, data);
+  return response.data;
+}
+
+// Topic API (Super Admin)
+export async function getSuperAdminCommunityTopics(slug: string): Promise<CommunityTopic[]> {
+  const response = await api.get<CommunityTopic[]>(`/api/super-admin/communities/${slug}/topics`);
+  return response.data;
+}
+
+export async function addCommunityTopic(
+  slug: string,
+  data: { name: string; description?: string }
+): Promise<CommunityTopic> {
+  const response = await api.post<CommunityTopic>(`/api/super-admin/communities/${slug}/topics`, data);
+  return response.data;
+}
+
+export async function updateCommunityTopic(
+  slug: string,
+  topicId: number,
+  data: { name?: string; description?: string; sortOrder?: number }
+): Promise<CommunityTopic> {
+  const response = await api.put<CommunityTopic>(`/api/super-admin/communities/${slug}/topics/${topicId}`, data);
+  return response.data;
+}
+
+export async function deleteCommunityTopic(slug: string, topicId: number): Promise<{ success: boolean }> {
+  const response = await api.delete<{ success: boolean }>(`/api/super-admin/communities/${slug}/topics/${topicId}`);
+  return response.data;
+}
+
+// Organizations API (Super Admin)
+export async function getSuperAdminCommunityOrganizations(slug: string): Promise<Organization[]> {
+  const response = await api.get<Organization[]>(`/api/super-admin/communities/${slug}/organizations`);
+  return response.data;
+}
+
+// Organization types for super admin
+export interface SuperAdminOrganization {
+  id: string;
+  name: string;
+  slug: string;
+  isActive: boolean;
+  createdAt: string;
+  communityId: string;
+  communityName: string;
+  communitySlug: string;
+  memberCount: number;
+  conversationCount: number;
+}
+
+export async function getSuperAdminOrganizations(): Promise<SuperAdminOrganization[]> {
+  const response = await api.get<SuperAdminOrganization[]>('/api/super-admin/organizations');
   return response.data;
 }
 
