@@ -18,6 +18,13 @@ import {
   getOnboardingStatus,
 } from '../services/api';
 import { connectSocket, getSocket, HelpRequestEvent } from '../services/socket';
+import {
+  isPushSupported,
+  getNotificationPermission,
+  requestNotificationPermission,
+  subscribeToPush,
+  isPushEnabled,
+} from '../services/push';
 import { useAuth } from '../context/AuthContext';
 import { AxiosError } from 'axios';
 
@@ -37,8 +44,81 @@ export default function CommunityDashboard() {
   const [qualifications, setQualifications] = useState('');
   const [isSubmittingVerification, setIsSubmittingVerification] = useState(false);
   const [verificationError, setVerificationError] = useState('');
+  const [showPushBanner, setShowPushBanner] = useState(false);
+  const [isEnablingPush, setIsEnablingPush] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+
+  // Check if we should show the push notification banner
+  useEffect(() => {
+    async function checkPushStatus() {
+      console.log('[PUSH DEBUG] Checking push status...');
+
+      // Only show on supported browsers
+      const supported = isPushSupported();
+      console.log('[PUSH DEBUG] isPushSupported:', supported);
+      if (!supported) {
+        console.log('[PUSH DEBUG] Exiting: Push not supported');
+        return;
+      }
+
+      // Don't show if user already dismissed it
+      const dismissed = localStorage.getItem('pushBannerDismissed');
+      console.log('[PUSH DEBUG] localStorage pushBannerDismissed:', dismissed);
+      if (dismissed) {
+        console.log('[PUSH DEBUG] Exiting: Banner was dismissed');
+        return;
+      }
+
+      // Don't show if permission is denied (can't re-ask)
+      const permission = getNotificationPermission();
+      console.log('[PUSH DEBUG] Notification.permission:', permission);
+      if (permission === 'denied') {
+        console.log('[PUSH DEBUG] Exiting: Permission denied');
+        return;
+      }
+
+      // Don't show if already enabled
+      const enabled = await isPushEnabled();
+      console.log('[PUSH DEBUG] isPushEnabled:', enabled);
+      if (enabled) {
+        console.log('[PUSH DEBUG] Exiting: Push already enabled');
+        return;
+      }
+
+      // Show the banner
+      console.log('[PUSH DEBUG] All checks passed, showing banner');
+      setShowPushBanner(true);
+    }
+
+    checkPushStatus();
+  }, []);
+
+  const handleEnablePush = async () => {
+    setIsEnablingPush(true);
+    try {
+      const permission = await requestNotificationPermission();
+      if (permission === 'granted') {
+        const success = await subscribeToPush();
+        if (success) {
+          setShowPushBanner(false);
+        }
+      } else {
+        // Permission denied, hide banner permanently
+        localStorage.setItem('pushBannerDismissed', 'true');
+        setShowPushBanner(false);
+      }
+    } catch (err) {
+      console.error('Failed to enable push:', err);
+    } finally {
+      setIsEnablingPush(false);
+    }
+  };
+
+  const handleDismissPushBanner = () => {
+    localStorage.setItem('pushBannerDismissed', 'true');
+    setShowPushBanner(false);
+  };
 
   const loadPendingConversations = async () => {
     try {
@@ -325,9 +405,16 @@ export default function CommunityDashboard() {
                 alt="Peerzle"
                 style={{ width: '32px', height: '32px' }}
               />
-              <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1E3A5F' }}>
-                {community.name}
-              </h1>
+              <div>
+                <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1E3A5F' }}>
+                  {community.name}
+                </h1>
+                {membership.organization?.name && (
+                  <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748B' }}>
+                    {membership.organization.name}
+                  </p>
+                )}
+              </div>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <span style={{ color: '#64748B', fontSize: '14px' }}>{user?.email}</span>
@@ -357,6 +444,72 @@ export default function CommunityDashboard() {
           </div>
         </div>
       </header>
+
+      {/* Push Notification Banner */}
+      {showPushBanner && (
+        <div
+          style={{
+            backgroundColor: '#EDF4FF',
+            borderBottom: '1px solid #DCE9FF',
+            padding: '12px 24px',
+          }}
+        >
+          <div
+            style={{
+              maxWidth: '800px',
+              margin: '0 auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '16px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '20px' }}>&#128276;</span>
+              <p style={{ margin: 0, color: '#1E3A5F', fontSize: '14px' }}>
+                {membership?.role === 'helper' || membership?.role === 'both'
+                  ? 'As a helper, notifications let you respond quickly when someone reaches out'
+                  : 'Turn on notifications so you never miss someone who needs help'}
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button
+                onClick={handleDismissPushBanner}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: 'transparent',
+                  color: '#64748B',
+                  border: 'none',
+                  borderRadius: '20px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              >
+                Not now
+              </button>
+              <button
+                onClick={handleEnablePush}
+                disabled={isEnablingPush}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#2B7CF6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '20px',
+                  cursor: isEnablingPush ? 'not-allowed' : 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  opacity: isEnablingPush ? 0.7 : 1,
+                }}
+              >
+                {isEnablingPush ? 'Enabling...' : 'Enable'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <main style={{ maxWidth: '800px', margin: '0 auto', padding: '24px' }}>
@@ -797,7 +950,7 @@ export default function CommunityDashboard() {
                   }}
                 >
                   <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                       <p style={{ margin: 0, fontWeight: 500, color: '#1E3A5F' }}>
                         {conv.topic || 'General Support'}
                       </p>
@@ -817,6 +970,35 @@ export default function CommunityDashboard() {
                           {score}% match
                         </span>
                       )}
+                      {conv.same_org ? (
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            color: '#16A34A',
+                            backgroundColor: '#DCFCE7',
+                          }}
+                        >
+                          Your org
+                        </span>
+                      ) : conv.org_name ? (
+                        <span
+                          style={{
+                            display: 'inline-block',
+                            padding: '2px 8px',
+                            borderRadius: '12px',
+                            fontSize: '11px',
+                            fontWeight: 500,
+                            color: '#64748B',
+                            backgroundColor: '#F1F5F9',
+                          }}
+                        >
+                          {conv.org_name}
+                        </span>
+                      ) : null}
                     </div>
                     <p style={{ margin: '4px 0 0', fontSize: '13px', color: '#64748B' }}>
                       Waiting {formatTimeWaiting(conv.started_at)}

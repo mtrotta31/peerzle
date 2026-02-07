@@ -5,8 +5,10 @@ import {
   getCommunityTopics,
   generateDisplayName,
   completeOnboarding,
+  getMembership,
   TopicRating,
   Community,
+  Membership,
 } from '../services/api';
 
 type OnboardingStep = 'welcome' | 'topics' | 'ratings' | 'identity' | 'review';
@@ -17,6 +19,7 @@ export default function OnboardingFlow() {
 
   // State
   const [community, setCommunity] = useState<Community | null>(null);
+  const [membership, setMembership] = useState<Membership | null>(null);
   const [availableTopics, setAvailableTopics] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,15 +36,16 @@ export default function OnboardingFlow() {
   const [role, setRole] = useState<'seeker' | 'both'>('seeker');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Load community and topics
+  // Load community, topics, and membership
   useEffect(() => {
     if (!slug) return;
 
-    Promise.all([getCommunity(slug), getCommunityTopics(slug), generateDisplayName(slug)])
-      .then(([communityData, topics, name]) => {
+    Promise.all([getCommunity(slug), getCommunityTopics(slug), generateDisplayName(slug), getMembership(slug)])
+      .then(([communityData, topics, name, membershipData]) => {
         setCommunity(communityData);
         setAvailableTopics(topics);
         setDisplayName(name);
+        setMembership(membershipData);
       })
       .catch(() => {
         setError('Failed to load onboarding data');
@@ -189,19 +193,23 @@ export default function OnboardingFlow() {
 
   // STEP 1: Welcome
   const renderWelcome = () => {
+    const orgName = membership?.organization?.name;
     const screens = [
       {
         title: `Welcome to ${community?.name || 'Peerzle'}`,
+        subtitle: orgName ? `You've been invited by ${orgName}` : null,
         text: 'Peerzle connects you with peers who share similar experiences for anonymous, supportive conversations.',
         icon: '👋',
       },
       {
         title: 'How it works',
+        subtitle: null,
         text: 'Select topics you\'ve experienced, get matched with someone who understands, and chat anonymously.',
         icon: '💬',
       },
       {
         title: 'Your safety matters',
+        subtitle: null,
         text: 'All conversations are monitored for safety. Crisis resources are always available. Everything is anonymous.',
         icon: '🛡️',
       },
@@ -214,9 +222,14 @@ export default function OnboardingFlow() {
         {renderProgress()}
         <div style={{ textAlign: 'center' }}>
           <div style={{ fontSize: '64px', marginBottom: '24px' }}>{screen.icon}</div>
-          <h1 style={{ fontSize: '28px', fontWeight: 700, color: '#1E3A5F', marginBottom: '16px' }}>
+          <h1 style={{ fontSize: '28px', fontWeight: 700, color: '#1E3A5F', marginBottom: screen.subtitle ? '8px' : '16px' }}>
             {screen.title}
           </h1>
+          {screen.subtitle && (
+            <p style={{ fontSize: '15px', color: '#2B7CF6', fontWeight: 500, marginBottom: '16px' }}>
+              {screen.subtitle}
+            </p>
+          )}
           <p style={{ fontSize: '16px', color: '#64748B', lineHeight: '1.6', marginBottom: '32px' }}>
             {screen.text}
           </p>

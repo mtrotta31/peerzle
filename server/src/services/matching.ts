@@ -5,6 +5,7 @@ export interface MatchResult {
   userId: string;
   matchScore: number;
   displayName: string | null;
+  sameOrganization?: boolean;
 }
 
 interface TopicRatings {
@@ -85,11 +86,20 @@ export async function calculateMatchScore(
   return Math.min(100, Math.max(0, totalScore));
 }
 
+interface OrganizationSettings {
+  match_within_org_only: boolean;
+  allow_cross_org_matching: boolean;
+}
+
 /**
  * Find and score all available helpers for a conversation, sorted by match score descending.
+ * Respects organization matching settings:
+ * - If match_within_org_only is true: only helpers from the same organization
+ * - If no org-internal helpers AND allow_cross_org_matching: expand to community
+ * - Same-org helpers get a +5 point bonus even when cross-org is enabled
  */
 export async function findMatchesForConversation(conversationId: string): Promise<MatchResult[]> {
-  // Get conversation details
+  // Get conversation details including seeker's organization
   const convResult = await query<{
     community_id: string;
     seeker_membership_id: string;
@@ -105,32 +115,100 @@ export async function findMatchesForConversation(conversationId: string): Promis
 
   const { community_id, seeker_membership_id, topic } = convResult.rows[0];
 
-  // Get all available, qualified helpers in this community (excluding the seeker)
-  const helpersResult = await query<{
+  // Get seeker's organization and settings
+  const seekerOrgResult = await query<{
+    organization_id: string | null;
+    settings: OrganizationSettings | null;
+  }>(
+    `SELECT m.organization_id, o.settings
+     FROM memberships m
+     LEFT JOIN organizations o ON o.id = m.organization_id
+     WHERE m.id = $1`,
+    [seeker_membership_id]
+  );
+
+  const seekerOrgId = seekerOrgResult.rows[0]?.organization_id || null;
+  const orgSettings: OrganizationSettings = seekerOrgResult.rows[0]?.settings || {
+    match_within_org_only: false,
+    allow_cross_org_matching: true,
+  };
+
+  // Build the helper query based on org settings
+  let helperQuery: string;
+  let helperParams: (string | null)[];
+
+  if (seekerOrgId && orgSettings.match_within_org_only) {
+    // Only match within the same organization
+    helperQuery = `
+      SELECT m.id, m.user_id, m.display_name, m.organization_id
+      FROM memberships m
+      WHERE m.community_id = $1
+        AND m.organization_id = $2
+        AND m.is_available = true
+        AND m.role IN ('helper', 'both')
+        AND m.training_completed = true
+        AND m.onboarding_completed = true
+        AND m.id != $3`;
+    helperParams = [community_id, seekerOrgId, seeker_membership_id];
+  } else {
+    // Match across entire community (but we'll track same-org for bonus)
+    helperQuery = `
+      SELECT m.id, m.user_id, m.display_name, m.organization_id
+      FROM memberships m
+      WHERE m.community_id = $1
+        AND m.is_available = true
+        AND m.role IN ('helper', 'both')
+        AND m.training_completed = true
+        AND m.onboarding_completed = true
+        AND m.id != $2`;
+    helperParams = [community_id, seeker_membership_id];
+  }
+
+  let helpersResult = await query<{
     id: string;
     user_id: string;
     display_name: string | null;
-  }>(
-    `SELECT m.id, m.user_id, m.display_name
-     FROM memberships m
-     WHERE m.community_id = $1
-       AND m.is_available = true
-       AND m.role IN ('helper', 'both')
-       AND m.training_completed = true
-       AND m.onboarding_completed = true
-       AND m.id != $2`,
-    [community_id, seeker_membership_id]
-  );
+    organization_id: string | null;
+  }>(helperQuery, helperParams);
+
+  // If org-only matching found no helpers AND cross-org is allowed, expand search
+  if (helpersResult.rows.length === 0 && seekerOrgId && orgSettings.match_within_org_only && orgSettings.allow_cross_org_matching) {
+    console.log(`[MATCHING] No org-internal helpers for conversation ${conversationId}, expanding to community`);
+    helpersResult = await query<{
+      id: string;
+      user_id: string;
+      display_name: string | null;
+      organization_id: string | null;
+    }>(
+      `SELECT m.id, m.user_id, m.display_name, m.organization_id
+       FROM memberships m
+       WHERE m.community_id = $1
+         AND m.is_available = true
+         AND m.role IN ('helper', 'both')
+         AND m.training_completed = true
+         AND m.onboarding_completed = true
+         AND m.id != $2`,
+      [community_id, seeker_membership_id]
+    );
+  }
 
   // Score each helper
   const matches: MatchResult[] = [];
   for (const helper of helpersResult.rows) {
-    const matchScore = await calculateMatchScore(helper.id, topic, seeker_membership_id);
+    let matchScore = await calculateMatchScore(helper.id, topic, seeker_membership_id);
+    const sameOrganization = seekerOrgId !== null && helper.organization_id === seekerOrgId;
+
+    // Same-org bonus (+5 points) when cross-org matching is enabled
+    if (sameOrganization && !orgSettings.match_within_org_only) {
+      matchScore = Math.min(100, matchScore + 5);
+    }
+
     matches.push({
       membershipId: helper.id,
       userId: helper.user_id,
       matchScore,
       displayName: helper.display_name,
+      sameOrganization,
     });
   }
 

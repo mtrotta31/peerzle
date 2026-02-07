@@ -186,6 +186,24 @@ export default function ConnectionCard({ connectionData, userRole }: ConnectionC
                   ✓ Verified Specialist
                 </span>
               )}
+              {connectionData.same_org && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '3px',
+                    padding: '1px 8px',
+                    borderRadius: '10px',
+                    backgroundColor: '#EDF4FF',
+                    color: '#2B7CF6',
+                    fontSize: '11px',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Same Organization
+                </span>
+              )}
             </div>
 
             {/* Shared experience label */}

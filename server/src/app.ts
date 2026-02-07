@@ -22,12 +22,14 @@ import dashboardRoutes from './routes/dashboard';
 import facilitatorRoutes from './routes/facilitator';
 import adminRoutes from './routes/admin';
 import adminStatsRoutes from './routes/admin-stats';
+import organizationsRoutes from './routes/organizations';
 import verificationRoutes from './routes/verification';
 import trainingRoutes from './routes/training';
 import legalRoutes from './routes/legal';
 import onboardingRoutes from './routes/onboarding';
 import reportsRoutes from './routes/reports';
 import suggestionsRoutes from './routes/suggestions';
+import pushRoutes from './routes/push';
 import { initializeSocket } from './config/socket';
 
 const app = express();
@@ -67,12 +69,14 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/facilitator', facilitatorRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/stats', adminStatsRoutes);
+app.use('/api/organizations', organizationsRoutes);
 app.use('/api/communities', verificationRoutes);
 app.use('/api/training', trainingRoutes);
 app.use('/api/legal', legalRoutes);
 app.use('/api/onboarding', onboardingRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/suggestions', suggestionsRoutes);
+app.use('/api/push', pushRoutes);
 
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

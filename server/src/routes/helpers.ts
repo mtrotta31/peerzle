@@ -4,6 +4,7 @@ import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { emitToConversation } from '../config/socket';
 import { cancelMatchingProcess } from '../services/matching-queue';
 import { calculateMatchScore } from '../services/matching';
+import { sendPushNotification } from '../services/push-notifications';
 
 const router = Router();
 
@@ -19,6 +20,8 @@ interface ConversationRow {
   community_slug: string;
   community_name: string;
   seeker_email: string;
+  seeker_org_id: string | null;
+  seeker_org_name: string | null;
 }
 
 interface MembershipRow {
@@ -35,16 +38,20 @@ router.get('/pending', authenticate, async (req: AuthenticatedRequest, res: Resp
     console.log(`[HELPER] Fetching pending conversations for user: ${userId}`);
 
     // Get pending conversations from communities where user is an available helper
+    // Include seeker's organization info
     const result = await query<ConversationRow>(
       `SELECT c.id, c.community_id, c.seeker_membership_id, c.helper_membership_id,
               c.topic, c.status, c.started_at, c.ended_at,
               cm.slug as community_slug, cm.name as community_name,
-              u.email as seeker_email
+              u.email as seeker_email,
+              seeker_m.organization_id as seeker_org_id,
+              seeker_org.name as seeker_org_name
        FROM conversations c
        JOIN communities cm ON cm.id = c.community_id
        JOIN memberships m ON m.community_id = c.community_id AND m.user_id = $1
        JOIN memberships seeker_m ON seeker_m.id = c.seeker_membership_id
        JOIN users u ON u.id = seeker_m.user_id
+       LEFT JOIN organizations seeker_org ON seeker_org.id = seeker_m.organization_id
        WHERE c.status = 'matching'
          AND c.helper_membership_id IS NULL
          AND m.is_available = true
@@ -56,9 +63,9 @@ router.get('/pending', authenticate, async (req: AuthenticatedRequest, res: Resp
 
     console.log(`[HELPER] Found ${result.rows.length} pending conversations`);
 
-    // Get this helper's membership to compute match scores
-    const membershipResult = await query<{ id: string }>(
-      `SELECT m.id FROM memberships m
+    // Get this helper's membership to compute match scores and check org
+    const membershipResult = await query<{ id: string; organization_id: string | null }>(
+      `SELECT m.id, m.organization_id FROM memberships m
        WHERE m.user_id = $1
          AND m.is_available = true
          AND m.role IN ('helper', 'both')
@@ -68,8 +75,9 @@ router.get('/pending', authenticate, async (req: AuthenticatedRequest, res: Resp
 
     if (membershipResult.rows.length > 0 && result.rows.length > 0) {
       const helperMembershipId = membershipResult.rows[0].id;
+      const helperOrgId = membershipResult.rows[0].organization_id;
 
-      // Compute match scores for each pending conversation
+      // Compute match scores and same-org flag for each pending conversation
       const pendingWithScores = await Promise.all(
         result.rows.map(async (conv) => {
           try {
@@ -78,9 +86,20 @@ router.get('/pending', authenticate, async (req: AuthenticatedRequest, res: Resp
               conv.topic,
               conv.seeker_membership_id
             );
-            return { ...conv, match_score: score };
+            const sameOrg = helperOrgId !== null && conv.seeker_org_id === helperOrgId;
+            return {
+              ...conv,
+              match_score: score,
+              same_org: sameOrg,
+              org_name: conv.seeker_org_name,
+            };
           } catch {
-            return { ...conv, match_score: undefined };
+            return {
+              ...conv,
+              match_score: undefined,
+              same_org: false,
+              org_name: conv.seeker_org_name,
+            };
           }
         })
       );
@@ -89,7 +108,14 @@ router.get('/pending', authenticate, async (req: AuthenticatedRequest, res: Resp
       return;
     }
 
-    res.json(result.rows);
+    // Return with org info but no match scores
+    const pendingWithOrg = result.rows.map((conv) => ({
+      ...conv,
+      same_org: false,
+      org_name: conv.seeker_org_name,
+    }));
+
+    res.json(pendingWithOrg);
   } catch (error) {
     console.error('Get pending conversations error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -197,6 +223,27 @@ router.post('/accept/:conversationId', authenticate, async (req: AuthenticatedRe
     });
 
     console.log(`[HELPER] Accepted conversation ${conversationId}: Helper ${helperEmail}`);
+
+    // Send push notification to the seeker
+    // Get seeker's user_id from their membership
+    const seekerResult = await query<{ user_id: string }>(
+      'SELECT user_id FROM memberships WHERE id = $1',
+      [conversation.seeker_membership_id]
+    );
+    if (seekerResult.rows.length > 0) {
+      const seekerUserId = seekerResult.rows[0].user_id;
+      sendPushNotification(seekerUserId, {
+        title: "You've been matched!",
+        body: 'A peer supporter is ready to chat with you.',
+        data: {
+          url: `/community/${conversation.community_slug}/chat/${conversationId}`,
+          type: 'match_accepted',
+          conversationId,
+        },
+      }).catch((err) => {
+        console.error('[HELPER] Push notification error:', err);
+      });
+    }
 
     res.json({
       ...updateResult.rows[0],

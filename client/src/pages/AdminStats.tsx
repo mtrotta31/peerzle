@@ -1,16 +1,21 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import {
   Community,
   AdminStats as AdminStatsType,
+  Organization,
   getCommunity,
   getAdminStats,
+  getOrganizations,
 } from '../services/api';
 
 export default function AdminStats() {
   const { slug } = useParams<{ slug: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [community, setCommunity] = useState<Community | null>(null);
   const [stats, setStats] = useState<AdminStatsType | null>(null);
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [selectedOrgId, setSelectedOrgId] = useState<string | null>(searchParams.get('organization_id'));
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -21,10 +26,18 @@ export default function AdminStats() {
       try {
         const [communityData, statsData] = await Promise.all([
           getCommunity(slug),
-          getAdminStats(slug),
+          getAdminStats(slug, selectedOrgId || undefined),
         ]);
         setCommunity(communityData);
         setStats(statsData);
+
+        // Try to load organizations (will fail for org admins, which is fine)
+        try {
+          const orgsData = await getOrganizations(slug);
+          setOrganizations(orgsData);
+        } catch {
+          // Org admins can't list all orgs, ignore
+        }
       } catch (err) {
         console.error('Failed to load admin stats:', err);
         setError('Failed to load statistics. You may not have admin access.');
@@ -34,7 +47,17 @@ export default function AdminStats() {
     }
 
     loadData();
-  }, [slug]);
+  }, [slug, selectedOrgId]);
+
+  const handleOrgChange = (orgId: string) => {
+    if (orgId === '') {
+      setSelectedOrgId(null);
+      setSearchParams({});
+    } else {
+      setSelectedOrgId(orgId);
+      setSearchParams({ organization_id: orgId });
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -124,6 +147,11 @@ export default function AdminStats() {
             <div>
               <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#1E3A5F' }}>
                 Platform Overview
+                {selectedOrgId && organizations.length > 0 && (
+                  <span style={{ fontWeight: 400, color: '#64748B' }}>
+                    {' '}&middot; {organizations.find((o) => o.id === selectedOrgId)?.name}
+                  </span>
+                )}
               </h1>
               <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748B' }}>
                 {community.name}
@@ -132,6 +160,31 @@ export default function AdminStats() {
                 )}
               </p>
             </div>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            {/* Organization filter - only for community admins */}
+            {organizations.length > 1 && (
+              <select
+                value={selectedOrgId || ''}
+                onChange={(e) => handleOrgChange(e.target.value)}
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '10px',
+                  border: '1px solid #E2E8F0',
+                  fontSize: '14px',
+                  color: '#1E3A5F',
+                  backgroundColor: 'white',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="">All Organizations</option>
+                {organizations.map((org) => (
+                  <option key={org.id} value={org.id}>
+                    {org.name}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <Link
             to={`/community/${slug}/admin`}
@@ -593,6 +646,86 @@ export default function AdminStats() {
                 </div>
               )}
             </div>
+
+            {/* Section 7: Organization Breakdown (only when viewing all orgs) */}
+            {!selectedOrgId && stats.organizationBreakdown && stats.organizationBreakdown.length > 0 && (
+              <div
+                style={{
+                  backgroundColor: 'white',
+                  borderRadius: '16px',
+                  padding: '24px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                  marginTop: '24px',
+                }}
+              >
+                <h2 style={{ margin: '0 0 20px', fontSize: '18px', fontWeight: 600, color: '#1E3A5F' }}>
+                  Organization Breakdown
+                </h2>
+                <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#64748B' }}>
+                  Performance summary by organization
+                </p>
+
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+                    gap: '16px',
+                  }}
+                >
+                  {stats.organizationBreakdown.map((org) => (
+                    <div
+                      key={org.id}
+                      style={{
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '12px',
+                        padding: '16px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      onClick={() => handleOrgChange(org.id)}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.borderColor = '#2B7CF6';
+                        e.currentTarget.style.backgroundColor = '#F8FAFC';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.borderColor = '#E2E8F0';
+                        e.currentTarget.style.backgroundColor = 'white';
+                      }}
+                    >
+                      <h3 style={{ margin: '0 0 12px', fontSize: '16px', fontWeight: 600, color: '#1E3A5F' }}>
+                        {org.name}
+                      </h3>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+                        <div>
+                          <p style={{ margin: '0 0 2px', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Members
+                          </p>
+                          <p style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1E3A5F' }}>
+                            {org.memberCount}
+                          </p>
+                        </div>
+                        <div>
+                          <p style={{ margin: '0 0 2px', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Conversations
+                          </p>
+                          <p style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1E3A5F' }}>
+                            {org.conversationCount}
+                          </p>
+                        </div>
+                        <div>
+                          <p style={{ margin: '0 0 2px', fontSize: '11px', color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                            Mood {'\u0394'}
+                          </p>
+                          <p style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: org.avgMoodImprovement !== null && org.avgMoodImprovement > 0 ? '#16A34A' : '#1E3A5F' }}>
+                            {org.avgMoodImprovement !== null ? `+${org.avgMoodImprovement.toFixed(1)}` : 'N/A'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </>
         )}
 

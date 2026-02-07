@@ -128,25 +128,15 @@ router.post('/:conversationId', authenticate, async (req: AuthenticatedRequest, 
 });
 
 // GET /api/reports/:communitySlug/list - Get all reports for a community (admin)
+// Query params: ?organization_id=<uuid> to filter by organization
 router.get('/:communitySlug/list', authenticate, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { communitySlug } = req.params;
+    const { organization_id: orgId } = req.query;
 
-    const result = await query<{
-      id: number;
-      conversation_id: string;
-      reporter_email: string;
-      reported_email: string;
-      category: string;
-      description: string | null;
-      status: string;
-      admin_notes: string | null;
-      reviewer_email: string | null;
-      reviewed_at: Date | null;
-      created_at: Date;
-      conversation_topic: string | null;
-    }>(
-      `SELECT
+    // Build query with optional organization filter
+    let queryText = `
+      SELECT
         ur.id,
         ur.conversation_id,
         reporter_u.email as reporter_email,
@@ -168,10 +158,31 @@ router.get('/:communitySlug/list', authenticate, requireAdmin, async (req: Authe
        JOIN conversations conv ON conv.id = ur.conversation_id
        LEFT JOIN users reviewer_u ON reviewer_u.id = ur.reviewed_by
        WHERE c.slug = $1
-       ORDER BY ur.created_at DESC
-       LIMIT 50`,
-      [communitySlug]
-    );
+    `;
+    const queryParams: (string | null)[] = [communitySlug];
+
+    if (orgId && typeof orgId === 'string') {
+      // Filter where reporter OR reported belongs to this org
+      queryText += ` AND (reporter_m.organization_id = $2 OR reported_m.organization_id = $2)`;
+      queryParams.push(orgId);
+    }
+
+    queryText += ` ORDER BY ur.created_at DESC LIMIT 50`;
+
+    const result = await query<{
+      id: number;
+      conversation_id: string;
+      reporter_email: string;
+      reported_email: string;
+      category: string;
+      description: string | null;
+      status: string;
+      admin_notes: string | null;
+      reviewer_email: string | null;
+      reviewed_at: Date | null;
+      created_at: Date;
+      conversation_topic: string | null;
+    }>(queryText, queryParams);
 
     const reports = result.rows.map((row) => ({
       id: row.id,

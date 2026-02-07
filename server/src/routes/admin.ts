@@ -156,25 +156,37 @@ router.get('/:communitySlug/members', authenticate, requireAdmin, async (req: Au
 });
 
 // GET /api/admin/:communitySlug/alerts - Recent safety alerts
+// Query params: ?organization_id=<uuid> to filter by organization
 router.get('/:communitySlug/alerts', authenticate, requireAdmin, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { communitySlug } = req.params;
+    const { organization_id: orgId } = req.query;
+
+    // Build query with optional organization filter
+    let queryText = `
+      SELECT ae.id, ae.conversation_id, ae.severity, ae.context, ae.created_at
+      FROM alert_events ae
+      JOIN communities c ON c.id = ae.community_id
+      JOIN conversations conv ON conv.id = ae.conversation_id
+      JOIN memberships seeker_m ON seeker_m.id = conv.seeker_membership_id
+      WHERE c.slug = $1
+    `;
+    const queryParams: (string | null)[] = [communitySlug];
+
+    if (orgId && typeof orgId === 'string') {
+      queryText += ` AND seeker_m.organization_id = $2`;
+      queryParams.push(orgId);
+    }
+
+    queryText += ` ORDER BY ae.created_at DESC LIMIT 50`;
 
     const result = await query<{
       id: string;
       conversation_id: string;
       severity: string;
-      context: { risk_level?: string; flags?: string[]; suggested_action?: string };
+      context: { risk_level?: string; flags?: string[]; suggested_action?: string; triggering_message?: string };
       created_at: Date;
-    }>(
-      `SELECT ae.id, ae.conversation_id, ae.severity, ae.context, ae.created_at
-       FROM alert_events ae
-       JOIN communities c ON c.id = ae.community_id
-       WHERE c.slug = $1
-       ORDER BY ae.created_at DESC
-       LIMIT 50`,
-      [communitySlug]
-    );
+    }>(queryText, queryParams);
 
     const alerts = result.rows.map((row) => ({
       id: row.id,
@@ -183,6 +195,7 @@ router.get('/:communitySlug/alerts', authenticate, requireAdmin, async (req: Aut
       riskLevel: row.context?.risk_level || row.severity,
       flags: row.context?.flags || [],
       suggestedAction: row.context?.suggested_action || '',
+      excerpt: row.context?.triggering_message || '',
       createdAt: row.created_at,
     }));
 

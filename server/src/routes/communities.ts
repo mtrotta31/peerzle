@@ -34,6 +34,7 @@ interface MembershipRow {
 interface InviteCodeRow {
   id: number;
   community_id: string;
+  organization_id: string | null;
   code: string;
   created_by: string;
   max_uses: number | null;
@@ -124,6 +125,9 @@ router.post('/:slug/join', authenticate, async (req: AuthenticatedRequest, res: 
       return;
     }
 
+    // Track organization_id from invite code (if any)
+    let organizationId: string | null = null;
+
     // Verify based on verification method
     if (community.verification_method === 'invite_code') {
       if (!inviteCode) {
@@ -136,7 +140,7 @@ router.post('/:slug/join', authenticate, async (req: AuthenticatedRequest, res: 
 
       // Validate invite code
       const codeResult = await query<InviteCodeRow>(
-        `SELECT id, max_uses, current_uses, expires_at, is_active
+        `SELECT id, max_uses, current_uses, expires_at, is_active, organization_id
          FROM invite_codes
          WHERE code = $1 AND community_id = $2`,
         [inviteCode.toUpperCase(), community.id]
@@ -176,6 +180,9 @@ router.post('/:slug/join', authenticate, async (req: AuthenticatedRequest, res: 
         return;
       }
 
+      // Capture organization_id from invite code for membership creation
+      organizationId = code.organization_id;
+
       // Increment code usage
       await query(
         'UPDATE invite_codes SET current_uses = current_uses + 1 WHERE id = $1',
@@ -209,15 +216,15 @@ router.post('/:slug/join', authenticate, async (req: AuthenticatedRequest, res: 
     }
     // If verification_method === 'open', no additional verification needed
 
-    // Create membership
-    const result = await query<MembershipRow>(
-      `INSERT INTO memberships (user_id, community_id, role)
-       VALUES ($1, $2, 'seeker')
-       RETURNING id, user_id, community_id, role, is_verified_helper, profile, topics, is_available, created_at`,
-      [userId, community.id]
+    // Create membership with optional organization_id
+    const result = await query<MembershipRow & { organization_id: string | null }>(
+      `INSERT INTO memberships (user_id, community_id, role, organization_id)
+       VALUES ($1, $2, 'seeker', $3)
+       RETURNING id, user_id, community_id, role, is_verified_helper, profile, topics, is_available, created_at, organization_id`,
+      [userId, community.id, organizationId]
     );
 
-    console.log(`[JOIN] User ${userId} joined community ${slug} via ${community.verification_method}`);
+    console.log(`[JOIN] User ${userId} joined community ${slug} via ${community.verification_method}${organizationId ? ` (org: ${organizationId})` : ''}`);
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Join community error:', error);
@@ -231,10 +238,19 @@ router.get('/:slug/membership', authenticate, async (req: AuthenticatedRequest, 
     const { slug } = req.params;
     const userId = req.user!.userId;
 
-    const result = await query<MembershipRow & { community_name: string }>(
-      `SELECT m.id, m.user_id, m.community_id, m.role, m.is_verified_helper, m.training_completed, m.profile, m.topics, m.is_available, m.created_at, c.name as community_name
+    const result = await query<MembershipRow & {
+      community_name: string;
+      organization_id: string | null;
+      organization_name: string | null;
+      organization_slug: string | null;
+    }>(
+      `SELECT m.id, m.user_id, m.community_id, m.role, m.is_verified_helper, m.training_completed,
+              m.profile, m.topics, m.is_available, m.created_at, m.organization_id,
+              c.name as community_name,
+              o.name as organization_name, o.slug as organization_slug
        FROM memberships m
        JOIN communities c ON c.id = m.community_id
+       LEFT JOIN organizations o ON o.id = m.organization_id
        WHERE m.user_id = $1 AND c.slug = $2 AND c.is_active = true`,
       [userId, slug]
     );
@@ -244,7 +260,15 @@ router.get('/:slug/membership', authenticate, async (req: AuthenticatedRequest, 
       return;
     }
 
-    res.json(result.rows[0]);
+    const membership = result.rows[0];
+    res.json({
+      ...membership,
+      organization: membership.organization_id ? {
+        id: membership.organization_id,
+        name: membership.organization_name,
+        slug: membership.organization_slug,
+      } : null,
+    });
   } catch (error) {
     console.error('Get membership error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -323,7 +347,7 @@ router.put('/:slug/availability', authenticate, async (req: AuthenticatedRequest
 router.post('/:slug/invite-codes', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { slug } = req.params;
-    const { maxUses, expiresInDays } = req.body;
+    const { maxUses, expiresInDays, organizationId } = req.body;
     const userId = req.user!.userId;
 
     // Get community and verify admin
@@ -367,15 +391,27 @@ router.post('/:slug/invite-codes', authenticate, async (req: AuthenticatedReques
       expiresAt.setDate(expiresAt.getDate() + expiresInDays);
     }
 
+    // Validate organization belongs to this community if specified
+    if (organizationId) {
+      const orgCheck = await query(
+        'SELECT id FROM organizations WHERE id = $1 AND community_id = $2',
+        [organizationId, communityId]
+      );
+      if (orgCheck.rows.length === 0) {
+        res.status(400).json({ error: 'Invalid organization for this community' });
+        return;
+      }
+    }
+
     // Create invite code
     const result = await query<InviteCodeRow>(
-      `INSERT INTO invite_codes (community_id, code, created_by, max_uses, expires_at)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO invite_codes (community_id, code, created_by, max_uses, expires_at, organization_id)
+       VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [communityId, code, userId, maxUses || null, expiresAt]
+      [communityId, code, userId, maxUses || null, expiresAt, organizationId || null]
     );
 
-    console.log(`[INVITE] Code ${code} created for community ${slug} by user ${userId}`);
+    console.log(`[INVITE] Code ${code} created for community ${slug}${organizationId ? ` (org: ${organizationId})` : ''} by user ${userId}`);
     res.status(201).json(result.rows[0]);
   } catch (error) {
     console.error('Create invite code error:', error);
@@ -384,9 +420,11 @@ router.post('/:slug/invite-codes', authenticate, async (req: AuthenticatedReques
 });
 
 // GET /api/communities/:slug/invite-codes - List invite codes (admin only)
+// Query params: ?organization_id=<uuid> to filter by organization
 router.get('/:slug/invite-codes', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const { slug } = req.params;
+    const { organization_id: filterOrgId } = req.query;
     const userId = req.user!.userId;
 
     // Get community and verify admin
@@ -413,14 +451,26 @@ router.get('/:slug/invite-codes', authenticate, async (req: AuthenticatedRequest
       return;
     }
 
-    // Get all invite codes with creator email
-    const result = await query<InviteCodeRow>(
-      `SELECT ic.*, u.email as creator_email
-       FROM invite_codes ic
-       JOIN users u ON u.id = ic.created_by
-       WHERE ic.community_id = $1
-       ORDER BY ic.created_at DESC`,
-      [communityId]
+    // Build query with optional organization filter
+    let queryText = `
+      SELECT ic.*, u.email as creator_email, o.name as organization_name, o.slug as organization_slug
+      FROM invite_codes ic
+      JOIN users u ON u.id = ic.created_by
+      LEFT JOIN organizations o ON o.id = ic.organization_id
+      WHERE ic.community_id = $1
+    `;
+    const queryParams: (string | null)[] = [communityId];
+
+    if (filterOrgId && typeof filterOrgId === 'string') {
+      queryText += ` AND ic.organization_id = $2`;
+      queryParams.push(filterOrgId);
+    }
+
+    queryText += ` ORDER BY ic.created_at DESC`;
+
+    const result = await query<InviteCodeRow & { organization_name: string | null; organization_slug: string | null }>(
+      queryText,
+      queryParams
     );
 
     res.json(result.rows);

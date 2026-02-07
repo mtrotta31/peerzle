@@ -8,6 +8,7 @@ import {
   InviteCode,
   VerificationRequest,
   UserReport,
+  Organization,
   getCommunity,
   getAdminOverview,
   getAdminMembers,
@@ -20,9 +21,11 @@ import {
   reviewVerificationRequest,
   getReports,
   updateReport,
+  getOrganizations,
+  createOrganization,
 } from '../services/api';
 
-type TabType = 'overview' | 'members' | 'verifications' | 'alerts' | 'inviteCodes';
+type TabType = 'overview' | 'members' | 'verifications' | 'alerts' | 'inviteCodes' | 'organizations';
 
 export default function AdminDashboard() {
   const { slug } = useParams<{ slug: string }>();
@@ -45,6 +48,15 @@ export default function AdminDashboard() {
   const [reports, setReports] = useState<UserReport[]>([]);
   const [updatingReport, setUpdatingReport] = useState<number | null>(null);
   const [reportNotes, setReportNotes] = useState<Record<number, string>>({});
+  const [organizations, setOrganizations] = useState<Organization[]>([]);
+  const [showOrgModal, setShowOrgModal] = useState(false);
+  const [newOrgName, setNewOrgName] = useState('');
+  const [newOrgContact, setNewOrgContact] = useState('');
+  const [newOrgMatchWithinOnly, setNewOrgMatchWithinOnly] = useState(true);
+  const [newOrgAllowCrossOrg, setNewOrgAllowCrossOrg] = useState(false);
+  const [creatingOrg, setCreatingOrg] = useState(false);
+  const [showInviteCodeModal, setShowInviteCodeModal] = useState(false);
+  const [selectedCodeOrgId, setSelectedCodeOrgId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadData() {
@@ -84,12 +96,22 @@ export default function AdminDashboard() {
           ]);
           setAlerts(alertsData);
           setReports(reportsData);
-        } else if (activeTab === 'inviteCodes' && inviteCodes.length === 0) {
-          const codesData = await getInviteCodes(slug!);
-          setInviteCodes(codesData);
+        } else if (activeTab === 'inviteCodes') {
+          if (inviteCodes.length === 0) {
+            const codesData = await getInviteCodes(slug!);
+            setInviteCodes(codesData);
+          }
+          // Also load organizations for the invite code picker
+          if (organizations.length === 0) {
+            const orgsData = await getOrganizations(slug!);
+            setOrganizations(orgsData);
+          }
         } else if (activeTab === 'verifications' && verificationRequests.length === 0) {
           const requestsData = await getVerificationRequests(slug!);
           setVerificationRequests(requestsData);
+        } else if (activeTab === 'organizations' && organizations.length === 0) {
+          const orgsData = await getOrganizations(slug!);
+          setOrganizations(orgsData);
         }
       } catch (err) {
         console.error('Failed to load tab data:', err);
@@ -117,13 +139,19 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleCreateCode = async () => {
+  const handleCreateCode = async (organizationId?: string | null) => {
     if (!slug || creatingCode) return;
 
     setCreatingCode(true);
     try {
-      const newCode = await createInviteCode(slug);
-      setInviteCodes((prev) => [newCode, ...prev]);
+      await createInviteCode(slug, {
+        organizationId: organizationId || undefined,
+      });
+      // Re-fetch the full list to get joined organization_name
+      const codesData = await getInviteCodes(slug);
+      setInviteCodes(codesData);
+      setShowInviteCodeModal(false);
+      setSelectedCodeOrgId(null);
     } catch (err) {
       console.error('Failed to create invite code:', err);
       alert('Failed to create invite code');
@@ -205,6 +233,33 @@ export default function AdminDashboard() {
       alert('Failed to update report');
     } finally {
       setUpdatingReport(null);
+    }
+  };
+
+  const handleCreateOrg = async () => {
+    if (!slug || creatingOrg || !newOrgName.trim()) return;
+
+    setCreatingOrg(true);
+    try {
+      const newOrg = await createOrganization(slug, {
+        name: newOrgName.trim(),
+        primaryContactEmail: newOrgContact.trim() || undefined,
+        settings: {
+          match_within_org_only: newOrgMatchWithinOnly,
+          allow_cross_org_matching: newOrgAllowCrossOrg,
+        },
+      });
+      setOrganizations((prev) => [newOrg, ...prev]);
+      setShowOrgModal(false);
+      setNewOrgName('');
+      setNewOrgContact('');
+      setNewOrgMatchWithinOnly(true);
+      setNewOrgAllowCrossOrg(false);
+    } catch (err) {
+      console.error('Failed to create organization:', err);
+      alert('Failed to create organization');
+    } finally {
+      setCreatingOrg(false);
     }
   };
 
@@ -303,6 +358,7 @@ export default function AdminDashboard() {
     verifications: 'Verifications',
     alerts: 'Alerts',
     inviteCodes: 'Invite Codes',
+    organizations: 'Organizations',
   };
 
   const pendingVerifications = verificationRequests.filter((r) => r.status === 'pending').length;
@@ -399,7 +455,7 @@ export default function AdminDashboard() {
       {/* Tabs */}
       <div style={{ backgroundColor: 'white', borderBottom: '1px solid #E2E8F0' }}>
         <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'flex', gap: '8px', padding: '0 20px' }}>
-          {(['overview', 'members', 'verifications', 'alerts', 'inviteCodes'] as TabType[]).map((tab) => (
+          {(['overview', 'members', 'organizations', 'verifications', 'alerts', 'inviteCodes'] as TabType[]).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -1093,30 +1149,26 @@ export default function AdminDashboard() {
                 </p>
               </div>
               <button
-                onClick={handleCreateCode}
-                disabled={creatingCode}
+                onClick={() => setShowInviteCodeModal(true)}
                 style={{
                   padding: '10px 20px',
                   backgroundColor: '#2B7CF6',
                   color: 'white',
                   border: 'none',
                   borderRadius: '24px',
-                  cursor: creatingCode ? 'not-allowed' : 'pointer',
+                  cursor: 'pointer',
                   fontSize: '14px',
                   fontWeight: 600,
-                  opacity: creatingCode ? 0.7 : 1,
                   transition: 'background-color 0.2s',
                 }}
                 onMouseOver={(e) => {
-                  if (!creatingCode) {
-                    e.currentTarget.style.backgroundColor = '#1E6AD9';
-                  }
+                  e.currentTarget.style.backgroundColor = '#1E6AD9';
                 }}
                 onMouseOut={(e) => {
                   e.currentTarget.style.backgroundColor = '#2B7CF6';
                 }}
               >
-                {creatingCode ? 'Generating...' : 'Generate New Code'}
+                Generate New Code
               </button>
             </div>
 
@@ -1143,6 +1195,7 @@ export default function AdminDashboard() {
                     <thead>
                       <tr style={{ backgroundColor: '#F8FAFC' }}>
                         <th style={thStyle}>Code</th>
+                        <th style={thStyle}>Organization</th>
                         <th style={thStyle}>Uses</th>
                         <th style={thStyle}>Max Uses</th>
                         <th style={thStyle}>Expires</th>
@@ -1174,6 +1227,17 @@ export default function AdminDashboard() {
                               >
                                 {code.code}
                               </span>
+                            </td>
+                            <td style={tdStyle}>
+                              {code.organization_name ? (
+                                <span style={{ fontSize: '13px', color: '#1E3A5F' }}>
+                                  {code.organization_name}
+                                </span>
+                              ) : (
+                                <span style={{ fontSize: '13px', color: '#94A3B8', fontStyle: 'italic' }}>
+                                  Community-wide
+                                </span>
+                              )}
                             </td>
                             <td style={{ ...tdStyle, textAlign: 'center' }}>{code.current_uses}</td>
                             <td style={{ ...tdStyle, textAlign: 'center', color: '#64748B' }}>
@@ -1240,6 +1304,542 @@ export default function AdminDashboard() {
                 </div>
               )}
             </div>
+
+            {/* Generate Invite Code Modal */}
+            {showInviteCodeModal && (
+              <div
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000,
+                  padding: '20px',
+                }}
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) {
+                    setShowInviteCodeModal(false);
+                    setSelectedCodeOrgId(null);
+                  }
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: 'white',
+                    borderRadius: '16px',
+                    padding: '24px',
+                    maxWidth: '450px',
+                    width: '100%',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                  }}
+                >
+                  <h2 style={{ margin: '0 0 8px 0', color: '#1E3A5F', fontSize: '20px' }}>
+                    Generate Invite Code
+                  </h2>
+                  <p style={{ margin: '0 0 20px 0', color: '#64748B', fontSize: '14px' }}>
+                    Choose which organization this invite code will assign new members to.
+                  </p>
+
+                  <div style={{ marginBottom: '20px' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: '#64748B',
+                        marginBottom: '8px',
+                      }}
+                    >
+                      Organization
+                    </label>
+                    <select
+                      value={selectedCodeOrgId || ''}
+                      onChange={(e) => setSelectedCodeOrgId(e.target.value || null)}
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '12px',
+                        fontSize: '14px',
+                        backgroundColor: 'white',
+                        cursor: 'pointer',
+                        outline: 'none',
+                      }}
+                    >
+                      <option value="">Community-wide (no organization)</option>
+                      {organizations.map((org) => (
+                        <option key={org.id} value={org.id}>
+                          {org.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p style={{ margin: '8px 0 0', fontSize: '12px', color: '#94A3B8' }}>
+                      {selectedCodeOrgId
+                        ? 'Members who join using this code will be assigned to the selected organization.'
+                        : 'Members who join using this code will not be assigned to any organization.'}
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                    <button
+                      onClick={() => {
+                        setShowInviteCodeModal(false);
+                        setSelectedCodeOrgId(null);
+                      }}
+                      style={{
+                        padding: '10px 20px',
+                        backgroundColor: 'white',
+                        color: '#64748B',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '24px',
+                        cursor: 'pointer',
+                        fontWeight: 500,
+                        fontSize: '14px',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#F8FAFC';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = 'white';
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleCreateCode(selectedCodeOrgId)}
+                      disabled={creatingCode}
+                      style={{
+                        padding: '10px 24px',
+                        backgroundColor: '#2B7CF6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '24px',
+                        cursor: creatingCode ? 'not-allowed' : 'pointer',
+                        fontWeight: 500,
+                        fontSize: '14px',
+                        opacity: creatingCode ? 0.6 : 1,
+                        transition: 'background-color 0.2s',
+                      }}
+                      onMouseOver={(e) => {
+                        if (!creatingCode) {
+                          e.currentTarget.style.backgroundColor = '#1E6AD9';
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#2B7CF6';
+                      }}
+                    >
+                      {creatingCode ? 'Generating...' : 'Generate Code'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Organizations Tab */}
+        {activeTab === 'organizations' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            {/* Header with Create Button */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1E3A5F' }}>
+                  Organizations
+                </h2>
+                <p style={{ margin: '4px 0 0', fontSize: '14px', color: '#64748B' }}>
+                  Manage organizations within this community
+                </p>
+              </div>
+              <button
+                onClick={() => setShowOrgModal(true)}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#2B7CF6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '24px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  transition: 'background-color 0.2s',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#1E6AD9';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#2B7CF6';
+                }}
+              >
+                Add Organization
+              </button>
+            </div>
+
+            {/* Organizations Grid */}
+            {organizations.length === 0 ? (
+              <div
+                style={{
+                  backgroundColor: 'white',
+                  borderRadius: '16px',
+                  padding: '48px 24px',
+                  textAlign: 'center',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                }}
+              >
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏢</div>
+                <h3 style={{ margin: '0 0 8px 0', color: '#1E3A5F' }}>No organizations yet</h3>
+                <p style={{ margin: 0, color: '#64748B' }}>
+                  Organizations allow you to group members and track metrics separately.
+                </p>
+              </div>
+            ) : (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+                  gap: '16px',
+                }}
+              >
+                {organizations.map((org) => (
+                  <div
+                    key={org.id}
+                    style={{
+                      backgroundColor: 'white',
+                      borderRadius: '16px',
+                      padding: '20px',
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                      border: '1px solid #E2E8F0',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                    }}
+                    onClick={() => navigate(`/community/${slug}/org/${org.slug}/admin`)}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.borderColor = '#2B7CF6';
+                      e.currentTarget.style.boxShadow = '0 2px 8px rgba(43, 124, 246, 0.15)';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.borderColor = '#E2E8F0';
+                      e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <h3 style={{ margin: '0 0 4px', fontSize: '16px', fontWeight: 600, color: '#1E3A5F' }}>
+                          {org.name}
+                        </h3>
+                        <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
+                          {org.slug}
+                        </p>
+                      </div>
+                      <span
+                        style={{
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                          backgroundColor: org.isActive ? '#DCFCE7' : '#F1F5F9',
+                          color: org.isActive ? '#16A34A' : '#64748B',
+                        }}
+                      >
+                        {org.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                    {org.primaryContactEmail && (
+                      <p style={{ margin: '12px 0 0', fontSize: '13px', color: '#64748B' }}>
+                        Contact: {org.primaryContactEmail}
+                      </p>
+                    )}
+                    <div style={{ marginTop: '12px', display: 'flex', gap: '8px' }}>
+                      <span style={{ fontSize: '12px', color: '#94A3B8' }}>
+                        Click to manage
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Create Organization Modal */}
+            {showOrgModal && (
+              <div
+                style={{
+                  position: 'fixed',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  zIndex: 1000,
+                  padding: '20px',
+                }}
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) {
+                    setShowOrgModal(false);
+                  }
+                }}
+              >
+                <div
+                  style={{
+                    backgroundColor: 'white',
+                    borderRadius: '16px',
+                    padding: '24px',
+                    maxWidth: '450px',
+                    width: '100%',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                  }}
+                >
+                  <h2 style={{ margin: '0 0 8px 0', color: '#1E3A5F', fontSize: '20px' }}>
+                    Add Organization
+                  </h2>
+                  <p style={{ margin: '0 0 20px 0', color: '#64748B', fontSize: '14px' }}>
+                    Create a new organization within this community.
+                  </p>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: '#64748B',
+                        marginBottom: '6px',
+                      }}
+                    >
+                      Organization Name *
+                    </label>
+                    <input
+                      type="text"
+                      value={newOrgName}
+                      onChange={(e) => setNewOrgName(e.target.value)}
+                      placeholder="e.g., Cincinnati IAFF Local 48"
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '12px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box',
+                        outline: 'none',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#2B7CF6';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#E2E8F0';
+                      }}
+                    />
+                  </div>
+
+                  <div style={{ marginBottom: '16px' }}>
+                    <label
+                      style={{
+                        display: 'block',
+                        fontSize: '13px',
+                        fontWeight: 500,
+                        color: '#64748B',
+                        marginBottom: '6px',
+                      }}
+                    >
+                      Primary Contact Email
+                    </label>
+                    <input
+                      type="email"
+                      value={newOrgContact}
+                      onChange={(e) => setNewOrgContact(e.target.value)}
+                      placeholder="admin@organization.com"
+                      style={{
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '12px',
+                        fontSize: '14px',
+                        boxSizing: 'border-box',
+                        outline: 'none',
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#2B7CF6';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#E2E8F0';
+                      }}
+                    />
+                  </div>
+
+                  {/* Matching Settings */}
+                  <div
+                    style={{
+                      backgroundColor: '#F8FAFC',
+                      borderRadius: '12px',
+                      padding: '16px',
+                      marginBottom: '20px',
+                    }}
+                  >
+                    <p style={{ margin: '0 0 12px', fontSize: '13px', fontWeight: 600, color: '#1E3A5F' }}>
+                      Matching Settings
+                    </p>
+
+                    {/* Match within org only */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        marginBottom: '12px',
+                      }}
+                    >
+                      <div style={{ flex: 1, marginRight: '12px' }}>
+                        <p style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: 500, color: '#1E3A5F' }}>
+                          Match within organization only
+                        </p>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#64748B' }}>
+                          Members will only be matched with helpers from their own organization
+                        </p>
+                      </div>
+                      <div
+                        onClick={() => setNewOrgMatchWithinOnly(!newOrgMatchWithinOnly)}
+                        style={{
+                          width: '44px',
+                          height: '24px',
+                          backgroundColor: newOrgMatchWithinOnly ? '#16A34A' : '#CBD5E1',
+                          borderRadius: '12px',
+                          position: 'relative',
+                          cursor: 'pointer',
+                          transition: 'background-color 0.2s',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            backgroundColor: 'white',
+                            borderRadius: '50%',
+                            position: 'absolute',
+                            top: '2px',
+                            left: newOrgMatchWithinOnly ? '22px' : '2px',
+                            transition: 'left 0.2s',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Allow cross-org matching (only when match within org is ON) */}
+                    <div
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'flex-start',
+                        opacity: newOrgMatchWithinOnly ? 1 : 0.5,
+                        pointerEvents: newOrgMatchWithinOnly ? 'auto' : 'none',
+                      }}
+                    >
+                      <div style={{ flex: 1, marginRight: '12px' }}>
+                        <p style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: 500, color: '#1E3A5F' }}>
+                          Allow cross-organization matching
+                        </p>
+                        <p style={{ margin: 0, fontSize: '12px', color: '#64748B' }}>
+                          If no helpers are available in the organization, expand search to the broader community
+                        </p>
+                      </div>
+                      <div
+                        onClick={() => newOrgMatchWithinOnly && setNewOrgAllowCrossOrg(!newOrgAllowCrossOrg)}
+                        style={{
+                          width: '44px',
+                          height: '24px',
+                          backgroundColor: newOrgAllowCrossOrg ? '#16A34A' : '#CBD5E1',
+                          borderRadius: '12px',
+                          position: 'relative',
+                          cursor: newOrgMatchWithinOnly ? 'pointer' : 'not-allowed',
+                          transition: 'background-color 0.2s',
+                          flexShrink: 0,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: '20px',
+                            height: '20px',
+                            backgroundColor: 'white',
+                            borderRadius: '50%',
+                            position: 'absolute',
+                            top: '2px',
+                            left: newOrgAllowCrossOrg ? '22px' : '2px',
+                            transition: 'left 0.2s',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                    <button
+                      onClick={() => {
+                        setShowOrgModal(false);
+                        setNewOrgName('');
+                        setNewOrgContact('');
+                        setNewOrgMatchWithinOnly(true);
+                        setNewOrgAllowCrossOrg(false);
+                      }}
+                      style={{
+                        padding: '10px 20px',
+                        backgroundColor: 'white',
+                        color: '#64748B',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '24px',
+                        cursor: 'pointer',
+                        fontWeight: 500,
+                        fontSize: '14px',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#F8FAFC';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = 'white';
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleCreateOrg}
+                      disabled={creatingOrg || !newOrgName.trim()}
+                      style={{
+                        padding: '10px 24px',
+                        backgroundColor: '#2B7CF6',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '24px',
+                        cursor: creatingOrg || !newOrgName.trim() ? 'not-allowed' : 'pointer',
+                        fontWeight: 500,
+                        fontSize: '14px',
+                        opacity: creatingOrg || !newOrgName.trim() ? 0.6 : 1,
+                        transition: 'background-color 0.2s',
+                      }}
+                      onMouseOver={(e) => {
+                        if (!creatingOrg && newOrgName.trim()) {
+                          e.currentTarget.style.backgroundColor = '#1E6AD9';
+                        }
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = '#2B7CF6';
+                      }}
+                    >
+                      {creatingOrg ? 'Creating...' : 'Create Organization'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

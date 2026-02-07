@@ -1,9 +1,10 @@
 import { Router, Response } from 'express';
 import { query } from '../config/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
-import { emitToConversation } from '../config/socket';
+import { emitToConversation, getUserSocketIds } from '../config/socket';
 import { generatePeerBotResponse } from '../services/peerbot';
 import { analyzeMessageSafety, shouldShowCrisisResources, mapRiskLevelToSeverity, SafetyAnalysisResult } from '../services/safety';
+import { sendPushNotification, sendPushToMultipleUsers, shouldSendMessagePush } from '../services/push-notifications';
 
 const router = Router();
 
@@ -14,12 +15,6 @@ interface MessageRow {
   content: string;
   created_at: Date;
   moderation_result: { sender?: string; safety?: SafetyAnalysisResult } | null;
-}
-
-interface MembershipRow {
-  id: string;
-  user_id: string;
-  community_id: string;
 }
 
 interface ConversationInfo {
@@ -46,7 +41,7 @@ router.post('/', authenticate, async (req: AuthenticatedRequest, res: Response) 
     }
 
     // Verify user is participant in conversation and get their membership
-    const verifyResult = await query<MembershipRow & { conversation_status: string; community_id: string }>(
+    const verifyResult = await query<{ membership_id: string; conversation_status: string; community_id: string }>(
       `SELECT m.id as membership_id, c.status as conversation_status, c.community_id
        FROM conversations c
        JOIN memberships m ON (m.id = c.seeker_membership_id OR m.id = c.helper_membership_id)
@@ -104,6 +99,11 @@ router.post('/', authenticate, async (req: AuthenticatedRequest, res: Response) 
     // Pass the sender's membership_id so we can check if they're the helper
     triggerPeerBotIfNeeded(conversationId, membership_id).catch((err) => {
       console.error('PeerBot trigger error:', err);
+    });
+
+    // 3. Send push notification to offline recipient(s)
+    sendNewMessagePush(conversationId, userId, community_id).catch((err) => {
+      console.error('New message push error:', err);
     });
   } catch (error) {
     console.error('Send message error:', error);
@@ -175,7 +175,104 @@ async function runSafetyAnalysis(
     );
 
     console.log(`[SAFETY] Alert logged to database for conversation: ${conversationId}`);
+
+    // Send push notifications to community admins for crisis-level alerts
+    if (safetyResult.riskLevel === 'crisis') {
+      // Get community slug for URL
+      const communityResult = await query<{ slug: string }>(
+        'SELECT slug FROM communities WHERE id = $1',
+        [communityId]
+      );
+      const communitySlug = communityResult.rows[0]?.slug || '';
+
+      // Get all admin user IDs in this community
+      const adminsResult = await query<{ user_id: string }>(
+        `SELECT m.user_id FROM memberships m
+         WHERE m.community_id = $1 AND m.role = 'admin'`,
+        [communityId]
+      );
+      const adminUserIds = adminsResult.rows.map((r) => r.user_id);
+
+      if (adminUserIds.length > 0) {
+        sendPushToMultipleUsers(adminUserIds, {
+          title: 'Safety Alert',
+          body: 'A critical safety concern has been detected.',
+          data: {
+            url: `/community/${communitySlug}/admin`,
+            type: 'safety_alert',
+          },
+        }).catch((err) => {
+          console.error('[SAFETY] Admin push notification error:', err);
+        });
+      }
+    }
   }
+}
+
+/**
+ * Send push notification to offline conversation participants for new messages.
+ * Rate limited to max 1 push per conversation per 60 seconds.
+ */
+async function sendNewMessagePush(
+  conversationId: string,
+  senderUserId: string,
+  _communityId: string
+): Promise<void> {
+  // Check rate limit first
+  if (!shouldSendMessagePush(conversationId)) {
+    return;
+  }
+
+  // Get conversation participants and community info
+  const result = await query<{
+    seeker_user_id: string;
+    helper_user_id: string | null;
+    community_slug: string;
+  }>(
+    `SELECT
+       seeker_m.user_id as seeker_user_id,
+       helper_m.user_id as helper_user_id,
+       cm.slug as community_slug
+     FROM conversations c
+     JOIN memberships seeker_m ON seeker_m.id = c.seeker_membership_id
+     LEFT JOIN memberships helper_m ON helper_m.id = c.helper_membership_id
+     JOIN communities cm ON cm.id = c.community_id
+     WHERE c.id = $1`,
+    [conversationId]
+  );
+
+  if (result.rows.length === 0) return;
+
+  const { seeker_user_id, helper_user_id, community_slug } = result.rows[0];
+
+  // Determine recipient (the other participant, not the sender)
+  let recipientUserId: string | null = null;
+  if (senderUserId === seeker_user_id && helper_user_id) {
+    recipientUserId = helper_user_id;
+  } else if (senderUserId === helper_user_id) {
+    recipientUserId = seeker_user_id;
+  }
+
+  if (!recipientUserId) return;
+
+  // Check if recipient is online (has active socket connections)
+  const recipientSocketIds = getUserSocketIds(recipientUserId);
+  if (recipientSocketIds.length > 0) {
+    // User is online, no push needed
+    return;
+  }
+
+  // User is offline, send push notification
+  // Privacy: Don't include message content
+  await sendPushNotification(recipientUserId, {
+    title: 'New message',
+    body: 'You have a new message in your conversation.',
+    data: {
+      url: `/community/${community_slug}/chat/${conversationId}`,
+      type: 'new_message',
+      conversationId,
+    },
+  });
 }
 
 async function triggerPeerBotIfNeeded(conversationId: string, senderMembershipId: string): Promise<void> {

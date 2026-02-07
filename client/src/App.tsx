@@ -12,6 +12,7 @@ import SessionHistory from './pages/SessionHistory';
 import HelperDashboard from './pages/HelperDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminStats from './pages/AdminStats';
+import OrgAdminDashboard from './pages/OrgAdminDashboard';
 import HelperTraining from './pages/HelperTraining';
 import ChatPage from './pages/ChatPage';
 import TermsOfService from './pages/TermsOfService';
@@ -156,6 +157,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <AdminStats />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/community/:slug/org/:orgSlug/admin"
+        element={
+          <ProtectedRoute>
+            <OrgAdminDashboard />
           </ProtectedRoute>
         }
       />

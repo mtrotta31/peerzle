@@ -108,6 +108,12 @@ export interface Community {
   created_at: string;
 }
 
+export interface OrganizationInfo {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 export interface Membership {
   id: string;
   user_id: string;
@@ -120,6 +126,8 @@ export interface Membership {
   is_available: boolean;
   created_at: string;
   community_name?: string;
+  organization_id?: string | null;
+  organization?: OrganizationInfo | null;
 }
 
 // Community API
@@ -157,17 +165,21 @@ export interface InviteCode {
   is_active: boolean;
   created_at: string;
   creator_email?: string;
+  organization_id?: string | null;
+  organization_name?: string | null;
+  organization_slug?: string | null;
 }
 
 // Invite Code API
-export async function getInviteCodes(communitySlug: string): Promise<InviteCode[]> {
-  const response = await api.get<InviteCode[]>(`/api/communities/${communitySlug}/invite-codes`);
+export async function getInviteCodes(communitySlug: string, organizationId?: string): Promise<InviteCode[]> {
+  const params = organizationId ? `?organization_id=${organizationId}` : '';
+  const response = await api.get<InviteCode[]>(`/api/communities/${communitySlug}/invite-codes${params}`);
   return response.data;
 }
 
 export async function createInviteCode(
   communitySlug: string,
-  options?: { maxUses?: number; expiresInDays?: number }
+  options?: { maxUses?: number; expiresInDays?: number; organizationId?: string }
 ): Promise<InviteCode> {
   const response = await api.post<InviteCode>(`/api/communities/${communitySlug}/invite-codes`, options || {});
   return response.data;
@@ -179,6 +191,95 @@ export async function updateInviteCode(
   isActive: boolean
 ): Promise<InviteCode> {
   const response = await api.put<InviteCode>(`/api/communities/${communitySlug}/invite-codes/${codeId}`, { isActive });
+  return response.data;
+}
+
+// Organization types
+export interface OrganizationSettings {
+  match_within_org_only: boolean;
+  allow_cross_org_matching: boolean;
+}
+
+export interface Organization {
+  id: string;
+  communityId: string;
+  name: string;
+  slug: string;
+  logoUrl: string | null;
+  primaryContactEmail: string | null;
+  settings: OrganizationSettings;
+  isActive: boolean;
+  createdAt: string;
+  memberCount?: number;
+  helperCount?: number;
+  activeHelperCount?: number;
+  inviteCodeCount?: number;
+  conversationCount?: number;
+}
+
+export interface OrganizationMember {
+  id: string;
+  email: string;
+  role: string;
+  isAvailable: boolean;
+  isVerifiedHelper: boolean;
+  displayName: string | null;
+  joinedAt: string;
+  seekerConversations: number;
+  helperConversations: number;
+  avgHelperRating: number | null;
+}
+
+export interface OrgInviteCode {
+  id: number;
+  code: string;
+  organizationId: string;
+  maxUses: number | null;
+  currentUses: number;
+  expiresAt: string | null;
+  isActive: boolean;
+  createdAt: string;
+}
+
+// Organization API
+export async function getOrganizations(communitySlug: string): Promise<Organization[]> {
+  const response = await api.get<Organization[]>(`/api/organizations/${communitySlug}`);
+  return response.data;
+}
+
+export async function createOrganization(
+  communitySlug: string,
+  data: { name: string; slug?: string; primaryContactEmail?: string; settings?: Partial<OrganizationSettings> }
+): Promise<Organization> {
+  const response = await api.post<Organization>(`/api/organizations/${communitySlug}`, data);
+  return response.data;
+}
+
+export async function getOrganization(communitySlug: string, orgSlug: string): Promise<Organization> {
+  const response = await api.get<Organization>(`/api/organizations/${communitySlug}/${orgSlug}`);
+  return response.data;
+}
+
+export async function updateOrganization(
+  communitySlug: string,
+  orgSlug: string,
+  data: Partial<{ name: string; primaryContactEmail: string; settings: OrganizationSettings; logoUrl: string; isActive: boolean }>
+): Promise<Organization> {
+  const response = await api.put<Organization>(`/api/organizations/${communitySlug}/${orgSlug}`, data);
+  return response.data;
+}
+
+export async function getOrganizationMembers(communitySlug: string, orgSlug: string): Promise<OrganizationMember[]> {
+  const response = await api.get<OrganizationMember[]>(`/api/organizations/${communitySlug}/${orgSlug}/members`);
+  return response.data;
+}
+
+export async function createOrgInviteCode(
+  communitySlug: string,
+  orgSlug: string,
+  options?: { maxUses?: number; expiresInDays?: number }
+): Promise<OrgInviteCode> {
+  const response = await api.post<OrgInviteCode>(`/api/organizations/${communitySlug}/${orgSlug}/invite-codes`, options || {});
   return response.data;
 }
 
@@ -254,6 +355,8 @@ export interface ConnectionData {
   helper_display_name: string | null;
   helper_is_verified: boolean;
   shared_topics: string[];
+  same_org?: boolean;
+  org_name?: string;
 }
 
 export interface Conversation {
@@ -331,6 +434,8 @@ export async function toggleAvailability(communitySlug: string, isAvailable: boo
 export interface PendingConversation extends Conversation {
   seeker_email: string;
   match_score?: number;
+  same_org?: boolean;
+  org_name?: string | null;
 }
 
 export async function getPendingConversations(): Promise<PendingConversation[]> {
@@ -506,13 +611,24 @@ export interface AdminStatsEngagement {
   uniqueSeekers: number;
 }
 
+export interface AdminStatsOrgBreakdown {
+  id: string;
+  name: string;
+  slug: string;
+  memberCount: number;
+  conversationCount: number;
+  avgMoodImprovement: number | null;
+}
+
 export interface AdminStats {
   firstConversationDate: string | null;
+  organizationId: string | null;
   usage: AdminStatsUsage;
   outcomes: AdminStatsOutcomes;
   safety: AdminStatsSafety;
   topTopics: AdminStatsTopTopic[];
   engagement: AdminStatsEngagement;
+  organizationBreakdown?: AdminStatsOrgBreakdown[];
 }
 
 export interface AdminMember {
@@ -533,6 +649,7 @@ export interface AdminAlert {
   riskLevel: string;
   flags: string[];
   suggestedAction: string;
+  excerpt?: string;
   createdAt: string;
 }
 
@@ -542,8 +659,9 @@ export async function getAdminOverview(communitySlug: string): Promise<AdminOver
   return response.data;
 }
 
-export async function getAdminStats(communitySlug: string): Promise<AdminStats> {
-  const response = await api.get<AdminStats>(`/api/admin/stats/${communitySlug}`);
+export async function getAdminStats(communitySlug: string, organizationId?: string): Promise<AdminStats> {
+  const params = organizationId ? { organization_id: organizationId } : {};
+  const response = await api.get<AdminStats>(`/api/admin/stats/${communitySlug}`, { params });
   return response.data;
 }
 
@@ -552,8 +670,9 @@ export async function getAdminMembers(communitySlug: string): Promise<AdminMembe
   return response.data;
 }
 
-export async function getAdminAlerts(communitySlug: string): Promise<AdminAlert[]> {
-  const response = await api.get<AdminAlert[]>(`/api/admin/${communitySlug}/alerts`);
+export async function getAdminAlerts(communitySlug: string, organizationId?: string): Promise<AdminAlert[]> {
+  const params = organizationId ? `?organization_id=${organizationId}` : '';
+  const response = await api.get<AdminAlert[]>(`/api/admin/${communitySlug}/alerts${params}`);
   return response.data;
 }
 
@@ -731,8 +850,9 @@ export async function submitReport(
   return response.data;
 }
 
-export async function getReports(communitySlug: string): Promise<UserReport[]> {
-  const response = await api.get<UserReport[]>(`/api/reports/${communitySlug}/list`);
+export async function getReports(communitySlug: string, organizationId?: string): Promise<UserReport[]> {
+  const params = organizationId ? `?organization_id=${organizationId}` : '';
+  const response = await api.get<UserReport[]>(`/api/reports/${communitySlug}/list${params}`);
   return response.data;
 }
 
@@ -778,6 +898,32 @@ export async function generateCoachingTip(
     recent_messages: recentMessages,
     mode: 'coaching',
   });
+  return response.data;
+}
+
+// Push notification API
+export async function subscribeToPushNotifications(
+  endpoint: string,
+  keys: { p256dh: string; auth: string }
+): Promise<{ success: boolean }> {
+  const response = await api.post<{ success: boolean }>('/api/push/subscribe', { endpoint, keys });
+  return response.data;
+}
+
+export async function unsubscribeFromPushNotifications(endpoint: string): Promise<{ success: boolean }> {
+  const response = await api.delete<{ success: boolean }>('/api/push/unsubscribe', {
+    data: { endpoint },
+  });
+  return response.data;
+}
+
+export async function getVapidPublicKey(): Promise<string> {
+  const response = await api.get<{ publicKey: string }>('/api/push/vapid-public-key');
+  return response.data.publicKey;
+}
+
+export async function testPushNotification(): Promise<{ success: boolean; message: string }> {
+  const response = await api.post<{ success: boolean; message: string }>('/api/push/test');
   return response.data;
 }
 

@@ -14,7 +14,10 @@
       "Bash(lsof:*)",
       "Bash(ps:*)",
       "Bash(find:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(echo:*)",
+      "Bash(npm install:*)",
+      "Bash(npx web-push:*)"
     ]
   }
 }
