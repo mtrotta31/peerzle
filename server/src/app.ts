@@ -36,6 +36,9 @@ const app = express();
 const httpServer = createServer(app);
 const PORT = process.env.PORT || 3001;
 
+// Trust proxy for rate limiting behind Railway's load balancer
+app.set('trust proxy', 1);
+
 // Initialize Socket.io
 initializeSocket(httpServer);
 
