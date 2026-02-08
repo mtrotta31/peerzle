@@ -454,7 +454,7 @@ Take your time, be yourself, and remember — you're not alone.`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      {/* Header - single row: Back | Title (center) | Actions */}
+      {/* Header - single row: [← Back + Topic] ... [Report + End] */}
       <header
         style={{
           padding: '8px 12px',
@@ -463,56 +463,55 @@ Take your time, be yourself, and remember — you're not alone.`;
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          gap: '8px',
           minHeight: '56px',
         }}
       >
-        {/* Left: Back button */}
-        <Link
-          to={`/community/${conversation.community_slug}`}
-          style={{
-            color: '#64748B',
-            textDecoration: 'none',
-            fontSize: '14px',
-            fontWeight: 500,
-            padding: '8px 4px',
-            whiteSpace: 'nowrap',
-            flexShrink: 0,
-          }}
-        >
-          ←
-        </Link>
-
-        {/* Center: Topic + Community name */}
-        <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
-          <h2
+        {/* Left group: Back + Topic/Community */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+          <Link
+            to={`/community/${conversation.community_slug}`}
             style={{
-              margin: 0,
-              fontSize: '15px',
-              fontWeight: 600,
-              color: '#1E3A5F',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
+              color: '#64748B',
+              textDecoration: 'none',
+              fontSize: '14px',
+              fontWeight: 500,
+              padding: '8px 4px',
               whiteSpace: 'nowrap',
+              flexShrink: 0,
             }}
           >
-            {conversation.topic || 'Support Session'}
-          </h2>
-          <p
-            style={{
-              margin: '1px 0 0',
-              fontSize: '11px',
-              color: '#94A3B8',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {conversation.community_name}
-          </p>
+            ← Back
+          </Link>
+          <div style={{ minWidth: 0 }}>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: '15px',
+                fontWeight: 600,
+                color: '#1E3A5F',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {conversation.topic || 'Support Session'}
+            </h2>
+            <p
+              style={{
+                margin: '1px 0 0',
+                fontSize: '11px',
+                color: '#94A3B8',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {conversation.community_name}
+            </p>
+          </div>
         </div>
 
-        {/* Right: Action buttons */}
+        {/* Right group: Action buttons */}
         <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
           {!isAdminViewer && !reportSubmitted && (
             <button
