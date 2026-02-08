@@ -62,13 +62,21 @@ async function requireOrgAdmin(req: AuthenticatedRequest, res: Response, next: N
   const userId = req.user!.userId;
 
   // Get the organization
-  const orgResult = await query<{ id: string }>(
-    `SELECT o.id
-     FROM organizations o
-     JOIN communities c ON c.id = o.community_id
-     WHERE o.slug = $1 AND c.slug = $2`,
-    [orgSlug, communitySlug]
-  );
+  // Note: This query may fail if organizations table has wrong schema (community_ids instead of community_id)
+  let orgResult;
+  try {
+    orgResult = await query<{ id: string }>(
+      `SELECT o.id
+       FROM organizations o
+       JOIN communities c ON c.id = o.community_id
+       WHERE o.slug = $1 AND c.slug = $2`,
+      [orgSlug, communitySlug]
+    );
+  } catch (error) {
+    console.error('Organization query failed (schema mismatch?):', error);
+    res.status(404).json({ error: 'Organization not found' });
+    return;
+  }
 
   if (orgResult.rows.length === 0) {
     res.status(404).json({ error: 'Organization not found' });

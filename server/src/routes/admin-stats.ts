@@ -317,30 +317,8 @@ router.get('/:communitySlug', authenticate, requireAdmin, async (req: Authentica
         convParams
       ),
 
-      // Organization breakdown (only when not filtering by org)
-      organizationId
-        ? Promise.resolve({ rows: [] })
-        : query<{
-            id: string;
-            name: string;
-            slug: string;
-            member_count: string;
-            conversation_count: string;
-            avg_mood_improvement: string | null;
-          }>(
-            `SELECT
-               o.id, o.name, o.slug,
-               (SELECT COUNT(*) FROM memberships m WHERE m.organization_id = o.id) as member_count,
-               (SELECT COUNT(*) FROM conversations c JOIN memberships sm ON sm.id = c.seeker_membership_id WHERE sm.organization_id = o.id) as conversation_count,
-               (SELECT AVG(c.seeker_post_mood - c.seeker_pre_mood)::numeric(3,2)
-                FROM conversations c
-                JOIN memberships sm ON sm.id = c.seeker_membership_id
-                WHERE sm.organization_id = o.id AND c.seeker_pre_mood IS NOT NULL AND c.seeker_post_mood IS NOT NULL) as avg_mood_improvement
-             FROM organizations o
-             WHERE o.community_id = $1 AND o.is_active = true
-             ORDER BY o.name ASC`,
-            [communityId]
-          ),
+      // Organization breakdown - disabled until organizations table schema is fixed
+      Promise.resolve({ rows: [] as { id: string; name: string; slug: string; member_count: string; conversation_count: string; avg_mood_improvement: string | null }[] }),
     ]);
 
     // Process results

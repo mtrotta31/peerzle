@@ -244,13 +244,13 @@ router.get('/:slug/membership', authenticate, async (req: AuthenticatedRequest, 
       organization_name: string | null;
       organization_slug: string | null;
     }>(
+      // Note: organization join disabled until organizations table schema is fixed
       `SELECT m.id, m.user_id, m.community_id, m.role, m.is_verified_helper, m.training_completed,
               m.profile, m.topics, m.is_available, m.created_at, m.organization_id,
               c.name as community_name,
-              o.name as organization_name, o.slug as organization_slug
+              NULL as organization_name, NULL as organization_slug
        FROM memberships m
        JOIN communities c ON c.id = m.community_id
-       LEFT JOIN organizations o ON o.id = m.organization_id
        WHERE m.user_id = $1 AND c.slug = $2 AND c.is_active = true`,
       [userId, slug]
     );

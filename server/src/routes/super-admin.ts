@@ -229,12 +229,13 @@ router.get('/communities/:slug', async (req: AuthenticatedRequest, res: Response
       `SELECT
          c.*,
          (SELECT COUNT(*) FROM memberships WHERE community_id = c.id) as member_count,
-         (SELECT COUNT(*) FROM organizations WHERE community_id = c.id) as org_count,
+         0 as org_count,
          (SELECT COUNT(*) FROM conversations WHERE community_id = c.id) as conversation_count
        FROM communities c
        WHERE c.slug = $1`,
       [slug]
     );
+    // Note: org_count hardcoded to 0 until organizations table schema is fixed
 
     if (result.rows.length === 0) {
       res.status(404).json({ error: 'Community not found' });
@@ -500,108 +501,25 @@ router.delete('/communities/:slug/topics/:topicIndex', async (req: Authenticated
 
 // ============================================================================
 // ORGANIZATION MANAGEMENT
+// Note: Organizations feature disabled until database schema is fixed
+// The organizations table currently has wrong schema (community_ids array instead of community_id FK)
 // ============================================================================
 
-interface OrgRow {
-  id: string;
-  community_id: string;
-  community_name: string;
-  community_slug: string;
-  name: string;
-  slug: string;
-  is_active: boolean;
-  created_at: Date;
-  member_count: string;
-  conversation_count: string;
-}
-
 // GET /api/super-admin/communities/:slug/organizations - Get organizations for a specific community
-router.get('/communities/:slug/organizations', async (req: AuthenticatedRequest, res: Response) => {
-  try {
-    const { slug } = req.params;
-
-    const communityResult = await query<{ id: string }>(
-      'SELECT id FROM communities WHERE slug = $1',
-      [slug]
-    );
-
-    if (communityResult.rows.length === 0) {
-      res.status(404).json({ error: 'Community not found' });
-      return;
-    }
-
-    const communityId = communityResult.rows[0].id;
-
-    const result = await query<OrgRow>(
-      `SELECT
-         o.*,
-         c.name as community_name,
-         c.slug as community_slug,
-         (SELECT COUNT(*) FROM memberships WHERE organization_id = o.id) as member_count,
-         (SELECT COUNT(*) FROM conversations conv
-          JOIN memberships m ON m.id = conv.seeker_membership_id
-          WHERE m.organization_id = o.id) as conversation_count
-       FROM organizations o
-       JOIN communities c ON c.id = o.community_id
-       WHERE o.community_id = $1
-       ORDER BY o.name ASC`,
-      [communityId]
-    );
-
-    const organizations = result.rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      slug: row.slug,
-      isActive: row.is_active,
-      createdAt: row.created_at,
-      communityId: row.community_id,
-      communityName: row.community_name,
-      communitySlug: row.community_slug,
-      memberCount: parseInt(row.member_count),
-      conversationCount: parseInt(row.conversation_count),
-    }));
-
-    res.json(organizations);
-  } catch (error) {
-    console.error('List community organizations error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+router.get('/communities/:slug/organizations', async (_req: AuthenticatedRequest, res: Response) => {
+  // Organizations feature disabled until schema is fixed
+  res.json([]);
 });
 
 // GET /api/super-admin/organizations - List all organizations
 router.get('/organizations', async (_req: AuthenticatedRequest, res: Response) => {
   try {
-    const result = await query<OrgRow>(
-      `SELECT
-         o.*,
-         c.name as community_name,
-         c.slug as community_slug,
-         (SELECT COUNT(*) FROM memberships WHERE organization_id = o.id) as member_count,
-         (SELECT COUNT(*) FROM conversations conv
-          JOIN memberships m ON m.id = conv.seeker_membership_id
-          WHERE m.organization_id = o.id) as conversation_count
-       FROM organizations o
-       JOIN communities c ON c.id = o.community_id
-       ORDER BY c.name ASC, o.name ASC`
-    );
-
-    const organizations = result.rows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      slug: row.slug,
-      isActive: row.is_active,
-      createdAt: row.created_at,
-      communityId: row.community_id,
-      communityName: row.community_name,
-      communitySlug: row.community_slug,
-      memberCount: parseInt(row.member_count),
-      conversationCount: parseInt(row.conversation_count),
-    }));
-
-    res.json(organizations);
+    // Organizations feature disabled until schema is fixed
+    // The organizations table currently has wrong schema (community_ids array instead of community_id FK)
+    res.json([]);
   } catch (error) {
     console.error('List organizations error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.json([]); // Return empty array instead of error
   }
 });
 
