@@ -43,14 +43,13 @@ router.get('/pending', authenticate, async (req: AuthenticatedRequest, res: Resp
       `SELECT c.id, c.community_id, c.seeker_membership_id, c.helper_membership_id,
               c.topic, c.status, c.started_at, c.ended_at,
               cm.slug as community_slug, cm.name as community_name,
-              COALESCE(u.display_name, 'Anonymous') as seeker_name,
+              COALESCE(seeker_m.display_name, 'Anonymous') as seeker_name,
               seeker_m.organization_id as seeker_org_id,
               seeker_org.name as seeker_org_name
        FROM conversations c
        JOIN communities cm ON cm.id = c.community_id
        JOIN memberships m ON m.community_id = c.community_id AND m.user_id = $1
        JOIN memberships seeker_m ON seeker_m.id = c.seeker_membership_id
-       JOIN users u ON u.id = seeker_m.user_id
        LEFT JOIN organizations seeker_org ON seeker_org.id = seeker_m.organization_id
        WHERE c.status = 'matching'
          AND c.helper_membership_id IS NULL
