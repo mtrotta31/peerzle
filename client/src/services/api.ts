@@ -152,6 +152,7 @@ export interface Membership {
   community_name?: string;
   organization_id?: string | null;
   organization?: OrganizationInfo | null;
+  display_name?: string | null;
 }
 
 // Community API

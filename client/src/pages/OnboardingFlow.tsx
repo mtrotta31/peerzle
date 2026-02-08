@@ -176,18 +176,22 @@ export default function OnboardingFlow() {
   // Progress indicator
   const renderProgress = () => (
     <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '32px' }}>
-      {[1, 2, 3, 4, 5].map((step) => (
-        <div
-          key={step}
-          style={{
-            width: step === getStepNumber() ? '32px' : '10px',
-            height: '10px',
-            borderRadius: '5px',
-            backgroundColor: step <= getStepNumber() ? '#2B7CF6' : '#E2E8F0',
-            transition: 'all 0.3s ease',
-          }}
-        />
-      ))}
+      {[1, 2, 3, 4, 5].map((step) => {
+        const isActive = step === getStepNumber();
+        const isCompleted = step < getStepNumber();
+        return (
+          <div
+            key={step}
+            style={{
+              width: isActive ? '24px' : '8px',
+              height: isActive ? '10px' : '8px',
+              borderRadius: isActive ? '5px' : '50%',
+              backgroundColor: isActive ? '#2563EB' : isCompleted ? '#2563EB' : '#D1D5DB',
+              transition: 'all 0.3s ease',
+            }}
+          />
+        );
+      })}
     </div>
   );
 
@@ -337,8 +341,8 @@ export default function OnboardingFlow() {
           <span style={{ fontWeight: 600, color: '#1E3A5F' }}>{label}</span>
           <span style={{ color: '#64748B', fontSize: '14px', marginLeft: '8px' }}>{description}</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '12px', color: '#94A3B8', minWidth: '80px' }}>{lowLabel}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '11px', color: '#94A3B8', minWidth: '50px', textAlign: 'right' }}>{lowLabel}</span>
           <input
             type="range"
             min="1"
@@ -350,7 +354,7 @@ export default function OnboardingFlow() {
               background: `linear-gradient(to right, #2B7CF6 0%, #2B7CF6 ${((rating[field] - 1) / 9) * 100}%, #E2E8F0 ${((rating[field] - 1) / 9) * 100}%, #E2E8F0 100%)`,
             }}
           />
-          <span style={{ fontSize: '12px', color: '#94A3B8', minWidth: '80px', textAlign: 'right' }}>{highLabel}</span>
+          <span style={{ fontSize: '11px', color: '#94A3B8', minWidth: '50px' }}>{highLabel}</span>
         </div>
         <div style={{ textAlign: 'center', marginTop: '8px', fontSize: '20px', fontWeight: 600, color: '#2B7CF6' }}>
           {rating[field]}
@@ -370,9 +374,9 @@ export default function OnboardingFlow() {
           {currentTopic}
         </h2>
 
-        {renderSlider('Experience', 'How frequently have you experienced this?', 'historyRating', 'Rarely', 'Very often')}
-        {renderSlider('Knowledge', 'How much do you know about this topic?', 'knowledgeRating', 'Very little', 'Very knowledgeable')}
-        {renderSlider('Coping', 'How well do you manage this?', 'copingRating', 'Struggling', 'Managing well')}
+        {renderSlider('Experience', 'How frequently have you experienced this?', 'historyRating', 'Rarely', 'Often')}
+        {renderSlider('Knowledge', 'How much do you know about this topic?', 'knowledgeRating', 'Low', 'High')}
+        {renderSlider('Coping', 'How well do you manage this?', 'copingRating', 'Struggling', 'Well')}
 
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '32px' }}>
           <button

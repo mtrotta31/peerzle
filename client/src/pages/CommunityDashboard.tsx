@@ -343,9 +343,6 @@ export default function CommunityDashboard() {
   }
 
   const { terminology, topics } = community.config;
-  const roleName = membership.role === 'helper' || membership.role === 'both'
-    ? terminology.helper
-    : terminology.seeker;
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC' }}>
@@ -579,164 +576,104 @@ export default function CommunityDashboard() {
       )}
 
       {/* Content */}
-      <main style={{ maxWidth: '800px', margin: '0 auto', padding: '24px' }}>
-        {/* Welcome Card with Helper Toggle */}
+      <main style={{ maxWidth: '800px', margin: '0 auto', padding: '16px 24px' }}>
+        {/* Slim Status Bar */}
         <div
           style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            padding: '12px 16px',
             backgroundColor: 'white',
-            borderRadius: '16px',
-            padding: '24px',
-            marginBottom: '20px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+            borderRadius: '12px',
+            marginBottom: '16px',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
           }}
         >
-          <div
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'flex-start',
-            }}
-          >
-            <div>
-              <h2 style={{ margin: '0 0 8px 0', color: '#1E3A5F', fontSize: '20px' }}>
-                Welcome back
-              </h2>
-              <p style={{ margin: 0, color: '#64748B', fontSize: '14px' }}>
-                Your role: <strong style={{ color: '#1E3A5F' }}>{roleName}</strong>
-              </p>
-            </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{ fontSize: '14px', color: '#64748B' }}>Hi,</span>
+            <span style={{ fontSize: '14px', fontWeight: 600, color: '#1E3A5F' }}>
+              {membership.display_name || 'Friend'}
+            </span>
+          </div>
 
-            {/* Helper Availability Toggle */}
-            <div
+          {/* Helper Availability Toggle - only show if training completed */}
+          {membership.training_completed && (
+            <label
               style={{
                 display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'flex-end',
+                alignItems: 'center',
                 gap: '8px',
+                cursor: isTogglingAvailability ? 'not-allowed' : 'pointer',
               }}
             >
-              {membership.training_completed ? (
-                <label
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '12px',
-                    cursor: isTogglingAvailability ? 'not-allowed' : 'pointer',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: '14px',
-                      fontWeight: 500,
-                      color: membership.is_available ? '#16A34A' : '#64748B',
-                    }}
-                  >
-                    {membership.is_available ? 'Available to Help' : 'Not Available'}
-                  </span>
-                  <div
-                    onClick={handleToggleAvailability}
-                    style={{
-                      width: '52px',
-                      height: '28px',
-                      backgroundColor: membership.is_available ? '#16A34A' : '#CBD5E1',
-                      borderRadius: '14px',
-                      position: 'relative',
-                      transition: 'background-color 0.2s',
-                      opacity: isTogglingAvailability ? 0.5 : 1,
-                      cursor: isTogglingAvailability ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: '24px',
-                        height: '24px',
-                        backgroundColor: 'white',
-                        borderRadius: '50%',
-                        position: 'absolute',
-                        top: '2px',
-                        left: membership.is_available ? '26px' : '2px',
-                        transition: 'left 0.2s',
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-                      }}
-                    />
-                  </div>
-                </label>
-              ) : (
-                <Link
-                  to={`/community/${slug}/training`}
-                  style={{
-                    padding: '8px 16px',
-                    backgroundColor: '#EDF4FF',
-                    color: '#2B7CF6',
-                    border: 'none',
-                    borderRadius: '24px',
-                    textDecoration: 'none',
-                    fontSize: '14px',
-                    fontWeight: 500,
-                    transition: 'background-color 0.2s',
-                  }}
-                  onMouseOver={(e) => {
-                    e.currentTarget.style.backgroundColor = '#DCE9FF';
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.backgroundColor = '#EDF4FF';
-                  }}
-                >
-                  Complete Training
-                </Link>
-              )}
-              <span style={{ fontSize: '12px', color: '#94A3B8' }}>
-                {membership.training_completed ? 'Toggle to help others' : 'Required to help others'}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Training Required Banner */}
-        {!membership.training_completed && (
-          <div
-            style={{
-              backgroundColor: '#EDF4FF',
-              borderRadius: '16px',
-              padding: '20px',
-              marginBottom: '20px',
-              borderLeft: '4px solid #2B7CF6',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h3 style={{ margin: '0 0 4px 0', color: '#1E3A5F', fontSize: '16px' }}>
-                  Complete Helper Training
-                </h3>
-                <p style={{ margin: 0, color: '#64748B', fontSize: '14px' }}>
-                  Finish 3 short modules to start helping others in this community.
-                </p>
-              </div>
-              <Link
-                to={`/community/${slug}/training`}
+              <span
                 style={{
-                  padding: '10px 20px',
-                  backgroundColor: '#2B7CF6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '24px',
-                  textDecoration: 'none',
-                  fontSize: '14px',
-                  fontWeight: 600,
-                  whiteSpace: 'nowrap',
-                  transition: 'background-color 0.2s',
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#1E6AD9';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = '#2B7CF6';
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  color: membership.is_available ? '#16A34A' : '#94A3B8',
                 }}
               >
-                Start Training
-              </Link>
-            </div>
-          </div>
+                {membership.is_available ? 'Helping' : 'Off'}
+              </span>
+              <div
+                onClick={handleToggleAvailability}
+                style={{
+                  width: '44px',
+                  height: '24px',
+                  backgroundColor: membership.is_available ? '#16A34A' : '#CBD5E1',
+                  borderRadius: '12px',
+                  position: 'relative',
+                  transition: 'background-color 0.2s',
+                  opacity: isTogglingAvailability ? 0.5 : 1,
+                  cursor: isTogglingAvailability ? 'not-allowed' : 'pointer',
+                }}
+              >
+                <div
+                  style={{
+                    width: '20px',
+                    height: '20px',
+                    backgroundColor: 'white',
+                    borderRadius: '50%',
+                    position: 'absolute',
+                    top: '2px',
+                    left: membership.is_available ? '22px' : '2px',
+                    transition: 'left 0.2s',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                  }}
+                />
+              </div>
+            </label>
+          )}
+        </div>
+
+        {/* Compact Training Banner - only for helpers who need it */}
+        {!membership.training_completed && (membership.role === 'helper' || membership.role === 'both' || membership.role === 'admin') && (
+          <Link
+            to={`/community/${slug}/training`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 16px',
+              backgroundColor: '#FEF3C7',
+              borderRadius: '10px',
+              marginBottom: '16px',
+              textDecoration: 'none',
+              transition: 'background-color 0.2s',
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = '#FDE68A';
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = '#FEF3C7';
+            }}
+          >
+            <span style={{ fontSize: '13px', color: '#92400E' }}>
+              Complete training to start helping
+            </span>
+            <span style={{ fontSize: '13px', color: '#92400E', fontWeight: 500 }}>→</span>
+          </Link>
         )}
 
         {/* Pending Requests Section */}
@@ -877,25 +814,6 @@ export default function CommunityDashboard() {
           </div>
         )}
 
-        {/* No pending requests message */}
-        {membership.is_available && pendingConversations.length === 0 && (
-          <div
-            style={{
-              backgroundColor: '#EDF4FF',
-              borderRadius: '16px',
-              padding: '20px',
-              marginBottom: '20px',
-              textAlign: 'center',
-            }}
-          >
-            <p style={{ margin: 0, color: '#1E3A5F', fontWeight: 500 }}>
-              You're available to help
-            </p>
-            <p style={{ margin: '8px 0 0', fontSize: '13px', color: '#64748B' }}>
-              No pending requests right now. This page will refresh automatically.
-            </p>
-          </div>
-        )}
 
         {/* Active Conversation Banner */}
         {activeConversation && (
@@ -945,78 +863,89 @@ export default function CommunityDashboard() {
           </div>
         )}
 
-        {/* How are you feeling today? */}
+        {/* Topic Selection - Hero Section */}
         <div
           style={{
             backgroundColor: 'white',
             borderRadius: '16px',
-            padding: '24px',
-            marginBottom: '20px',
+            padding: '20px',
             boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
           }}
         >
-          <h3 style={{ margin: '0 0 8px 0', color: '#1E3A5F', fontSize: '18px' }}>
-            {activeConversation ? 'Topics' : 'How are you feeling today?'}
+          <h3 style={{ margin: '0 0 4px 0', color: '#1E3A5F', fontSize: '17px', fontWeight: 600 }}>
+            {activeConversation ? 'Topics' : 'What would you like to talk about?'}
           </h3>
-          <p style={{ margin: '0 0 20px 0', color: '#64748B', fontSize: '14px' }}>
+          <p style={{ margin: '0 0 16px 0', color: '#64748B', fontSize: '13px' }}>
             {activeConversation
               ? 'End your current session to start a new one'
-              : `Select a topic to connect with a ${terminology.helper}`}
+              : 'Choose a topic to get matched with a peer'}
           </p>
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
-              gap: '12px',
+              gridTemplateColumns: 'repeat(2, 1fr)',
+              gap: '10px',
             }}
           >
-            {topics.map((topic) => (
-              <button
-                key={topic}
-                onClick={() => !activeConversation && handleStartConversation(topic)}
-                disabled={isStarting || !!activeConversation}
-                style={{
-                  padding: '16px',
-                  backgroundColor: 'white',
-                  border: `1px solid ${activeConversation ? '#E2E8F0' : '#E2E8F0'}`,
-                  borderRadius: '16px',
-                  textAlign: 'left',
-                  cursor: activeConversation ? 'not-allowed' : 'pointer',
-                  color: activeConversation ? '#94A3B8' : '#1E3A5F',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  transition: 'all 0.2s',
-                  opacity: activeConversation ? 0.6 : 1,
-                }}
-                onMouseOver={(e) => {
-                  if (!activeConversation) {
-                    e.currentTarget.style.borderColor = '#2B7CF6';
-                    e.currentTarget.style.backgroundColor = '#F8FAFC';
-                  }
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.borderColor = '#E2E8F0';
-                  e.currentTarget.style.backgroundColor = 'white';
-                }}
-              >
-                {topic}
-              </button>
-            ))}
+            {topics.map((topic, index) => {
+              // Alternating warm accent colors
+              const accentColors = ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B', '#EC4899', '#06B6D4'];
+              const accentColor = accentColors[index % accentColors.length];
+              const bgTints = ['#EFF6FF', '#ECFDF5', '#F5F3FF', '#FFFBEB', '#FDF2F8', '#ECFEFF'];
+              const bgTint = bgTints[index % bgTints.length];
+
+              return (
+                <button
+                  key={topic}
+                  onClick={() => !activeConversation && handleStartConversation(topic)}
+                  disabled={isStarting || !!activeConversation}
+                  style={{
+                    padding: '12px 14px',
+                    backgroundColor: activeConversation ? '#F8FAFC' : bgTint,
+                    border: 'none',
+                    borderLeft: `3px solid ${activeConversation ? '#E2E8F0' : accentColor}`,
+                    borderRadius: '8px',
+                    textAlign: 'left',
+                    cursor: activeConversation ? 'not-allowed' : 'pointer',
+                    color: activeConversation ? '#94A3B8' : '#1E3A5F',
+                    fontSize: '13px',
+                    fontWeight: 500,
+                    transition: 'all 0.2s',
+                    opacity: activeConversation ? 0.6 : 1,
+                    minHeight: '44px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                  onMouseOver={(e) => {
+                    if (!activeConversation) {
+                      e.currentTarget.style.transform = 'translateX(2px)';
+                      e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.transform = 'translateX(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  {topic}
+                </button>
+              );
+            })}
           </div>
           {!activeConversation && (
-            <div style={{ marginTop: '20px', textAlign: 'center' }}>
+            <div style={{ marginTop: '16px', textAlign: 'center' }}>
               <button
                 onClick={() => handleStartConversation('General Support')}
                 disabled={isStarting}
                 style={{
-                  padding: '14px 32px',
+                  padding: '12px 28px',
                   backgroundColor: '#2B7CF6',
                   color: 'white',
                   border: 'none',
                   borderRadius: '24px',
                   cursor: isStarting ? 'not-allowed' : 'pointer',
                   fontWeight: 600,
-                  fontSize: '16px',
+                  fontSize: '14px',
                   opacity: isStarting ? 0.7 : 1,
                   transition: 'background-color 0.2s',
                 }}
@@ -1029,7 +958,7 @@ export default function CommunityDashboard() {
                   e.currentTarget.style.backgroundColor = '#2B7CF6';
                 }}
               >
-                {isStarting ? 'Starting...' : 'Start Conversation'}
+                {isStarting ? 'Starting...' : 'Just Talk'}
               </button>
             </div>
           )}
