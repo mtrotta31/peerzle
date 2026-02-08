@@ -50,7 +50,7 @@ CREATE TABLE memberships (
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     community_id UUID NOT NULL REFERENCES communities(id) ON DELETE CASCADE,
     role VARCHAR(20) NOT NULL DEFAULT 'seeker',
-    -- Options: 'seeker', 'helper', 'both'
+    -- Options: 'seeker', 'helper', 'both', 'admin'
     is_verified_helper BOOLEAN DEFAULT false,
     profile JSONB DEFAULT '{}',
     -- profile structure: community-specific data (bio, experience, etc.)
@@ -110,22 +110,27 @@ CREATE TABLE messages (
 CREATE INDEX idx_messages_conversation_id ON messages(conversation_id);
 CREATE INDEX idx_messages_created_at ON messages(created_at DESC);
 
--- Organizations: Partner orgs that manage communities
+-- Organizations: Buyer orgs within communities (e.g., Cincinnati IAFF Local 48 within First Responders)
 CREATE TABLE organizations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    community_id UUID NOT NULL REFERENCES communities(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
-    community_ids UUID[] DEFAULT '{}',
-    config JSONB DEFAULT '{}',
-    sso_config JSONB,
-    -- sso_config structure: { provider: "saml"|"oidc", ... }
-    api_keys JSONB DEFAULT '[]',
-    -- api_keys structure: [{ key_hash, name, permissions, created_at }]
-    webhook_endpoints JSONB DEFAULT '[]',
-    -- webhook_endpoints structure: [{ url, events, secret_hash, is_active }]
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    slug VARCHAR(100) NOT NULL,
+    logo_url TEXT,
+    primary_contact_email VARCHAR(255),
+    settings JSONB DEFAULT '{"match_within_org_only": true, "allow_cross_org_matching": false}',
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(community_id, slug)
 );
 
-CREATE INDEX idx_organizations_community_ids ON organizations USING GIN(community_ids);
+CREATE INDEX idx_organizations_community_id ON organizations(community_id);
+CREATE INDEX idx_organizations_slug ON organizations(slug);
+CREATE INDEX idx_organizations_is_active ON organizations(is_active) WHERE is_active = true;
+
+-- Add organization_id to memberships (defined after organizations table exists)
+ALTER TABLE memberships ADD COLUMN organization_id UUID REFERENCES organizations(id) ON DELETE SET NULL;
+CREATE INDEX idx_memberships_organization_id ON memberships(organization_id);
 
 -- ============================================================================
 -- FUTURE-STATE TABLES (created now, used later)
