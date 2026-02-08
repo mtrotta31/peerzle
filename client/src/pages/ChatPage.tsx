@@ -457,23 +457,20 @@ Take your time, be yourself, and remember — you're not alone.`;
       {/* Header */}
       <header
         style={{
-          padding: '16px 20px',
+          padding: '12px 16px',
           backgroundColor: 'white',
           borderBottom: '1px solid #E2E8F0',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
         }}
       >
-        <div>
-          <h2 style={{ margin: 0, fontSize: '16px', fontWeight: 600, color: '#1E3A5F' }}>
-            {conversation.topic || 'Support Session'}
-          </h2>
-          <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748B' }}>
-            {conversation.community_name}
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+        {/* Row 1: Back button + Topic info */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            marginBottom: '8px',
+          }}
+        >
           <Link
             to={`/community/${conversation.community_slug}`}
             style={{
@@ -481,35 +478,61 @@ Take your time, be yourself, and remember — you're not alone.`;
               textDecoration: 'none',
               fontSize: '14px',
               fontWeight: 500,
-              padding: '8px 16px',
-              borderRadius: '24px',
-              border: '1px solid #E2E8F0',
-              transition: 'all 0.2s',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.borderColor = '#2B7CF6';
-              e.currentTarget.style.color = '#2B7CF6';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.borderColor = '#E2E8F0';
-              e.currentTarget.style.color = '#64748B';
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              padding: '8px 0',
+              minHeight: '44px',
+              whiteSpace: 'nowrap',
             }}
           >
-            Back
+            ← Back
           </Link>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h2
+              style={{
+                margin: 0,
+                fontSize: '16px',
+                fontWeight: 600,
+                color: '#1E3A5F',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {conversation.topic || 'Support Session'}
+            </h2>
+            <p
+              style={{
+                margin: '2px 0 0',
+                fontSize: '12px',
+                color: '#94A3B8',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {conversation.community_name}
+            </p>
+          </div>
+        </div>
+        {/* Row 2: Action buttons */}
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
           {!isAdminViewer && !reportSubmitted && (
             <button
               onClick={() => setShowReportModal(true)}
               style={{
-                padding: '8px 16px',
+                padding: '8px 12px',
                 backgroundColor: 'white',
                 color: '#64748B',
                 border: '1px solid #E2E8F0',
-                borderRadius: '24px',
+                borderRadius: '20px',
                 cursor: 'pointer',
-                fontSize: '14px',
+                fontSize: '13px',
                 fontWeight: 500,
                 transition: 'all 0.2s',
+                minHeight: '36px',
+                whiteSpace: 'nowrap',
               }}
               onMouseOver={(e) => {
                 e.currentTarget.style.borderColor = '#DC2626';
@@ -524,8 +547,8 @@ Take your time, be yourself, and remember — you're not alone.`;
             </button>
           )}
           {reportSubmitted && (
-            <span style={{ fontSize: '13px', color: '#16A34A', fontWeight: 500, padding: '8px 0' }}>
-              Report submitted
+            <span style={{ fontSize: '12px', color: '#16A34A', fontWeight: 500, padding: '8px 0' }}>
+              Reported
             </span>
           )}
           {!isEnded && !isAdminViewer && (
@@ -533,16 +556,18 @@ Take your time, be yourself, and remember — you're not alone.`;
               onClick={handleEndSessionClick}
               disabled={isEnding}
               style={{
-                padding: '8px 16px',
+                padding: '8px 12px',
                 backgroundColor: 'white',
-                color: '#DC2626',
-                border: '1px solid #DC2626',
-                borderRadius: '24px',
+                color: '#EF4444',
+                border: '1px solid #FCA5A5',
+                borderRadius: '20px',
                 cursor: isEnding ? 'not-allowed' : 'pointer',
-                fontSize: '14px',
+                fontSize: '13px',
                 fontWeight: 500,
                 opacity: isEnding ? 0.7 : 1,
                 transition: 'all 0.2s',
+                minHeight: '36px',
+                whiteSpace: 'nowrap',
               }}
               onMouseOver={(e) => {
                 if (!isEnding) {
@@ -553,7 +578,7 @@ Take your time, be yourself, and remember — you're not alone.`;
                 e.currentTarget.style.backgroundColor = 'white';
               }}
             >
-              {isEnding ? 'Ending...' : 'End Session'}
+              {isEnding ? 'Ending...' : 'End'}
             </button>
           )}
         </div>

@@ -382,12 +382,24 @@ export default function CommunityDashboard() {
                 )}
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <span style={{ color: '#64748B', fontSize: '14px' }}>{user?.email}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+              <span
+                style={{
+                  color: '#64748B',
+                  fontSize: '14px',
+                  maxWidth: '150px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+                title={user?.email}
+              >
+                {user?.email?.split('@')[0]}
+              </span>
               <button
                 onClick={logout}
                 style={{
-                  padding: '8px 16px',
+                  padding: '8px 12px',
                   backgroundColor: 'white',
                   color: '#64748B',
                   border: '1px solid #E2E8F0',
@@ -396,6 +408,7 @@ export default function CommunityDashboard() {
                   fontSize: '14px',
                   fontWeight: 500,
                   transition: 'all 0.2s',
+                  whiteSpace: 'nowrap',
                 }}
                 onMouseOver={(e) => {
                   e.currentTarget.style.backgroundColor = '#F8FAFC';
@@ -404,7 +417,7 @@ export default function CommunityDashboard() {
                   e.currentTarget.style.backgroundColor = 'white';
                 }}
               >
-                Log Out
+                Logout
               </button>
             </div>
           </div>
