@@ -56,6 +56,16 @@ const TOPIC_TEMPLATES = {
     { name: 'Social Anxiety', description: 'Difficulty in social situations' },
     { name: 'General Support', description: 'Any topic not listed above' },
   ],
+  employee_wellness: [
+    { name: 'Burnout', description: 'Managing exhaustion and disengagement at work' },
+    { name: 'Work-Life Balance', description: 'Balancing professional and personal demands' },
+    { name: 'Workplace Conflict', description: 'Navigating difficult coworker or team dynamics' },
+    { name: 'Career Anxiety', description: 'Worries about job security or advancement' },
+    { name: 'Imposter Syndrome', description: 'Feeling like you don\'t belong or aren\'t qualified' },
+    { name: 'Financial Stress', description: 'Managing money and compensation concerns' },
+    { name: 'Manager Challenges', description: 'Dealing with difficult leadership or feedback' },
+    { name: 'General Support', description: 'Any topic not listed above' },
+  ],
 };
 
 type Tab = 'communities' | 'organizations';
@@ -588,6 +598,7 @@ export default function SuperAdminPanel() {
                     <TemplateButton onClick={() => handleApplyTemplate('healthcare')}>Healthcare</TemplateButton>
                     <TemplateButton onClick={() => handleApplyTemplate('veterans')}>Veterans</TemplateButton>
                     <TemplateButton onClick={() => handleApplyTemplate('education')}>Education</TemplateButton>
+                    <TemplateButton onClick={() => handleApplyTemplate('employee_wellness')}>Employee Wellness</TemplateButton>
                     <TemplateButton onClick={() => setFormTopics([])}>Start Blank</TemplateButton>
                   </div>
 
