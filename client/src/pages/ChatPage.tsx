@@ -443,7 +443,7 @@ export default function ChatPage() {
   const peerbotIntroMessage = `Welcome to your conversation! 👋 Here are a few things to know:
 
 • This is a safe, anonymous space. Neither of you can see the other's identity.
-• Use the suggested responses panel if you're unsure what to say — they're written by licensed counselors.
+• Use the suggested responses panel if you're unsure what to say.
 • You can end the conversation at any time using the menu.
 • If either of you needs immediate crisis support, resources are always available.
 
@@ -982,18 +982,24 @@ Take your time, be yourself, and remember — you're not alone.`;
           </div>
         )}
 
-        {messages.length === 0 && !showPeerbotIntro ? (
+        {messages.length === 0 && !showPeerbotIntro && !(isMatching && !helperJoined) ? (
           <p style={{ textAlign: 'center', color: '#64748B' }}>
             No messages yet. Start the conversation!
           </p>
         ) : messages.length > 0 ? (
-          messages.map((message) => {
+          messages.map((message, index) => {
             const isPeerBot = message.moderation_result?.sender === 'peerbot';
             const isMine = !isPeerBot && !isAdminViewer && message.sender_email === user?.email;
 
             // Determine the sender's role based on membership ID
             const isFromSeeker = message.sender_membership_id === conversation?.seeker_membership_id;
             const isFromHelper = message.sender_membership_id === conversation?.helper_membership_id;
+
+            // Check if sender changed from previous message
+            const prevMessage = index > 0 ? messages[index - 1] : null;
+            const prevIsPeerBot = prevMessage?.moderation_result?.sender === 'peerbot';
+            const prevIsMine = prevMessage && !prevIsPeerBot && !isAdminViewer && prevMessage.sender_email === user?.email;
+            const senderChanged = !prevMessage || (isMine !== prevIsMine) || (isPeerBot !== prevIsPeerBot);
 
             // For admin viewers, determine message styling based on role
             const getSenderLabel = () => {
@@ -1075,7 +1081,7 @@ Take your time, be yourself, and remember — you're not alone.`;
                   </div>
                 )}
                 <div style={{ maxWidth: '70%' }}>
-                  {!isMine && (
+                  {!isMine && senderChanged && (
                     <p
                       style={{
                         margin: '0 0 4px 4px',

@@ -366,7 +366,7 @@ export default function SuggestionsPanel({
 
         {/* Expanded content */}
         {isExpanded && (
-          <div style={{ padding: '0 20px 12px', maxHeight: '220px', overflowY: 'auto' }}>
+          <div style={{ padding: '0 20px 12px', maxHeight: '200px', overflowY: 'auto' }}>
             {/* Coaching Tip Section */}
             <div
               style={{
@@ -502,7 +502,7 @@ export default function SuggestionsPanel({
 
       {/* Expanded content */}
       {isExpanded && (
-        <div style={{ padding: '0 20px 12px', maxHeight: '220px', overflowY: 'auto' }}>
+        <div style={{ padding: '0 20px 12px', maxHeight: '200px', overflowY: 'auto' }}>
           {/* Reassurance message */}
           <p style={{ margin: '0 0 10px', fontSize: '13px', color: '#64748B', lineHeight: '1.4' }}>
             {seekerPaused
