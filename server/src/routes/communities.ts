@@ -91,6 +91,51 @@ router.get('/:slug', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/communities/:slug/details - Get extended community details for info modal
+router.get('/:slug/details', async (req: Request, res: Response) => {
+  try {
+    const { slug } = req.params;
+
+    // Get community with member count
+    const result = await query<CommunityRow & { member_count: string }>(
+      `SELECT
+         c.id, c.slug, c.name, c.config, c.verification_method, c.is_public,
+         (SELECT COUNT(*) FROM memberships WHERE community_id = c.id) as member_count
+       FROM communities c
+       WHERE c.slug = $1 AND c.is_active = true`,
+      [slug]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Community not found' });
+      return;
+    }
+
+    const community = result.rows[0];
+
+    // Get organizations for this community
+    const orgsResult = await query<{ id: string; name: string; slug: string }>(
+      `SELECT id, name, slug FROM organizations WHERE community_id = $1 ORDER BY name`,
+      [community.id]
+    );
+
+    res.json({
+      id: community.id,
+      slug: community.slug,
+      name: community.name,
+      description: community.config?.description || null,
+      topics: community.config?.topics || [],
+      verification_method: community.verification_method,
+      is_public: community.is_public,
+      member_count: parseInt(community.member_count),
+      organizations: orgsResult.rows,
+    });
+  } catch (error) {
+    console.error('Get community details error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // POST /api/communities/:slug/join - Join a community with verification
 router.post('/:slug/join', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {

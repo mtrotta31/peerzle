@@ -166,6 +166,23 @@ export async function getCommunity(slug: string): Promise<Community> {
   return response.data;
 }
 
+export interface CommunityDetails {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  topics: string[];
+  verification_method: 'open' | 'invite_code' | 'email_domain';
+  is_public: boolean;
+  member_count: number;
+  organizations: { id: string; name: string; slug: string }[];
+}
+
+export async function getCommunityDetails(slug: string): Promise<CommunityDetails> {
+  const response = await api.get<CommunityDetails>(`/api/communities/${slug}/details`);
+  return response.data;
+}
+
 export interface JoinCommunityResponse {
   membership?: Membership;
   error?: string;

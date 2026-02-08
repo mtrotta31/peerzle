@@ -4,6 +4,7 @@ import { Community, Membership, getCommunities, getMembership, joinCommunity } f
 import { useAuth } from '../context/AuthContext';
 import { AxiosError } from 'axios';
 import InviteCodeModal from '../components/InviteCodeModal';
+import CommunityInfoModal from '../components/CommunityInfoModal';
 
 interface CommunityWithMembership extends Community {
   membership?: Membership;
@@ -21,6 +22,7 @@ export default function CommunitiesPage() {
   const [joiningSlug, setJoiningSlug] = useState<string | null>(null);
   const [inviteModalCommunity, setInviteModalCommunity] = useState<CommunityWithMembership | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  const [infoModalCommunity, setInfoModalCommunity] = useState<CommunityWithMembership | null>(null);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -271,17 +273,54 @@ export default function CommunitiesPage() {
                   }
                 >
                   {/* Stacked layout for mobile-friendly cards */}
-                  {/* Row 1: Community name */}
-                  <h2
-                    style={{
-                      margin: '0 0 8px 0',
-                      fontSize: '18px',
-                      fontWeight: 600,
-                      color: '#1E3A5F',
-                    }}
-                  >
-                    {community.name}
-                  </h2>
+                  {/* Row 1: Community name + info button */}
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
+                    <h2
+                      style={{
+                        margin: 0,
+                        fontSize: '18px',
+                        fontWeight: 600,
+                        color: '#1E3A5F',
+                        flex: 1,
+                      }}
+                    >
+                      {community.name}
+                    </h2>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setInfoModalCommunity(community);
+                      }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#94A3B8',
+                        cursor: 'pointer',
+                        fontSize: '18px',
+                        padding: '8px',
+                        margin: '-8px -8px -8px 0',
+                        minWidth: '44px',
+                        minHeight: '44px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        borderRadius: '50%',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseOver={(e) => {
+                        e.currentTarget.style.backgroundColor = '#F1F5F9';
+                        e.currentTarget.style.color = '#64748B';
+                      }}
+                      onMouseOut={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                        e.currentTarget.style.color = '#94A3B8';
+                      }}
+                      aria-label="Community info"
+                      title="View community details"
+                    >
+                      &#9432;
+                    </button>
+                  </div>
 
                   {/* Row 2: Badge + topic count */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
@@ -409,6 +448,25 @@ export default function CommunitiesPage() {
             setInviteError(null);
           }}
           error={inviteError}
+        />
+      )}
+
+      {/* Community Info Modal */}
+      {infoModalCommunity && (
+        <CommunityInfoModal
+          communitySlug={infoModalCommunity.slug}
+          communityName={infoModalCommunity.name}
+          isMember={!!infoModalCommunity.membership}
+          onClose={() => setInfoModalCommunity(null)}
+          onJoin={() => {
+            setInfoModalCommunity(null);
+            handleJoin(infoModalCommunity);
+          }}
+          onEnter={() => {
+            setInfoModalCommunity(null);
+            handleEnter(infoModalCommunity.slug);
+          }}
+          isJoining={joiningSlug === infoModalCommunity.slug}
         />
       )}
     </div>
