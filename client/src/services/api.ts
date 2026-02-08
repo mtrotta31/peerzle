@@ -517,7 +517,7 @@ export interface HistoryConversation {
   started_at: string;
   ended_at: string | null;
   role: 'seeker' | 'helper';
-  other_user_email: string | null;
+  other_user_display_name: string | null;
   rating: number | null;
   felt_heard: boolean | null;
   would_recommend: boolean | null;

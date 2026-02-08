@@ -10,7 +10,7 @@ interface HistoryRow {
   started_at: Date;
   ended_at: Date | null;
   role: 'seeker' | 'helper';
-  other_user_email: string | null;
+  other_user_display_name: string | null;
   rating: number | null;
   felt_heard: boolean | null;
   would_recommend: boolean | null;
@@ -67,10 +67,10 @@ router.get('/:communitySlug', authenticate, async (req: AuthenticatedRequest, re
           WHEN c.seeker_membership_id = $1 THEN
             CASE
               WHEN c.helper_membership_id IS NULL THEN NULL
-              ELSE (SELECT u.email FROM users u JOIN memberships m ON m.user_id = u.id WHERE m.id = c.helper_membership_id)
+              ELSE (SELECT m.display_name FROM memberships m WHERE m.id = c.helper_membership_id)
             END
-          ELSE (SELECT u.email FROM users u JOIN memberships m ON m.user_id = u.id WHERE m.id = c.seeker_membership_id)
-        END as other_user_email,
+          ELSE (SELECT m.display_name FROM memberships m WHERE m.id = c.seeker_membership_id)
+        END as other_user_display_name,
         cr.rating,
         cr.felt_heard,
         cr.would_recommend,

@@ -313,11 +313,12 @@ export default function SessionHistory() {
                     </p>
                     <p style={{ margin: '0 0 8px 0', color: '#64748B', fontSize: '13px' }}>
                       Duration: {formatDuration(session.started_at, session.ended_at)}
-                      {session.other_user_email && (
-                        <span> · with {session.other_user_email}</span>
-                      )}
-                      {!session.other_user_email && (
+                      {session.other_user_display_name ? (
+                        <span> · with {session.other_user_display_name}</span>
+                      ) : session.role === 'seeker' ? (
                         <span> · PeerBot only</span>
+                      ) : (
+                        <span> · with Anonymous Peer</span>
                       )}
                     </p>
 

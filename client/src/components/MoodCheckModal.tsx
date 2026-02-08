@@ -7,8 +7,8 @@ interface MoodCheckModalProps {
 }
 
 const MOODS = [
-  { value: 1, emoji: '\uD83D\uDE2B', label: 'Much Worse' },
-  { value: 2, emoji: '\uD83D\uDE1F', label: 'Slightly Down' },
+  { value: 1, emoji: '\uD83D\uDE2B', label: 'Worse' },
+  { value: 2, emoji: '\uD83D\uDE1F', label: 'Down' },
   { value: 3, emoji: '\uD83D\uDE10', label: 'Neutral' },
   { value: 4, emoji: '\uD83D\uDE42', label: 'Okay' },
   { value: 5, emoji: '\uD83D\uDE0A', label: 'Good' },
@@ -82,9 +82,10 @@ export default function MoodCheckModal({ conversationId, onComplete }: MoodCheck
         <div
           style={{
             display: 'flex',
-            justifyContent: 'center',
-            gap: '12px',
+            justifyContent: 'space-evenly',
+            flexWrap: 'nowrap',
             marginBottom: '32px',
+            padding: '0 8px',
           }}
         >
           {MOODS.map((mood) => {
@@ -98,22 +99,23 @@ export default function MoodCheckModal({ conversationId, onComplete }: MoodCheck
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
-                  gap: '6px',
+                  gap: '4px',
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  padding: '8px',
-                  borderRadius: '16px',
+                  padding: '4px',
+                  borderRadius: '12px',
                   transition: 'transform 0.2s',
-                  transform: isSelected ? 'scale(1.15)' : 'scale(1)',
+                  transform: isSelected ? 'scale(1.1)' : 'scale(1)',
+                  minWidth: '48px',
                 }}
               >
                 <span
                   style={{
-                    fontSize: '36px',
+                    fontSize: '28px',
                     lineHeight: 1,
-                    width: '52px',
-                    height: '52px',
+                    width: '40px',
+                    height: '40px',
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
@@ -126,7 +128,7 @@ export default function MoodCheckModal({ conversationId, onComplete }: MoodCheck
                 </span>
                 <span
                   style={{
-                    fontSize: '11px',
+                    fontSize: '10px',
                     color: isSelected ? '#2B7CF6' : '#94A3B8',
                     fontWeight: isSelected ? 600 : 400,
                     whiteSpace: 'nowrap',

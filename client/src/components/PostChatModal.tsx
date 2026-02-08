@@ -173,7 +173,7 @@ export default function PostChatModal({
               After your conversation
             </p>
 
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '12px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-evenly', flexWrap: 'nowrap', marginBottom: '20px', padding: '0 8px' }}>
               {MOODS.map((mood) => {
                 const isSelected = postMoodValue === mood.value;
                 return (
@@ -185,22 +185,23 @@ export default function PostChatModal({
                       display: 'flex',
                       flexDirection: 'column',
                       alignItems: 'center',
-                      gap: '6px',
+                      gap: '4px',
                       background: 'none',
                       border: 'none',
                       cursor: 'pointer',
-                      padding: '8px',
-                      borderRadius: '16px',
+                      padding: '4px',
+                      borderRadius: '12px',
                       transition: 'transform 0.2s',
-                      transform: isSelected ? 'scale(1.15)' : 'scale(1)',
+                      transform: isSelected ? 'scale(1.1)' : 'scale(1)',
+                      minWidth: '48px',
                     }}
                   >
                     <span
                       style={{
-                        fontSize: '36px',
+                        fontSize: '28px',
                         lineHeight: 1,
-                        width: '52px',
-                        height: '52px',
+                        width: '40px',
+                        height: '40px',
                         borderRadius: '50%',
                         display: 'flex',
                         alignItems: 'center',
@@ -213,7 +214,7 @@ export default function PostChatModal({
                     </span>
                     <span
                       style={{
-                        fontSize: '11px',
+                        fontSize: '10px',
                         color: isSelected ? '#2B7CF6' : '#94A3B8',
                         fontWeight: isSelected ? 600 : 400,
                         whiteSpace: 'nowrap',
