@@ -159,20 +159,7 @@ export default function CommunitiesPage() {
             alt="Peerzle"
             style={{ height: '36px', width: 'auto' }}
           />
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-            <span
-              style={{
-                color: '#64748B',
-                fontSize: '14px',
-                maxWidth: '150px',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-              title={user?.email}
-            >
-              {user?.email?.split('@')[0]}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             {user?.isSuperAdmin && (
               <button
                 onClick={() => navigate('/super-admin')}

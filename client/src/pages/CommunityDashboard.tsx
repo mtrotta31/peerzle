@@ -38,7 +38,7 @@ export default function CommunityDashboard() {
   const [error, setError] = useState('');
   const [showPushBanner, setShowPushBanner] = useState(false);
   const [isEnablingPush, setIsEnablingPush] = useState(false);
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
   const navigate = useNavigate();
 
   // Check if we should show the push notification banner
@@ -382,44 +382,29 @@ export default function CommunityDashboard() {
                 )}
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-              <span
-                style={{
-                  color: '#64748B',
-                  fontSize: '14px',
-                  maxWidth: '150px',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-                title={user?.email}
-              >
-                {user?.email?.split('@')[0]}
-              </span>
-              <button
-                onClick={logout}
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: 'white',
-                  color: '#64748B',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '24px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  transition: 'all 0.2s',
-                  whiteSpace: 'nowrap',
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#F8FAFC';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = 'white';
-                }}
-              >
-                Logout
-              </button>
-            </div>
+            <button
+              onClick={logout}
+              style={{
+                padding: '8px 12px',
+                backgroundColor: 'white',
+                color: '#64748B',
+                border: '1px solid #E2E8F0',
+                borderRadius: '24px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 500,
+                transition: 'all 0.2s',
+                whiteSpace: 'nowrap',
+              }}
+              onMouseOver={(e) => {
+                e.currentTarget.style.backgroundColor = '#F8FAFC';
+              }}
+              onMouseOut={(e) => {
+                e.currentTarget.style.backgroundColor = 'white';
+              }}
+            >
+              Logout
+            </button>
           </div>
         </div>
       </header>

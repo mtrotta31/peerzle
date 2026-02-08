@@ -454,84 +454,79 @@ Take your time, be yourself, and remember — you're not alone.`;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
-      {/* Header */}
+      {/* Header - single row: Back | Title (center) | Actions */}
       <header
         style={{
-          padding: '12px 16px',
+          padding: '8px 12px',
           backgroundColor: 'white',
           borderBottom: '1px solid #E2E8F0',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: '8px',
+          minHeight: '56px',
         }}
       >
-        {/* Row 1: Back button + Topic info */}
-        <div
+        {/* Left: Back button */}
+        <Link
+          to={`/community/${conversation.community_slug}`}
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '12px',
-            marginBottom: '8px',
+            color: '#64748B',
+            textDecoration: 'none',
+            fontSize: '14px',
+            fontWeight: 500,
+            padding: '8px 4px',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
           }}
         >
-          <Link
-            to={`/community/${conversation.community_slug}`}
+          ←
+        </Link>
+
+        {/* Center: Topic + Community name */}
+        <div style={{ flex: 1, minWidth: 0, textAlign: 'center' }}>
+          <h2
             style={{
-              color: '#64748B',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: 500,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              padding: '8px 0',
-              minHeight: '44px',
+              margin: 0,
+              fontSize: '15px',
+              fontWeight: 600,
+              color: '#1E3A5F',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
               whiteSpace: 'nowrap',
             }}
           >
-            ← Back
-          </Link>
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <h2
-              style={{
-                margin: 0,
-                fontSize: '16px',
-                fontWeight: 600,
-                color: '#1E3A5F',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {conversation.topic || 'Support Session'}
-            </h2>
-            <p
-              style={{
-                margin: '2px 0 0',
-                fontSize: '12px',
-                color: '#94A3B8',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {conversation.community_name}
-            </p>
-          </div>
+            {conversation.topic || 'Support Session'}
+          </h2>
+          <p
+            style={{
+              margin: '1px 0 0',
+              fontSize: '11px',
+              color: '#94A3B8',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {conversation.community_name}
+          </p>
         </div>
-        {/* Row 2: Action buttons */}
-        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+
+        {/* Right: Action buttons */}
+        <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
           {!isAdminViewer && !reportSubmitted && (
             <button
               onClick={() => setShowReportModal(true)}
               style={{
-                padding: '8px 12px',
+                padding: '6px 10px',
                 backgroundColor: 'white',
                 color: '#64748B',
                 border: '1px solid #E2E8F0',
-                borderRadius: '20px',
+                borderRadius: '16px',
                 cursor: 'pointer',
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: 500,
                 transition: 'all 0.2s',
-                minHeight: '36px',
                 whiteSpace: 'nowrap',
               }}
               onMouseOver={(e) => {
@@ -547,7 +542,7 @@ Take your time, be yourself, and remember — you're not alone.`;
             </button>
           )}
           {reportSubmitted && (
-            <span style={{ fontSize: '12px', color: '#16A34A', fontWeight: 500, padding: '8px 0' }}>
+            <span style={{ fontSize: '11px', color: '#16A34A', fontWeight: 500, padding: '6px 0' }}>
               Reported
             </span>
           )}
@@ -556,17 +551,16 @@ Take your time, be yourself, and remember — you're not alone.`;
               onClick={handleEndSessionClick}
               disabled={isEnding}
               style={{
-                padding: '8px 12px',
+                padding: '6px 10px',
                 backgroundColor: 'white',
                 color: '#EF4444',
                 border: '1px solid #FCA5A5',
-                borderRadius: '20px',
+                borderRadius: '16px',
                 cursor: isEnding ? 'not-allowed' : 'pointer',
-                fontSize: '13px',
+                fontSize: '12px',
                 fontWeight: 500,
                 opacity: isEnding ? 0.7 : 1,
                 transition: 'all 0.2s',
-                minHeight: '36px',
                 whiteSpace: 'nowrap',
               }}
               onMouseOver={(e) => {
@@ -578,7 +572,7 @@ Take your time, be yourself, and remember — you're not alone.`;
                 e.currentTarget.style.backgroundColor = 'white';
               }}
             >
-              {isEnding ? 'Ending...' : 'End'}
+              {isEnding ? '...' : 'End'}
             </button>
           )}
         </div>
