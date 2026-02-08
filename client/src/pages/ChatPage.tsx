@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef, FormEvent, useMemo } from 'react';
+import { useState, useEffect, useRef, FormEvent, useMemo, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Conversation, ConnectionData, Message, getConversation, sendMessage, endConversation, getMembership, SuggestionsMessage } from '../services/api';
+import { Conversation, ConnectionData, Message, getConversation, sendMessage, endConversation, getMembership, SuggestionsMessage, startPeerBotEarly } from '../services/api';
 import { connectSocket, joinConversation, leaveConversation, sendTypingIndicator, getSocket } from '../services/socket';
 import { useAuth } from '../context/AuthContext';
 import RatingModal from '../components/RatingModal';
@@ -9,6 +9,22 @@ import MoodCheckModal from '../components/MoodCheckModal';
 import SuggestionsPanel from '../components/SuggestionsPanel';
 import ReportUserModal from '../components/ReportUserModal';
 import ConnectionCard from '../components/ConnectionCard';
+
+// Motivational quotes for the waiting screen carousel
+const MOTIVATIONAL_QUOTES = [
+  "You don't have to go through this alone.",
+  "Asking for support is a sign of strength, not weakness.",
+  "Every conversation is a step forward.",
+  "It's okay to not be okay.",
+  "Your feelings are valid, and they matter.",
+  "Healing doesn't happen in isolation — it happens in connection.",
+  "The bravest thing you can do is let someone in.",
+  "You've survived 100% of your hardest days.",
+  "Vulnerability is not winning or losing; it's having the courage to show up. — Brené Brown",
+  "There is no greater agony than bearing an untold story inside you. — Maya Angelou",
+  "One conversation can change everything.",
+  "You are not your worst moment.",
+];
 
 interface SafetyAlert {
   riskLevel: 'moderate_concern' | 'crisis';
@@ -50,6 +66,9 @@ export default function ChatPage() {
   const [matchingElapsed, setMatchingElapsed] = useState(0);
   const [peerbotFallbackActive, setPeerbotFallbackActive] = useState(false);
   const [connectionData, setConnectionData] = useState<ConnectionData | null>(null);
+  const [currentQuoteIndex, setCurrentQuoteIndex] = useState(() => Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length));
+  const [quoteVisible, setQuoteVisible] = useState(true);
+  const [isStartingPeerBot, setIsStartingPeerBot] = useState(false);
   const [showMoodCheck, setShowMoodCheck] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -209,6 +228,22 @@ export default function ChatPage() {
     return () => clearInterval(interval);
   }, [conversation?.status, conversation?.started_at, helperJoined]);
 
+  // Quotes carousel rotation - every 7 seconds with fade animation
+  useEffect(() => {
+    if (conversation?.status !== 'matching' || helperJoined || peerbotFallbackActive) return;
+
+    const rotateQuote = () => {
+      setQuoteVisible(false);
+      setTimeout(() => {
+        setCurrentQuoteIndex((prev) => (prev + 1) % MOTIVATIONAL_QUOTES.length);
+        setQuoteVisible(true);
+      }, 500); // Half second fade out, then change quote and fade in
+    };
+
+    const interval = setInterval(rotateQuote, 7000);
+    return () => clearInterval(interval);
+  }, [conversation?.status, helperJoined, peerbotFallbackActive]);
+
   const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
     if (!conversationId || !newMessage.trim() || isSending) return;
@@ -287,6 +322,19 @@ export default function ChatPage() {
   const handleSuggestionClick = (suggestion: string) => {
     setNewMessage(suggestion);
   };
+
+  const handleStartPeerBotEarly = useCallback(async () => {
+    if (!conversationId || isStartingPeerBot) return;
+
+    setIsStartingPeerBot(true);
+    try {
+      await startPeerBotEarly(conversationId);
+      // The peerbot_fallback socket event will trigger setPeerbotFallbackActive(true)
+    } catch (err) {
+      console.error('Failed to start PeerBot early:', err);
+      setIsStartingPeerBot(false);
+    }
+  }, [conversationId, isStartingPeerBot]);
 
   // Prepare recent messages for suggestions panel (last 10 messages)
   const recentMessagesForSuggestions: SuggestionsMessage[] = useMemo(() => {
@@ -555,7 +603,7 @@ Take your time, be yourself, and remember — you're not alone.`;
           />
           {peerbotFallbackActive ? (
             <>
-              A <strong>Peer Supporter</strong> has joined
+              Great news! A <strong>Peer Supporter</strong> has joined your conversation
               {helperIsVerified && (
                 <span
                   style={{
@@ -602,23 +650,185 @@ Take your time, be yourself, and remember — you're not alone.`;
         </div>
       )}
 
-      {/* Matching Status Banner - progressive messages */}
+      {/* Enhanced Matching/Waiting Screen */}
       {isMatching && !helperJoined && (
         <div
           style={{
-            padding: '12px 20px',
-            backgroundColor: peerbotFallbackActive ? '#ECFDF5' : '#EDF4FF',
-            color: '#1E3A5F',
-            textAlign: 'center',
+            padding: '24px 20px',
+            backgroundColor: '#F8FAFC',
+            borderBottom: '1px solid #E2E8F0',
           }}
         >
-          {peerbotFallbackActive || matchingElapsed >= 90
-            ? 'Connecting you with PeerBot while we keep searching...'
-            : matchingElapsed >= 60
-            ? 'Looking for any available helper...'
-            : matchingElapsed >= 30
-            ? 'Expanding search...'
-            : 'Finding your best match...'}
+          {/* Progress indicator with pulsing animation */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '12px',
+              marginBottom: '8px',
+            }}
+          >
+            <div
+              style={{
+                width: '12px',
+                height: '12px',
+                backgroundColor: peerbotFallbackActive ? '#16A34A' : '#2B7CF6',
+                borderRadius: '50%',
+                animation: 'pulse 2s ease-in-out infinite',
+              }}
+            />
+            <span
+              style={{
+                fontSize: '16px',
+                fontWeight: 600,
+                color: '#1E3A5F',
+              }}
+            >
+              {peerbotFallbackActive
+                ? 'Connected with PeerBot'
+                : matchingElapsed >= 60
+                ? 'Looking for any available helper...'
+                : matchingElapsed >= 30
+                ? 'Expanding search...'
+                : 'Finding your best match...'}
+            </span>
+          </div>
+
+          {/* Wait context - only show if not yet connected to PeerBot */}
+          {!peerbotFallbackActive && (
+            <p
+              style={{
+                textAlign: 'center',
+                fontSize: '13px',
+                color: '#64748B',
+                margin: '0 0 20px 0',
+              }}
+            >
+              Most matches happen within 30 seconds
+            </p>
+          )}
+
+          {/* PeerBot early chat prompt - only show if not yet using PeerBot */}
+          {!peerbotFallbackActive && (
+            <div
+              style={{
+                backgroundColor: 'white',
+                borderRadius: '16px',
+                padding: '20px',
+                marginBottom: '20px',
+                border: '1px solid #E2E8F0',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                <div
+                  style={{
+                    width: '40px',
+                    height: '40px',
+                    borderRadius: '50%',
+                    backgroundColor: '#F0FDF4',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
+                  }}
+                >
+                  <img
+                    src="/peerbot-avatar.png"
+                    alt="PeerBot"
+                    style={{
+                      width: '28px',
+                      height: '28px',
+                      objectFit: 'contain',
+                    }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <p
+                    style={{
+                      margin: '0 0 12px 0',
+                      fontSize: '14px',
+                      color: '#1E3A5F',
+                      lineHeight: '1.5',
+                    }}
+                  >
+                    While we find your best match, PeerBot is here if you'd like to start talking.
+                    Your conversation will transfer seamlessly when a peer joins.
+                  </p>
+                  <button
+                    onClick={handleStartPeerBotEarly}
+                    disabled={isStartingPeerBot}
+                    style={{
+                      padding: '10px 20px',
+                      backgroundColor: '#16A34A',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '24px',
+                      cursor: isStartingPeerBot ? 'not-allowed' : 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      opacity: isStartingPeerBot ? 0.7 : 1,
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseOver={(e) => {
+                      if (!isStartingPeerBot) {
+                        e.currentTarget.style.backgroundColor = '#15803D';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#16A34A';
+                    }}
+                  >
+                    {isStartingPeerBot ? 'Starting...' : 'Chat with PeerBot'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Motivational quotes carousel - only show if not using PeerBot */}
+          {!peerbotFallbackActive && (
+            <div
+              style={{
+                textAlign: 'center',
+                padding: '16px 20px',
+                minHeight: '60px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: '15px',
+                  fontStyle: 'italic',
+                  color: '#475569',
+                  lineHeight: '1.6',
+                  maxWidth: '400px',
+                  opacity: quoteVisible ? 1 : 0,
+                  transition: 'opacity 0.5s ease-in-out',
+                }}
+              >
+                "{MOTIVATIONAL_QUOTES[currentQuoteIndex]}"
+              </p>
+            </div>
+          )}
+
+          {/* PeerBot connected message - show when PeerBot is active but still matching */}
+          {peerbotFallbackActive && (
+            <p
+              style={{
+                textAlign: 'center',
+                fontSize: '13px',
+                color: '#16A34A',
+                margin: '0',
+              }}
+            >
+              We're still searching for a peer supporter to join you
+            </p>
+          )}
         </div>
       )}
 

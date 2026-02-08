@@ -250,4 +250,12 @@ export function cancelMatchingProcess(conversationId: string): void {
   console.log(`[MATCHING] Cancelled matching process for conversation ${conversationId}`);
 }
 
+/**
+ * Trigger PeerBot early - allows seeker to start chatting with PeerBot
+ * while still waiting for a human helper.
+ */
+export async function triggerPeerBotEarly(conversationId: string): Promise<void> {
+  await triggerPeerBotFallback(conversationId);
+}
+
 export { calculateMatchScore };

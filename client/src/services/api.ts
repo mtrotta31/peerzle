@@ -420,6 +420,11 @@ export async function saveConversation(conversationId: string): Promise<{ succes
   return response.data;
 }
 
+export async function startPeerBotEarly(conversationId: string): Promise<{ success: boolean }> {
+  const response = await api.post<{ success: boolean }>(`/api/conversations/${conversationId}/start-peerbot`);
+  return response.data;
+}
+
 // Message API
 export async function sendMessage(conversationId: string, content: string): Promise<Message> {
   const response = await api.post<Message>('/api/messages', { conversationId, content });

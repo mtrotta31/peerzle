@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { query } from '../config/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { emitToConversation } from '../config/socket';
-import { startMatchingProcess, cancelMatchingProcess } from '../services/matching-queue';
+import { startMatchingProcess, cancelMatchingProcess, triggerPeerBotEarly } from '../services/matching-queue';
 
 const router = Router();
 
@@ -372,6 +372,47 @@ router.put('/:id/post-mood', authenticate, async (req: AuthenticatedRequest, res
     res.json({ ...updated, mood_change: moodChange });
   } catch (error) {
     console.error('Set post-mood error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/conversations/:id/start-peerbot - Trigger PeerBot early (seeker's choice while waiting)
+router.post('/:id/start-peerbot', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.userId;
+
+    // Verify user is the seeker and conversation is still matching
+    const verifyResult = await query<ConversationRow>(
+      `SELECT c.* FROM conversations c
+       JOIN memberships m ON m.id = c.seeker_membership_id
+       WHERE c.id = $1 AND m.user_id = $2`,
+      [id, userId]
+    );
+
+    if (verifyResult.rows.length === 0) {
+      res.status(404).json({ error: 'Conversation not found or you are not the seeker' });
+      return;
+    }
+
+    const conversation = verifyResult.rows[0];
+
+    if (conversation.status !== 'matching') {
+      res.status(400).json({ error: 'PeerBot can only be started during matching' });
+      return;
+    }
+
+    if (conversation.helper_membership_id !== null) {
+      res.status(400).json({ error: 'A helper has already joined' });
+      return;
+    }
+
+    // Trigger PeerBot early
+    await triggerPeerBotEarly(id);
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Start PeerBot early error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
