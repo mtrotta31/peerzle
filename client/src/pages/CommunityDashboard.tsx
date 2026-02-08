@@ -212,7 +212,7 @@ export default function CommunityDashboard() {
           seeker_rating: null,
           helper_rating: null,
           safety_flags: [],
-          seeker_email: '',
+          seeker_name: 'Anonymous',
           match_score: event.matchScore,
         };
 

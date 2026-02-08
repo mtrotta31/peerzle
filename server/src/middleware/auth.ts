@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
+import jwt, { TokenExpiredError, JsonWebTokenError } from 'jsonwebtoken';
 
 export interface JwtPayload {
   userId: string;
@@ -29,7 +29,13 @@ export function authenticate(
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
     req.user = decoded;
     next();
-  } catch {
-    res.status(401).json({ error: 'Invalid or expired token' });
+  } catch (error) {
+    if (error instanceof TokenExpiredError) {
+      res.status(401).json({ error: 'Token expired', code: 'TOKEN_EXPIRED' });
+    } else if (error instanceof JsonWebTokenError) {
+      res.status(401).json({ error: 'Invalid token', code: 'TOKEN_INVALID' });
+    } else {
+      res.status(401).json({ error: 'Authentication failed' });
+    }
   }
 }

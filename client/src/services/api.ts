@@ -1,4 +1,4 @@
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
@@ -11,6 +11,25 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Response interceptor to handle token expiration globally
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError<{ error?: string; code?: string }>) => {
+    if (error.response?.status === 401) {
+      const code = error.response.data?.code;
+      // Clear token and redirect to login on expiration
+      if (code === 'TOKEN_EXPIRED' || code === 'TOKEN_INVALID') {
+        localStorage.removeItem('token');
+        // Dispatch custom event so AuthContext can react
+        window.dispatchEvent(new CustomEvent('auth:session-expired', {
+          detail: { reason: code === 'TOKEN_EXPIRED' ? 'Session expired' : 'Invalid session' }
+        }));
+      }
+    }
+    return Promise.reject(error);
+  }
+);
 
 export interface User {
   id: string;
@@ -438,7 +457,7 @@ export async function toggleAvailability(communitySlug: string, isAvailable: boo
 }
 
 export interface PendingConversation extends Conversation {
-  seeker_email: string;
+  seeker_name: string;
   match_score?: number;
   same_org?: boolean;
   org_name?: string | null;

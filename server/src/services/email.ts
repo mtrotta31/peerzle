@@ -10,7 +10,10 @@ async function getTransporter(): Promise<nodemailer.Transporter> {
 
   // In development, use Ethereal (nodemailer's free test email service)
   testAccount = await nodemailer.createTestAccount();
-  console.log('Ethereal test account created:', testAccount.user);
+  // Note: Ethereal credentials logged only in development for debugging
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[DEV] Ethereal test account created');
+  }
 
   transporter = nodemailer.createTransport({
     host: 'smtp.ethereal.email',

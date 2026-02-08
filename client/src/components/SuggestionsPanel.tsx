@@ -31,6 +31,7 @@ export default function SuggestionsPanel({
   // Suggestions state (both modes)
   const [suggestions, setSuggestions] = useState<string[] | null>(null);
   const [isSuggestionsLoading, setIsSuggestionsLoading] = useState(false);
+  const [suggestionsError, setSuggestionsError] = useState<string | null>(null);
   const [tappedIndex, setTappedIndex] = useState<number | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const suggestionsLastFetchRef = useRef(0);
@@ -121,6 +122,7 @@ export default function SuggestionsPanel({
 
   const fetchSuggestions = useCallback(async () => {
     setIsSuggestionsLoading(true);
+    setSuggestionsError(null);
     try {
       const fetchMode = mode === 'helper' ? 'helper' : 'seeker';
       const response = await generateSuggestions(conversationId, recentMessages, fetchMode);
@@ -131,11 +133,13 @@ export default function SuggestionsPanel({
       if (err && typeof err === 'object' && 'response' in err) {
         const axiosErr = err as { response?: { status?: number } };
         if (axiosErr.response?.status === 429) {
+          setSuggestionsError('Please wait a moment before refreshing.');
           setIsSuggestionsLoading(false);
           return;
         }
       }
       console.error('Failed to fetch suggestions:', err);
+      setSuggestionsError('Suggestions unavailable right now.');
     } finally {
       setIsSuggestionsLoading(false);
     }
@@ -212,6 +216,37 @@ export default function SuggestionsPanel({
 
   const renderSuggestionChips = () => (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', position: 'relative' }}>
+      {/* Error state */}
+      {suggestionsError && !isSuggestionsLoading && (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '12px',
+            padding: '12px 16px',
+            backgroundColor: '#FEF2F2',
+            borderRadius: '12px',
+            width: '100%',
+          }}
+        >
+          <span style={{ fontSize: '14px', color: '#DC2626' }}>{suggestionsError}</span>
+          <button
+            onClick={fetchSuggestions}
+            style={{
+              padding: '6px 12px',
+              backgroundColor: 'white',
+              color: '#DC2626',
+              border: '1px solid #DC2626',
+              borderRadius: '16px',
+              fontSize: '13px',
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
       {isSuggestionsLoading && !suggestions && (
         <>
           {[1, 2, 3].map((i) => (
@@ -401,18 +436,22 @@ export default function SuggestionsPanel({
                   <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
                     Suggested Responses
                   </span>
-                  <span
+                  <button
                     onClick={handleRefreshSuggestions}
                     style={{
                       fontSize: '16px',
                       color: '#64748B',
                       cursor: 'pointer',
                       lineHeight: 1,
+                      background: 'none',
+                      border: 'none',
+                      padding: 0,
                     }}
                     title="Refresh suggestions"
+                    aria-label="Refresh suggestions"
                   >
                     {'\u21BB'}
-                  </span>
+                  </button>
                 </div>
                 {renderSuggestionChips()}
               </div>
@@ -500,18 +539,22 @@ export default function SuggestionsPanel({
                 <span style={{ fontSize: '12px', color: '#64748B', fontWeight: 500 }}>
                   Conversation Starters
                 </span>
-                <span
+                <button
                   onClick={handleRefreshSuggestions}
                   style={{
                     fontSize: '16px',
                     color: '#64748B',
                     cursor: 'pointer',
                     lineHeight: 1,
+                    background: 'none',
+                    border: 'none',
+                    padding: 0,
                   }}
                   title="Get new suggestions"
+                  aria-label="Get new suggestions"
                 >
                   {'\u21BB'}
-                </span>
+                </button>
               </div>
               {renderSuggestionChips()}
             </div>

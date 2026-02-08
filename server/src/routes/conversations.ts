@@ -103,8 +103,23 @@ router.post('/start', authenticate, async (req: AuthenticatedRequest, res: Respo
     const newConversation = result.rows[0];
 
     // Fire-and-forget: start the smart matching process
-    startMatchingProcess(newConversation.id).catch((err) => {
-      console.error('Smart matching error:', err);
+    // If matching fails, update conversation status and notify seeker
+    startMatchingProcess(newConversation.id).catch(async (err) => {
+      console.error('Smart matching error for conversation', newConversation.id, ':', err);
+      try {
+        // Mark conversation as ended since matching failed
+        await query(
+          `UPDATE conversations SET status = 'ended', ended_at = CURRENT_TIMESTAMP WHERE id = $1`,
+          [newConversation.id]
+        );
+        // Notify the seeker that matching failed
+        emitToConversation(newConversation.id, 'matching_failed', {
+          conversationId: newConversation.id,
+          error: 'Unable to find a helper at this time. Please try again later.',
+        });
+      } catch (updateErr) {
+        console.error('Failed to update conversation after matching error:', updateErr);
+      }
     });
 
     res.status(201).json(newConversation);

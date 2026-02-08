@@ -86,6 +86,7 @@ export default function ReportUserModal({ conversationId, onClose, onSubmitted }
                 </h2>
                 <button
                   onClick={onClose}
+                  aria-label="Close report dialog"
                   style={{
                     background: 'none',
                     border: 'none',

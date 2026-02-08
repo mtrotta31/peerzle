@@ -287,6 +287,7 @@ export default function ConnectionCard({ connectionData, userRole }: ConnectionC
             marginLeft: '8px',
           }}
           title="Minimize"
+          aria-label="Minimize connection card"
         >
           &#x2715;
         </button>

@@ -1,13 +1,15 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { User, login as apiLogin, signup as apiSignup, getCurrentUser } from '../services/api';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
+  sessionExpiredMessage: string | null;
   login: (email: string, password: string) => Promise<void>;
   signup: (email: string, password: string, acceptedTermsVersion: string) => Promise<void>;
   logout: () => void;
+  clearSessionExpiredMessage: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -15,6 +17,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
+
+  const clearSessionExpiredMessage = useCallback(() => {
+    setSessionExpiredMessage(null);
+  }, []);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
@@ -32,6 +39,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } else {
       setIsLoading(false);
     }
+  }, []);
+
+  // Listen for session expiration events from API interceptor
+  useEffect(() => {
+    const handleSessionExpired = (event: CustomEvent<{ reason: string }>) => {
+      setUser(null);
+      setSessionExpiredMessage(event.detail.reason + '. Please log in again.');
+    };
+
+    window.addEventListener('auth:session-expired', handleSessionExpired as EventListener);
+    return () => {
+      window.removeEventListener('auth:session-expired', handleSessionExpired as EventListener);
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -57,9 +77,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         isAuthenticated: !!user,
         isLoading,
+        sessionExpiredMessage,
         login,
         signup,
         logout,
+        clearSessionExpiredMessage,
       }}
     >
       {children}

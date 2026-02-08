@@ -54,8 +54,9 @@ export default function ChatPage() {
   const [error, setError] = useState('');
   const [typingUser, setTypingUser] = useState<string | null>(null);
   const [showCrisisBanner, setShowCrisisBanner] = useState(false);
-  const [_crisisRiskLevel, setCrisisRiskLevel] = useState<'moderate_concern' | 'crisis' | null>(null);
   const [helperJoined, setHelperJoined] = useState<string | null>(null);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [showEndSessionModal, setShowEndSessionModal] = useState(false);
   const [helperIsVerified, setHelperIsVerified] = useState(false);
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -126,66 +127,105 @@ export default function ChatPage() {
 
         // Listen for new messages
         socket.on('new_message', (message: Message) => {
-          if (message.conversation_id === conversationId) {
-            setMessages((prev) => {
-              // Avoid duplicates
-              if (prev.some((m) => m.id === message.id)) return prev;
-              return [...prev, message];
-            });
+          try {
+            if (message.conversation_id === conversationId) {
+              setMessages((prev) => {
+                // Avoid duplicates
+                if (prev.some((m) => m.id === message.id)) return prev;
+                return [...prev, message];
+              });
+            }
+          } catch (err) {
+            console.error('Error handling new message:', err);
           }
         });
 
         // Listen for typing indicators
         socket.on('user_typing', (data: { conversationId: string; userId: string; isTyping: boolean }) => {
-          if (data.conversationId === conversationId && data.userId !== user?.id) {
-            setTypingUser(data.isTyping ? data.userId : null);
+          try {
+            if (data.conversationId === conversationId && data.userId !== user?.id) {
+              setTypingUser(data.isTyping ? data.userId : null);
+            }
+          } catch (err) {
+            console.error('Error handling typing indicator:', err);
           }
         });
 
         // Listen for safety alerts
         socket.on('safety_alert', (alert: SafetyAlert) => {
-          console.log('Safety alert received:', alert);
-          setCrisisRiskLevel(alert.riskLevel);
-          setShowCrisisBanner(true);
+          try {
+            console.log('Safety alert received:', alert);
+            if (alert.riskLevel === 'crisis' || alert.riskLevel === 'moderate_concern') {
+              setShowCrisisBanner(true);
+            }
+          } catch (err) {
+            console.error('Error handling safety alert:', err);
+          }
         });
 
         // Listen for helper joining
         socket.on('helper_joined', (event: HelperJoinedEvent) => {
-          console.log('Helper joined:', event);
-          setHelperJoined(event.helperEmail);
-          setHelperIsVerified(event.isVerifiedHelper);
-          setConversation((prev) =>
-            prev ? { ...prev, status: 'active', helper_membership_id: event.helperMembershipId } : prev
-          );
+          try {
+            console.log('Helper joined:', event);
+            setHelperJoined(event.helperEmail);
+            setHelperIsVerified(event.isVerifiedHelper);
+            setConversation((prev) =>
+              prev ? { ...prev, status: 'active', helper_membership_id: event.helperMembershipId } : prev
+            );
 
-          // Fetch connection data now that a helper has joined
-          getConversation(conversationId!).then((refreshed) => {
-            if (refreshed.connection_data) {
-              setConnectionData(refreshed.connection_data);
-            }
-          }).catch((err) => {
-            console.error('Failed to fetch connection data:', err);
-          });
+            // Fetch connection data now that a helper has joined
+            getConversation(conversationId!).then((refreshed) => {
+              if (refreshed.connection_data) {
+                setConnectionData(refreshed.connection_data);
+              }
+            }).catch((err) => {
+              console.error('Failed to fetch connection data:', err);
+            });
+          } catch (err) {
+            console.error('Error handling helper joined:', err);
+          }
         });
 
         // Listen for conversation ended (by the other user)
         socket.on('conversation_ended', (event: ConversationEndedEvent) => {
-          console.log('Conversation ended:', event);
-          if (event.conversationId === conversationId) {
-            setConversation((prev) =>
-              prev ? { ...prev, status: 'ended', ended_at: new Date().toISOString() } : prev
-            );
-            // Show rating modal for the user who didn't end the session
-            if (event.endedBy !== user?.id) {
-              setShowRatingModal(true);
+          try {
+            console.log('Conversation ended:', event);
+            if (event.conversationId === conversationId) {
+              setConversation((prev) =>
+                prev ? { ...prev, status: 'ended', ended_at: new Date().toISOString() } : prev
+              );
+              // Show rating modal for the user who didn't end the session
+              if (event.endedBy !== user?.id) {
+                setShowRatingModal(true);
+              }
             }
+          } catch (err) {
+            console.error('Error handling conversation ended:', err);
+          }
+        });
+
+        // Listen for matching failed
+        socket.on('matching_failed', (event: { conversationId: string; error: string }) => {
+          try {
+            if (event.conversationId === conversationId) {
+              setConversation((prev) =>
+                prev ? { ...prev, status: 'ended', ended_at: new Date().toISOString() } : prev
+              );
+              setError(event.error || 'Unable to find a helper at this time. Please try again later.');
+            }
+          } catch (err) {
+            console.error('Error handling matching failed:', err);
           }
         });
 
         // Listen for PeerBot fallback
         socket.on('peerbot_fallback', (event: { conversationId: string }) => {
-          if (event.conversationId === conversationId) {
-            setPeerbotFallbackActive(true);
+          try {
+            if (event.conversationId === conversationId) {
+              setPeerbotFallbackActive(true);
+            }
+          } catch (err) {
+            console.error('Error handling PeerBot fallback:', err);
           }
         });
       } catch (err) {
@@ -249,12 +289,16 @@ export default function ChatPage() {
     if (!conversationId || !newMessage.trim() || isSending) return;
 
     setIsSending(true);
+    setSendError(null);
     try {
       await sendMessage(conversationId, newMessage.trim());
       setNewMessage('');
       sendTypingIndicator(conversationId, false);
     } catch (err) {
       console.error('Failed to send message:', err);
+      setSendError('Failed to send message. Please try again.');
+      // Auto-clear error after 5 seconds
+      setTimeout(() => setSendError(null), 5000);
     } finally {
       setIsSending(false);
     }
@@ -279,11 +323,15 @@ export default function ChatPage() {
     }, 2000);
   };
 
-  const handleEndSession = async () => {
+  const handleEndSessionClick = () => {
+    if (!conversationId || isEnding) return;
+    setShowEndSessionModal(true);
+  };
+
+  const handleConfirmEndSession = async () => {
     if (!conversationId || isEnding) return;
 
-    if (!confirm('Are you sure you want to end this session?')) return;
-
+    setShowEndSessionModal(false);
     setIsEnding(true);
     try {
       const endedConversation = await endConversation(conversationId);
@@ -482,7 +530,7 @@ Take your time, be yourself, and remember — you're not alone.`;
           )}
           {!isEnded && !isAdminViewer && (
             <button
-              onClick={handleEndSession}
+              onClick={handleEndSessionClick}
               disabled={isEnding}
               style={{
                 padding: '8px 16px',
@@ -1101,6 +1149,39 @@ Take your time, be yourself, and remember — you're not alone.`;
         />
       )}
 
+      {/* Send Error Message */}
+      {sendError && (
+        <div
+          style={{
+            padding: '12px 20px',
+            backgroundColor: '#FEF2F2',
+            color: '#DC2626',
+            textAlign: 'center',
+            fontSize: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+          }}
+        >
+          <span>{sendError}</span>
+          <button
+            onClick={() => setSendError(null)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#DC2626',
+              cursor: 'pointer',
+              fontSize: '16px',
+              padding: '0 4px',
+            }}
+            aria-label="Dismiss error"
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       {/* Message Input - only for active conversations and non-admin viewers */}
       {!isEnded && !isAdminViewer ? (
         <form
@@ -1124,7 +1205,6 @@ Take your time, be yourself, and remember — you're not alone.`;
               border: '1px solid #E2E8F0',
               borderRadius: '24px',
               fontSize: '16px',
-              outline: 'none',
               transition: 'border-color 0.2s',
             }}
             onFocus={(e) => {
@@ -1346,6 +1426,94 @@ Take your time, be yourself, and remember — you're not alone.`;
                 }}
               >
                 Return to dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* End Session Confirmation Modal */}
+      {showEndSessionModal && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowEndSessionModal(false);
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '20px',
+              padding: '32px',
+              maxWidth: '400px',
+              width: '100%',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+              textAlign: 'center',
+            }}
+          >
+            <h2 style={{ margin: '0 0 12px', fontSize: '20px', fontWeight: 600, color: '#1E3A5F' }}>
+              End this conversation?
+            </h2>
+            <p style={{ margin: '0 0 24px', fontSize: '14px', color: '#64748B', lineHeight: 1.5 }}>
+              Are you sure you want to end this session? You'll be asked to provide feedback afterward.
+            </p>
+
+            <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+              <button
+                onClick={() => setShowEndSessionModal(false)}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: 'white',
+                  color: '#64748B',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '24px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.borderColor = '#94A3B8';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.borderColor = '#E2E8F0';
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleConfirmEndSession}
+                style={{
+                  padding: '12px 24px',
+                  backgroundColor: '#DC2626',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '24px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 600,
+                  transition: 'background-color 0.2s',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#B91C1C';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = '#DC2626';
+                }}
+              >
+                End Session
               </button>
             </div>
           </div>

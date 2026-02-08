@@ -6,23 +6,28 @@ const router = Router();
 
 // Middleware to verify admin role
 async function requireAdmin(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
-  const { communitySlug } = req.params;
-  const userId = req.user!.userId;
+  try {
+    const { communitySlug } = req.params;
+    const userId = req.user!.userId;
 
-  const result = await query<{ role: string }>(
-    `SELECT m.role
-     FROM memberships m
-     JOIN communities c ON c.id = m.community_id
-     WHERE m.user_id = $1 AND c.slug = $2`,
-    [userId, communitySlug]
-  );
+    const result = await query<{ role: string }>(
+      `SELECT m.role
+       FROM memberships m
+       JOIN communities c ON c.id = m.community_id
+       WHERE m.user_id = $1 AND c.slug = $2`,
+      [userId, communitySlug]
+    );
 
-  if (result.rows.length === 0 || result.rows[0].role !== 'admin') {
-    res.status(403).json({ error: 'Admin access required' });
-    return;
+    if (result.rows.length === 0 || result.rows[0].role !== 'admin') {
+      res.status(403).json({ error: 'Admin access required' });
+      return;
+    }
+
+    next();
+  } catch (error) {
+    console.error('Admin middleware error:', error);
+    res.status(500).json({ error: 'Internal server error' });
   }
-
-  next();
 }
 
 // GET /api/admin/:communitySlug/overview - Community statistics

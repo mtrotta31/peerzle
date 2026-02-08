@@ -43,7 +43,7 @@ router.get('/pending', authenticate, async (req: AuthenticatedRequest, res: Resp
       `SELECT c.id, c.community_id, c.seeker_membership_id, c.helper_membership_id,
               c.topic, c.status, c.started_at, c.ended_at,
               cm.slug as community_slug, cm.name as community_name,
-              u.email as seeker_email,
+              COALESCE(u.display_name, 'Anonymous') as seeker_name,
               seeker_m.organization_id as seeker_org_id,
               seeker_org.name as seeker_org_name
        FROM conversations c

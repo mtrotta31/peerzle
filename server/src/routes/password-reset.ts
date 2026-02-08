@@ -1,10 +1,20 @@
 import { Router, Request, Response } from 'express';
 import crypto from 'crypto';
 import bcrypt from 'bcrypt';
+import rateLimit from 'express-rate-limit';
 import { query } from '../config/database';
 import { sendPasswordResetEmail } from '../services/email';
 
 const router = Router();
+
+// Rate limiter for password reset - 3 attempts per hour
+const passwordResetLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3,
+  message: { error: 'Too many password reset attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const MIN_PASSWORD_LENGTH = 8;
 const SALT_ROUNDS = 10;
@@ -24,7 +34,7 @@ interface TokenRow {
 }
 
 // POST /api/auth/forgot-password
-router.post('/forgot-password', async (req: Request, res: Response) => {
+router.post('/forgot-password', passwordResetLimiter, async (req: Request, res: Response) => {
   try {
     const { email } = req.body;
 

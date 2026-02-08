@@ -1,11 +1,29 @@
 import { Router, Request, Response } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import rateLimit from 'express-rate-limit';
 import { query } from '../config/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { CURRENT_TOS_VERSION } from '../data/legal-content';
 
 const router = Router();
+
+// Rate limiters for auth endpoints
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // 5 attempts per window
+  message: { error: 'Too many login attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const signupLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // 3 signups per hour
+  message: { error: 'Too many signup attempts. Please try again later.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
@@ -28,7 +46,7 @@ function generateToken(userId: string, email: string, isSuperAdmin: boolean = fa
 }
 
 // POST /api/auth/signup
-router.post('/signup', async (req: Request, res: Response) => {
+router.post('/signup', signupLimiter, async (req: Request, res: Response) => {
   try {
     const { email, password, acceptedTermsVersion } = req.body;
 
@@ -105,7 +123,7 @@ router.post('/signup', async (req: Request, res: Response) => {
 });
 
 // POST /api/auth/login
-router.post('/login', async (req: Request, res: Response) => {
+router.post('/login', loginLimiter, async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
 

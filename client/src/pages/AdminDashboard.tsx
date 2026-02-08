@@ -58,6 +58,10 @@ export default function AdminDashboard() {
   const [showInviteCodeModal, setShowInviteCodeModal] = useState(false);
   const [selectedCodeOrgId, setSelectedCodeOrgId] = useState<string | null>(null);
 
+  // Confirmation modal state
+  const [roleChangeConfirm, setRoleChangeConfirm] = useState<{ membershipId: string; newRole: string; email: string } | null>(null);
+  const [deactivateCodeConfirm, setDeactivateCodeConfirm] = useState<{ codeId: number; code: string } | null>(null);
+
   useEffect(() => {
     async function loadData() {
       if (!slug) return;
@@ -572,7 +576,13 @@ export default function AdminDashboard() {
                       <td style={tdStyle}>
                         <select
                           value={member.role === 'seeker' || member.role === 'both' ? 'member' : member.role}
-                          onChange={(e) => handleRoleChange(member.id, e.target.value)}
+                          onChange={(e) => {
+                            const newRole = e.target.value;
+                            const currentRole = member.role === 'seeker' || member.role === 'both' ? 'member' : member.role;
+                            if (newRole !== currentRole) {
+                              setRoleChangeConfirm({ membershipId: member.id, newRole, email: member.email });
+                            }
+                          }}
                           disabled={updatingRole === member.id}
                           style={{
                             ...getRoleBadgeStyle(member.role),
@@ -1277,7 +1287,15 @@ export default function AdminDashboard() {
                                   {copiedCode === code.code ? 'Copied!' : 'Copy'}
                                 </button>
                                 <button
-                                  onClick={() => handleToggleCode(code.id, !code.is_active)}
+                                  onClick={() => {
+                                    if (code.is_active) {
+                                      // Show confirmation for deactivation
+                                      setDeactivateCodeConfirm({ codeId: code.id, code: code.code });
+                                    } else {
+                                      // Activate directly (not destructive)
+                                      handleToggleCode(code.id, true);
+                                    }
+                                  }}
                                   disabled={togglingCode === code.id}
                                   style={{
                                     padding: '4px 10px',
@@ -1843,6 +1861,178 @@ export default function AdminDashboard() {
           </div>
         )}
       </div>
+
+      {/* Role Change Confirmation Modal */}
+      {roleChangeConfirm && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}
+          onClick={() => setRoleChangeConfirm(null)}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '18px', fontWeight: 600, color: '#1E3A5F' }}>
+              Confirm Role Change
+            </h3>
+            <p style={{ margin: '0 0 20px 0', fontSize: '14px', color: '#64748B' }}>
+              Are you sure you want to change <strong>{roleChangeConfirm.email}</strong>'s role to{' '}
+              <strong>{roleChangeConfirm.newRole === 'member' ? 'Member' : roleChangeConfirm.newRole.charAt(0).toUpperCase() + roleChangeConfirm.newRole.slice(1)}</strong>?
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button
+                onClick={() => setRoleChangeConfirm(null)}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: 'white',
+                  color: '#64748B',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '24px',
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  await handleRoleChange(roleChangeConfirm.membershipId, roleChangeConfirm.newRole);
+                  setRoleChangeConfirm(null);
+                }}
+                disabled={updatingRole === roleChangeConfirm.membershipId}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#2B7CF6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '24px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  opacity: updatingRole === roleChangeConfirm.membershipId ? 0.6 : 1,
+                }}
+              >
+                {updatingRole === roleChangeConfirm.membershipId ? 'Updating...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Deactivate Code Confirmation Modal */}
+      {deactivateCodeConfirm && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}
+          onClick={() => setDeactivateCodeConfirm(null)}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              padding: '24px',
+              maxWidth: '400px',
+              width: '100%',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 style={{ margin: '0 0 12px 0', fontSize: '18px', fontWeight: 600, color: '#DC2626' }}>
+              Deactivate Invite Code
+            </h3>
+            <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#64748B' }}>
+              Are you sure you want to deactivate this invite code?
+            </p>
+            <p
+              style={{
+                margin: '0 0 20px 0',
+                fontSize: '18px',
+                fontWeight: 600,
+                fontFamily: 'monospace',
+                letterSpacing: '1px',
+                color: '#1E3A5F',
+                backgroundColor: '#F8FAFC',
+                padding: '12px',
+                borderRadius: '8px',
+                textAlign: 'center',
+              }}
+            >
+              {deactivateCodeConfirm.code}
+            </p>
+            <p style={{ margin: '0 0 20px 0', fontSize: '13px', color: '#94A3B8' }}>
+              New members will no longer be able to use this code to join.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+              <button
+                onClick={() => setDeactivateCodeConfirm(null)}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: 'white',
+                  color: '#64748B',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '24px',
+                  cursor: 'pointer',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  await handleToggleCode(deactivateCodeConfirm.codeId, false);
+                  setDeactivateCodeConfirm(null);
+                }}
+                disabled={togglingCode === deactivateCodeConfirm.codeId}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#DC2626',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '24px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  fontSize: '14px',
+                  opacity: togglingCode === deactivateCodeConfirm.codeId ? 0.6 : 1,
+                }}
+              >
+                {togglingCode === deactivateCodeConfirm.codeId ? 'Deactivating...' : 'Deactivate'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
