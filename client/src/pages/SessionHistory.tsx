@@ -166,12 +166,15 @@ export default function SessionHistory() {
             style={{
               color: '#64748B',
               textDecoration: 'none',
-              padding: '8px 16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '44px',
+              height: '44px',
               backgroundColor: 'white',
               border: '1px solid #E2E8F0',
-              borderRadius: '24px',
-              fontSize: '14px',
-              fontWeight: 500,
+              borderRadius: '50%',
+              fontSize: '20px',
               transition: 'all 0.2s',
             }}
             onMouseOver={(e) => {
@@ -182,8 +185,9 @@ export default function SessionHistory() {
               e.currentTarget.style.borderColor = '#E2E8F0';
               e.currentTarget.style.color = '#64748B';
             }}
+            aria-label="Back to Dashboard"
           >
-            Back to Dashboard
+            ‹
           </Link>
         </div>
       </header>

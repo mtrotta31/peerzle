@@ -473,14 +473,17 @@ Take your time, be yourself, and remember — you're not alone.`;
             style={{
               color: '#64748B',
               textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: 500,
-              padding: '8px 4px',
-              whiteSpace: 'nowrap',
+              fontSize: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: '44px',
+              height: '44px',
               flexShrink: 0,
             }}
+            aria-label="Back"
           >
-            ← Back
+            ‹
           </Link>
           <div style={{ minWidth: 0 }}>
             <h2

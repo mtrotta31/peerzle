@@ -170,12 +170,18 @@ export default function HelperTraining() {
                 border: 'none',
                 color: '#64748B',
                 cursor: 'pointer',
-                fontSize: '14px',
-                padding: 0,
+                fontSize: '20px',
+                padding: '8px',
                 marginBottom: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: '44px',
+                minHeight: '44px',
               }}
+              aria-label="Back to Modules"
             >
-              &larr; Back to Modules
+              ‹
             </button>
             <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#1E3A5F' }}>
               Module {currentModule.moduleNumber}: {currentModule.title}

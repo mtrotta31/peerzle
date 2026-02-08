@@ -270,132 +270,127 @@ export default function CommunitiesPage() {
                       : handleJoin(community)
                   }
                 >
-                  <div
+                  {/* Stacked layout for mobile-friendly cards */}
+                  {/* Row 1: Community name */}
+                  <h2
                     style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'flex-start',
-                      gap: '16px',
+                      margin: '0 0 8px 0',
+                      fontSize: '18px',
+                      fontWeight: 600,
+                      color: '#1E3A5F',
                     }}
                   >
-                    <div style={{ flex: 1 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
-                        <h2
-                          style={{
-                            margin: 0,
-                            fontSize: '18px',
-                            fontWeight: 600,
-                            color: '#1E3A5F',
-                          }}
-                        >
-                          {community.name}
-                        </h2>
-                        {!community.membership && (
-                          <span
-                            style={{
-                              backgroundColor: badge.bgColor,
-                              color: badge.textColor,
-                              padding: '3px 8px',
-                              borderRadius: '10px',
-                              fontSize: '11px',
-                              fontWeight: 600,
-                            }}
-                          >
-                            {badge.label}
-                          </span>
-                        )}
-                      </div>
-                      <p
+                    {community.name}
+                  </h2>
+
+                  {/* Row 2: Badge + topic count */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', flexWrap: 'wrap' }}>
+                    {!community.membership && (
+                      <span
                         style={{
-                          margin: '0 0 16px 0',
-                          color: '#64748B',
-                          fontSize: '14px',
+                          backgroundColor: badge.bgColor,
+                          color: badge.textColor,
+                          padding: '3px 8px',
+                          borderRadius: '10px',
+                          fontSize: '11px',
+                          fontWeight: 600,
                         }}
                       >
-                        {community.config.topics.length} support topics available
-                      </p>
-                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                        {community.config.topics.slice(0, 4).map((topic) => (
-                          <span
-                            key={topic}
-                            style={{
-                              backgroundColor: '#EDF4FF',
-                              color: '#2B7CF6',
-                              padding: '4px 10px',
-                              borderRadius: '12px',
-                              fontSize: '12px',
-                              fontWeight: 500,
-                            }}
-                          >
-                            {topic}
-                          </span>
-                        ))}
-                        {community.config.topics.length > 4 && (
-                          <span
-                            style={{
-                              color: '#64748B',
-                              fontSize: '12px',
-                              padding: '4px',
-                            }}
-                          >
-                            +{community.config.topics.length - 4} more
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <div onClick={(e) => e.stopPropagation()}>
-                      {community.membership ? (
-                        <button
-                          onClick={() => handleEnter(community.slug)}
-                          style={{
-                            padding: '12px 28px',
-                            backgroundColor: '#2B7CF6',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '24px',
-                            cursor: 'pointer',
-                            fontWeight: 600,
-                            fontSize: '14px',
-                            transition: 'background-color 0.2s',
-                          }}
-                          onMouseOver={(e) => {
-                            e.currentTarget.style.backgroundColor = '#1E6AD9';
-                          }}
-                          onMouseOut={(e) => {
-                            e.currentTarget.style.backgroundColor = '#2B7CF6';
-                          }}
-                        >
-                          Enter
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleJoin(community)}
-                          disabled={joiningSlug === community.slug}
-                          style={{
-                            padding: '12px 28px',
-                            backgroundColor: 'white',
-                            color: '#2B7CF6',
-                            border: '2px solid #2B7CF6',
-                            borderRadius: '24px',
-                            cursor: joiningSlug === community.slug ? 'not-allowed' : 'pointer',
-                            fontWeight: 600,
-                            fontSize: '14px',
-                            opacity: joiningSlug === community.slug ? 0.7 : 1,
-                            transition: 'background-color 0.2s',
-                          }}
-                          onMouseOver={(e) => {
-                            if (joiningSlug !== community.slug) {
-                              e.currentTarget.style.backgroundColor = '#EDF4FF';
-                            }
-                          }}
-                          onMouseOut={(e) => {
-                            e.currentTarget.style.backgroundColor = 'white';
-                          }}
-                        >
-                          {joiningSlug === community.slug ? 'Joining...' : 'Join'}
-                        </button>
-                      )}
-                    </div>
+                        {badge.label}
+                      </span>
+                    )}
+                    <span style={{ color: '#64748B', fontSize: '13px' }}>
+                      {community.config.topics.length} support topics available
+                    </span>
+                  </div>
+
+                  {/* Row 3: Topic pills - horizontal wrap */}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '16px' }}>
+                    {community.config.topics.slice(0, 4).map((topic) => (
+                      <span
+                        key={topic}
+                        style={{
+                          display: 'inline-flex',
+                          backgroundColor: '#EDF4FF',
+                          color: '#2B7CF6',
+                          padding: '4px 10px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: 500,
+                        }}
+                      >
+                        {topic}
+                      </span>
+                    ))}
+                    {community.config.topics.length > 4 && (
+                      <span
+                        style={{
+                          display: 'inline-flex',
+                          color: '#64748B',
+                          fontSize: '12px',
+                          padding: '4px',
+                        }}
+                      >
+                        +{community.config.topics.length - 4} more
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Row 4: Action button */}
+                  <div onClick={(e) => e.stopPropagation()}>
+                    {community.membership ? (
+                      <button
+                        onClick={() => handleEnter(community.slug)}
+                        style={{
+                          width: '100%',
+                          padding: '12px 28px',
+                          backgroundColor: '#2B7CF6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '24px',
+                          cursor: 'pointer',
+                          fontWeight: 600,
+                          fontSize: '14px',
+                          transition: 'background-color 0.2s',
+                        }}
+                        onMouseOver={(e) => {
+                          e.currentTarget.style.backgroundColor = '#1E6AD9';
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = '#2B7CF6';
+                        }}
+                      >
+                        Enter
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handleJoin(community)}
+                        disabled={joiningSlug === community.slug}
+                        style={{
+                          width: '100%',
+                          padding: '12px 28px',
+                          backgroundColor: 'white',
+                          color: '#2B7CF6',
+                          border: '2px solid #2B7CF6',
+                          borderRadius: '24px',
+                          cursor: joiningSlug === community.slug ? 'not-allowed' : 'pointer',
+                          fontWeight: 600,
+                          fontSize: '14px',
+                          opacity: joiningSlug === community.slug ? 0.7 : 1,
+                          transition: 'background-color 0.2s',
+                        }}
+                        onMouseOver={(e) => {
+                          if (joiningSlug !== community.slug) {
+                            e.currentTarget.style.backgroundColor = '#EDF4FF';
+                          }
+                        }}
+                        onMouseOut={(e) => {
+                          e.currentTarget.style.backgroundColor = 'white';
+                        }}
+                      >
+                        {joiningSlug === community.slug ? 'Joining...' : 'Join'}
+                      </button>
+                    )}
                   </div>
                 </div>
               );
