@@ -38,10 +38,11 @@ interface UserRow {
 }
 
 function generateToken(userId: string, email: string, isSuperAdmin: boolean = false): string {
+  const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
   return jwt.sign(
     { userId, email, isSuperAdmin },
     process.env.JWT_SECRET!,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { expiresIn } as jwt.SignOptions
   );
 }
 

@@ -1,9 +1,8 @@
 import dotenv from 'dotenv';
 import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'fs';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Load .env file (works in both development and production)
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 import express from 'express';
@@ -79,6 +78,17 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/suggestions', suggestionsRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/super-admin', superAdminRoutes);
+
+// Serve static files from client build in production
+const clientDistPath = path.join(__dirname, '../../client/dist');
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+  // Serve index.html for all non-API routes (SPA fallback)
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+  });
+  console.log('Serving static files from:', clientDistPath);
+}
 
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

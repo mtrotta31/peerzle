@@ -1,7 +1,11 @@
 import axios, { AxiosError } from 'axios';
 
+// In production with same-origin deployment, VITE_API_URL should be empty string
+// which means axios will use relative URLs (same origin)
+const apiBaseUrl = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
+  baseURL: apiBaseUrl,
 });
 
 api.interceptors.request.use((config) => {

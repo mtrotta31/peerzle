@@ -8,7 +8,9 @@ export interface HelpRequestEvent {
   startedAt: string;
 }
 
-const SOCKET_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
+// In production with same-origin deployment, VITE_API_URL should be empty string
+// which means socket.io will connect to the same origin
+const SOCKET_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
 
 let socket: Socket | null = null;
 
