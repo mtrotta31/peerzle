@@ -577,129 +577,218 @@ export default function CommunityDashboard() {
 
       {/* Content */}
       <main style={{ maxWidth: '800px', margin: '0 auto', padding: '16px 24px' }}>
-        {/* Slim Status Bar */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            padding: '12px 16px',
-            backgroundColor: 'white',
-            borderRadius: '12px',
-            marginBottom: '16px',
-            boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '14px', color: '#64748B' }}>Hi,</span>
-            <span style={{ fontSize: '14px', fontWeight: 600, color: '#1E3A5F' }}>
-              {membership.display_name || 'Friend'}
-            </span>
-          </div>
+        {/* Greeting */}
+        <p style={{ margin: '0 0 16px 0', fontSize: '15px', color: '#1E3A5F' }}>
+          {membership.display_name ? (
+            <>Hi, <strong>{membership.display_name}</strong></>
+          ) : (
+            <strong>Welcome back</strong>
+          )}
+        </p>
 
-          {/* Helper Availability Toggle - only show if training completed */}
-          {membership.training_completed && (
-            <label
+        {/* Helper Section - State Aware */}
+        {(() => {
+          const isHelper = membership.role === 'helper' || membership.role === 'both' || membership.role === 'admin';
+
+          // State A: Seeker only - no helper section
+          if (!isHelper) return null;
+
+          // State B: Helper, training NOT complete
+          if (!membership.training_completed) {
+            return (
+              <div
+                style={{
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '16px 20px',
+                  marginBottom: '16px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                  borderLeft: '4px solid #F59E0B',
+                }}
+              >
+                <p style={{ margin: '0 0 12px 0', fontSize: '14px', color: '#1E3A5F', fontWeight: 500 }}>
+                  Complete your training to start helping others
+                </p>
+                <Link
+                  to={`/community/${slug}/training`}
+                  style={{
+                    display: 'inline-block',
+                    padding: '10px 20px',
+                    backgroundColor: '#F59E0B',
+                    color: 'white',
+                    borderRadius: '20px',
+                    textDecoration: 'none',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    transition: 'background-color 0.2s',
+                  }}
+                  onMouseOver={(e) => {
+                    e.currentTarget.style.backgroundColor = '#D97706';
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#F59E0B';
+                  }}
+                >
+                  Start Training
+                </Link>
+              </div>
+            );
+          }
+
+          // State C: Helper, trained, NOT available
+          if (!membership.is_available) {
+            return (
+              <div
+                style={{
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '16px 20px',
+                  marginBottom: '16px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                  borderLeft: '4px solid #16A34A',
+                }}
+              >
+                <p style={{ margin: '0 0 4px 0', fontSize: '15px', color: '#1E3A5F', fontWeight: 600 }}>
+                  Ready to help?
+                </p>
+                <p style={{ margin: '0 0 12px 0', fontSize: '13px', color: '#64748B' }}>
+                  Go available to receive peer support requests
+                </p>
+                <button
+                  onClick={handleToggleAvailability}
+                  disabled={isTogglingAvailability}
+                  style={{
+                    padding: '10px 24px',
+                    backgroundColor: '#16A34A',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '20px',
+                    fontSize: '14px',
+                    fontWeight: 600,
+                    cursor: isTogglingAvailability ? 'not-allowed' : 'pointer',
+                    opacity: isTogglingAvailability ? 0.7 : 1,
+                    transition: 'background-color 0.2s',
+                  }}
+                  onMouseOver={(e) => {
+                    if (!isTogglingAvailability) {
+                      e.currentTarget.style.backgroundColor = '#15803D';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.backgroundColor = '#16A34A';
+                  }}
+                >
+                  {isTogglingAvailability ? 'Updating...' : 'Go Available'}
+                </button>
+              </div>
+            );
+          }
+
+          // State D: Helper, trained, available, NO pending requests
+          if (pendingConversations.length === 0) {
+            return (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  backgroundColor: '#F0FDF4',
+                  borderRadius: '10px',
+                  padding: '12px 16px',
+                  marginBottom: '16px',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <span
+                    style={{
+                      width: '8px',
+                      height: '8px',
+                      backgroundColor: '#16A34A',
+                      borderRadius: '50%',
+                    }}
+                  />
+                  <span style={{ fontSize: '13px', color: '#166534', fontWeight: 500 }}>
+                    You're available
+                  </span>
+                  <span style={{ fontSize: '12px', color: '#64748B' }}>
+                    — we'll notify you when someone needs help
+                  </span>
+                </div>
+                <button
+                  onClick={handleToggleAvailability}
+                  disabled={isTogglingAvailability}
+                  style={{
+                    padding: '6px 12px',
+                    backgroundColor: 'transparent',
+                    color: '#64748B',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '16px',
+                    fontSize: '12px',
+                    fontWeight: 500,
+                    cursor: isTogglingAvailability ? 'not-allowed' : 'pointer',
+                    opacity: isTogglingAvailability ? 0.7 : 1,
+                    transition: 'all 0.2s',
+                  }}
+                  onMouseOver={(e) => {
+                    if (!isTogglingAvailability) {
+                      e.currentTarget.style.borderColor = '#94A3B8';
+                    }
+                  }}
+                  onMouseOut={(e) => {
+                    e.currentTarget.style.borderColor = '#E2E8F0';
+                  }}
+                >
+                  Go Unavailable
+                </button>
+              </div>
+            );
+          }
+
+          // State E: Helper, trained, available, HAS pending requests - handled below
+          return null;
+        })()}
+
+        {/* Pending Requests Section - State E: Most prominent when requests exist */}
+        {membership.is_available && pendingConversations.length > 0 && (
+          <>
+            <style>
+              {`
+                @keyframes subtlePulse {
+                  0%, 100% { box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 0 rgba(43, 124, 246, 0.2); }
+                  50% { box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 4px rgba(43, 124, 246, 0.1); }
+                }
+              `}
+            </style>
+            <div
               style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: isTogglingAvailability ? 'not-allowed' : 'pointer',
+                backgroundColor: 'white',
+                borderLeft: '4px solid #2B7CF6',
+                borderRadius: '16px',
+                padding: '20px',
+                marginBottom: '20px',
+                animation: 'subtlePulse 2s ease-in-out infinite',
               }}
             >
-              <span
+              <h3
                 style={{
-                  fontSize: '13px',
-                  fontWeight: 500,
-                  color: membership.is_available ? '#16A34A' : '#94A3B8',
+                  margin: '0 0 16px 0',
+                  color: '#1E3A5F',
+                  fontSize: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
                 }}
               >
-                {membership.is_available ? 'Helping' : 'Off'}
-              </span>
-              <div
-                onClick={handleToggleAvailability}
-                style={{
-                  width: '44px',
-                  height: '24px',
-                  backgroundColor: membership.is_available ? '#16A34A' : '#CBD5E1',
-                  borderRadius: '12px',
-                  position: 'relative',
-                  transition: 'background-color 0.2s',
-                  opacity: isTogglingAvailability ? 0.5 : 1,
-                  cursor: isTogglingAvailability ? 'not-allowed' : 'pointer',
-                }}
-              >
-                <div
+                <span
                   style={{
-                    width: '20px',
-                    height: '20px',
-                    backgroundColor: 'white',
+                    width: '8px',
+                    height: '8px',
+                    backgroundColor: '#2B7CF6',
                     borderRadius: '50%',
-                    position: 'absolute',
-                    top: '2px',
-                    left: membership.is_available ? '22px' : '2px',
-                    transition: 'left 0.2s',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.2)',
                   }}
                 />
-              </div>
-            </label>
-          )}
-        </div>
-
-        {/* Compact Training Banner - only for helpers who need it */}
-        {!membership.training_completed && (membership.role === 'helper' || membership.role === 'both' || membership.role === 'admin') && (
-          <Link
-            to={`/community/${slug}/training`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '10px 16px',
-              backgroundColor: '#FEF3C7',
-              borderRadius: '10px',
-              marginBottom: '16px',
-              textDecoration: 'none',
-              transition: 'background-color 0.2s',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.backgroundColor = '#FDE68A';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.backgroundColor = '#FEF3C7';
-            }}
-          >
-            <span style={{ fontSize: '13px', color: '#92400E' }}>
-              Complete training to start helping
-            </span>
-            <span style={{ fontSize: '13px', color: '#92400E', fontWeight: 500 }}>→</span>
-          </Link>
-        )}
-
-        {/* Pending Requests Section */}
-        {membership.is_available && pendingConversations.length > 0 && (
-          <div
-            style={{
-              backgroundColor: 'white',
-              borderLeft: '4px solid #2B7CF6',
-              borderRadius: '16px',
-              padding: '20px',
-              marginBottom: '20px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-            }}
-          >
-            <h3
-              style={{
-                margin: '0 0 16px 0',
-                color: '#1E3A5F',
-                fontSize: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-              }}
-            >
-              Pending Requests ({pendingConversations.length})
-            </h3>
+                Someone needs your help
+              </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {pendingConversations.map((conv) => {
                 const score = conv.match_score;
@@ -811,9 +900,9 @@ export default function CommunityDashboard() {
                 );
               })}
             </div>
-          </div>
+            </div>
+          </>
         )}
-
 
         {/* Active Conversation Banner */}
         {activeConversation && (
