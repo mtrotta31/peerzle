@@ -130,9 +130,9 @@ export default function SignupPage() {
           )}
 
           <form onSubmit={handleSubmit}>
-            {/* Name fields - side by side */}
-            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-              <div style={{ flex: 1 }}>
+            {/* Name fields - side by side (required for signup) */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+              <div style={{ flex: 1, minWidth: '140px' }}>
                 <label
                   htmlFor="firstName"
                   style={{
@@ -143,7 +143,7 @@ export default function SignupPage() {
                     fontSize: '14px',
                   }}
                 >
-                  First Name
+                  First Name *
                 </label>
                 <input
                   id="firstName"
@@ -152,12 +152,13 @@ export default function SignupPage() {
                   onChange={(e) => setFirstName(e.target.value)}
                   required
                   maxLength={100}
+                  placeholder="Enter first name"
                   style={inputStyle}
                   onFocus={handleFocus}
                   onBlur={handleBlur}
                 />
               </div>
-              <div style={{ flex: 1 }}>
+              <div style={{ flex: 1, minWidth: '140px' }}>
                 <label
                   htmlFor="lastName"
                   style={{
@@ -168,7 +169,7 @@ export default function SignupPage() {
                     fontSize: '14px',
                   }}
                 >
-                  Last Name
+                  Last Name *
                 </label>
                 <input
                   id="lastName"
@@ -177,6 +178,7 @@ export default function SignupPage() {
                   onChange={(e) => setLastName(e.target.value)}
                   required
                   maxLength={100}
+                  placeholder="Enter last name"
                   style={inputStyle}
                   onFocus={handleFocus}
                   onBlur={handleBlur}
