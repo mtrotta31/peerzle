@@ -4,11 +4,21 @@ import {
   PlatformOverview,
   SuperAdminCommunity,
   SuperAdminOrganization,
+  WebhookConfig,
+  WebhookDelivery,
   getSuperAdminOverview,
   getSuperAdminCommunities,
   getSuperAdminOrganizations,
   createCommunity,
   CreateCommunityData,
+  getWebhooks,
+  createWebhook,
+  updateWebhook,
+  deleteWebhook,
+  testWebhook,
+  getWebhookDeliveries,
+  getWebhookCommunities,
+  getWebhookOrganizations,
 } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -68,8 +78,9 @@ const TOPIC_TEMPLATES = {
   ],
 };
 
-type Tab = 'communities' | 'organizations';
+type Tab = 'communities' | 'organizations' | 'webhooks';
 type CreateStep = 1 | 2 | 3 | 4;
+type EventType = 'crisis_alert' | 'high_severity_alert' | 'user_report';
 
 export default function SuperAdminPanel() {
   const { user, logout } = useAuth();
@@ -100,6 +111,34 @@ export default function SuperAdminPanel() {
   const [newTopicName, setNewTopicName] = useState('');
   const [newTopicDescription, setNewTopicDescription] = useState('');
 
+  // Webhook state
+  const [webhooks, setWebhooks] = useState<WebhookConfig[]>([]);
+  const [webhookCommunities, setWebhookCommunities] = useState<{ id: string; name: string; slug: string }[]>([]);
+  const [webhookOrganizations, setWebhookOrganizations] = useState<{ id: string; name: string; slug: string }[]>([]);
+  const [showWebhookModal, setShowWebhookModal] = useState(false);
+  const [editingWebhook, setEditingWebhook] = useState<WebhookConfig | null>(null);
+  const [webhookSaving, setWebhookSaving] = useState(false);
+  const [webhookError, setWebhookError] = useState('');
+  const [createdSecretKey, setCreatedSecretKey] = useState<string | null>(null);
+  const [testingWebhookId, setTestingWebhookId] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<{ id: string; success: boolean; message: string } | null>(null);
+
+  // Webhook form state
+  const [webhookCommunityId, setWebhookCommunityId] = useState('');
+  const [webhookOrgId, setWebhookOrgId] = useState<string>('');
+  const [webhookEventType, setWebhookEventType] = useState<EventType>('crisis_alert');
+  const [webhookEndpointUrl, setWebhookEndpointUrl] = useState('');
+  const [webhookIncludePii, setWebhookIncludePii] = useState(false);
+  const [webhookIsActive, setWebhookIsActive] = useState(true);
+
+  // Delivery log state
+  const [showDeliveryLog, setShowDeliveryLog] = useState(false);
+  const [selectedWebhookForLog, setSelectedWebhookForLog] = useState<WebhookConfig | null>(null);
+  const [deliveries, setDeliveries] = useState<WebhookDelivery[]>([]);
+  const [deliveriesLoading, setDeliveriesLoading] = useState(false);
+  const [deliveryPage, setDeliveryPage] = useState(1);
+  const [deliveryTotalPages, setDeliveryTotalPages] = useState(1);
+
   // Redirect non-super-admins
   useEffect(() => {
     if (user && !user.isSuperAdmin) {
@@ -112,14 +151,18 @@ export default function SuperAdminPanel() {
     async function loadData() {
       try {
         setLoading(true);
-        const [overviewData, communitiesData, orgsData] = await Promise.all([
+        const [overviewData, communitiesData, orgsData, webhooksData, webhookCommunitiesData] = await Promise.all([
           getSuperAdminOverview(),
           getSuperAdminCommunities(),
           getSuperAdminOrganizations(),
+          getWebhooks(),
+          getWebhookCommunities(),
         ]);
         setOverview(overviewData);
         setCommunities(communitiesData);
         setOrganizations(orgsData);
+        setWebhooks(webhooksData);
+        setWebhookCommunities(webhookCommunitiesData);
       } catch (err) {
         setError('Failed to load data');
         console.error(err);
@@ -209,6 +252,162 @@ export default function SuperAdminPanel() {
     setCreatedCommunity(null);
   };
 
+  // Webhook handlers
+  const loadOrganizationsForCommunity = async (communityId: string) => {
+    if (!communityId) {
+      setWebhookOrganizations([]);
+      return;
+    }
+    try {
+      const orgs = await getWebhookOrganizations(communityId);
+      setWebhookOrganizations(orgs);
+    } catch (err) {
+      console.error('Failed to load organizations:', err);
+      setWebhookOrganizations([]);
+    }
+  };
+
+  const openWebhookModal = (webhook?: WebhookConfig) => {
+    if (webhook) {
+      setEditingWebhook(webhook);
+      setWebhookCommunityId(webhook.communityId);
+      setWebhookOrgId(webhook.organizationId || '');
+      setWebhookEventType(webhook.eventType);
+      setWebhookEndpointUrl(webhook.endpointUrl);
+      setWebhookIncludePii(webhook.includePii);
+      setWebhookIsActive(webhook.isActive);
+      loadOrganizationsForCommunity(webhook.communityId);
+    } else {
+      setEditingWebhook(null);
+      setWebhookCommunityId('');
+      setWebhookOrgId('');
+      setWebhookEventType('crisis_alert');
+      setWebhookEndpointUrl('');
+      setWebhookIncludePii(false);
+      setWebhookIsActive(true);
+      setWebhookOrganizations([]);
+    }
+    setWebhookError('');
+    setCreatedSecretKey(null);
+    setShowWebhookModal(true);
+  };
+
+  const closeWebhookModal = () => {
+    setShowWebhookModal(false);
+    setEditingWebhook(null);
+    setCreatedSecretKey(null);
+    setWebhookError('');
+  };
+
+  const handleSaveWebhook = async () => {
+    if (!webhookCommunityId || !webhookEndpointUrl) {
+      setWebhookError('Community and Endpoint URL are required');
+      return;
+    }
+
+    try {
+      new URL(webhookEndpointUrl);
+    } catch {
+      setWebhookError('Invalid endpoint URL');
+      return;
+    }
+
+    setWebhookSaving(true);
+    setWebhookError('');
+
+    try {
+      if (editingWebhook) {
+        const updated = await updateWebhook(editingWebhook.id, {
+          event_type: webhookEventType,
+          endpoint_url: webhookEndpointUrl,
+          is_active: webhookIsActive,
+          include_pii: webhookIncludePii,
+          organization_id: webhookOrgId || null,
+        });
+        setWebhooks(webhooks.map((w) => (w.id === updated.id ? { ...w, ...updated } : w)));
+        closeWebhookModal();
+      } else {
+        const created = await createWebhook({
+          community_id: webhookCommunityId,
+          organization_id: webhookOrgId || null,
+          event_type: webhookEventType,
+          endpoint_url: webhookEndpointUrl,
+          include_pii: webhookIncludePii,
+        });
+        setWebhooks([created, ...webhooks]);
+        setCreatedSecretKey(created.secretKey || null);
+      }
+    } catch (err) {
+      setWebhookError('Failed to save webhook');
+      console.error(err);
+    } finally {
+      setWebhookSaving(false);
+    }
+  };
+
+  const handleDeleteWebhook = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this webhook?')) return;
+    try {
+      await deleteWebhook(id);
+      setWebhooks(webhooks.filter((w) => w.id !== id));
+    } catch (err) {
+      console.error('Failed to delete webhook:', err);
+    }
+  };
+
+  const handleTestWebhook = async (id: string) => {
+    setTestingWebhookId(id);
+    setTestResult(null);
+    try {
+      const result = await testWebhook(id);
+      setTestResult({ id, success: result.success, message: result.success ? 'Test successful!' : result.error || 'Test failed' });
+    } catch (err) {
+      setTestResult({ id, success: false, message: 'Test request failed' });
+    } finally {
+      setTestingWebhookId(null);
+    }
+  };
+
+  const openDeliveryLog = async (webhook: WebhookConfig) => {
+    setSelectedWebhookForLog(webhook);
+    setDeliveryPage(1);
+    setShowDeliveryLog(true);
+    await loadDeliveries(webhook.id, 1);
+  };
+
+  const loadDeliveries = async (webhookId: string, page: number) => {
+    setDeliveriesLoading(true);
+    try {
+      const result = await getWebhookDeliveries(webhookId, page);
+      setDeliveries(result.deliveries);
+      setDeliveryTotalPages(result.pagination.totalPages);
+      setDeliveryPage(result.pagination.page);
+    } catch (err) {
+      console.error('Failed to load deliveries:', err);
+    } finally {
+      setDeliveriesLoading(false);
+    }
+  };
+
+  const getEventTypeLabel = (type: string) => {
+    switch (type) {
+      case 'crisis_alert': return 'Crisis Alert';
+      case 'high_severity_alert': return 'High Severity Alert';
+      case 'user_report': return 'User Report';
+      default: return type;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'success': return { bg: '#DCFCE7', color: '#16A34A' };
+      case 'failed': return { bg: '#FEE2E2', color: '#DC2626' };
+      case 'retrying': return { bg: '#FEF3C7', color: '#D97706' };
+      case 'pending': return { bg: '#E0E7FF', color: '#4F46E5' };
+      default: return { bg: '#F1F5F9', color: '#64748B' };
+    }
+  };
+
   if (!user?.isSuperAdmin) {
     return null;
   }
@@ -296,6 +495,9 @@ export default function SuperAdminPanel() {
           </TabButton>
           <TabButton active={activeTab === 'organizations'} onClick={() => setActiveTab('organizations')}>
             Organizations
+          </TabButton>
+          <TabButton active={activeTab === 'webhooks'} onClick={() => setActiveTab('webhooks')}>
+            Webhooks
           </TabButton>
         </div>
 
@@ -452,6 +654,204 @@ export default function SuperAdminPanel() {
                 No organizations yet
               </p>
             )}
+          </div>
+        )}
+
+        {/* Webhooks Tab */}
+        {activeTab === 'webhooks' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>Webhook Configurations</h2>
+              <button
+                onClick={() => openWebhookModal()}
+                style={{
+                  padding: '10px 20px',
+                  backgroundColor: '#2B7CF6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                }}
+              >
+                + Create Webhook
+              </button>
+            </div>
+
+            {/* Webhooks list */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {webhooks.map((webhook) => (
+                <div
+                  key={webhook.id}
+                  style={{
+                    backgroundColor: 'white',
+                    borderRadius: '12px',
+                    padding: '20px',
+                    border: '1px solid #E2E8F0',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                        <h3 style={{ margin: 0, fontSize: '15px', fontWeight: 600, color: '#1E3A5F' }}>
+                          {webhook.communityName}
+                        </h3>
+                        {webhook.organizationName && (
+                          <span style={{ color: '#64748B', fontSize: '13px' }}>
+                            / {webhook.organizationName}
+                          </span>
+                        )}
+                        <span
+                          style={{
+                            padding: '2px 8px',
+                            backgroundColor: webhook.isActive ? '#DCFCE7' : '#FEE2E2',
+                            color: webhook.isActive ? '#16A34A' : '#DC2626',
+                            borderRadius: '4px',
+                            fontSize: '11px',
+                            fontWeight: 500,
+                          }}
+                        >
+                          {webhook.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginBottom: '8px' }}>
+                        <span
+                          style={{
+                            padding: '4px 10px',
+                            backgroundColor: '#EDF4FF',
+                            color: '#2B7CF6',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: 500,
+                          }}
+                        >
+                          {getEventTypeLabel(webhook.eventType)}
+                        </span>
+                        {webhook.includePii && (
+                          <span
+                            style={{
+                              padding: '4px 10px',
+                              backgroundColor: '#FEF3C7',
+                              color: '#D97706',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: 500,
+                            }}
+                          >
+                            Includes PII
+                          </span>
+                        )}
+                      </div>
+                      <p style={{ margin: 0, color: '#64748B', fontSize: '13px', wordBreak: 'break-all' }}>
+                        {webhook.endpointUrl}
+                      </p>
+                      {webhook.lastDeliveryStatus && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '8px' }}>
+                          <span style={{ fontSize: '12px', color: '#64748B' }}>Last delivery:</span>
+                          <span
+                            style={{
+                              padding: '2px 6px',
+                              backgroundColor: getStatusColor(webhook.lastDeliveryStatus).bg,
+                              color: getStatusColor(webhook.lastDeliveryStatus).color,
+                              borderRadius: '4px',
+                              fontSize: '11px',
+                              fontWeight: 500,
+                            }}
+                          >
+                            {webhook.lastDeliveryStatus}
+                          </span>
+                          {webhook.lastDeliveryAt && (
+                            <span style={{ fontSize: '12px', color: '#94A3B8' }}>
+                              {new Date(webhook.lastDeliveryAt).toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', marginLeft: '16px' }}>
+                      <button
+                        onClick={() => handleTestWebhook(webhook.id)}
+                        disabled={testingWebhookId === webhook.id}
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: '#F1F5F9',
+                          color: '#475569',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: testingWebhookId === webhook.id ? 'wait' : 'pointer',
+                          fontSize: '13px',
+                        }}
+                      >
+                        {testingWebhookId === webhook.id ? 'Testing...' : 'Test'}
+                      </button>
+                      <button
+                        onClick={() => openDeliveryLog(webhook)}
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: '#F1F5F9',
+                          color: '#475569',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                        }}
+                      >
+                        Logs
+                      </button>
+                      <button
+                        onClick={() => openWebhookModal(webhook)}
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: '#F1F5F9',
+                          color: '#475569',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleDeleteWebhook(webhook.id)}
+                        style={{
+                          padding: '6px 12px',
+                          backgroundColor: '#FEE2E2',
+                          color: '#DC2626',
+                          border: 'none',
+                          borderRadius: '6px',
+                          cursor: 'pointer',
+                          fontSize: '13px',
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                  {testResult?.id === webhook.id && (
+                    <div
+                      style={{
+                        marginTop: '12px',
+                        padding: '8px 12px',
+                        backgroundColor: testResult.success ? '#DCFCE7' : '#FEE2E2',
+                        color: testResult.success ? '#16A34A' : '#DC2626',
+                        borderRadius: '6px',
+                        fontSize: '13px',
+                      }}
+                    >
+                      {testResult.message}
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {webhooks.length === 0 && (
+                <p style={{ color: '#64748B', textAlign: 'center', padding: '48px' }}>
+                  No webhooks configured yet
+                </p>
+              )}
+            </div>
           </div>
         )}
       </div>
@@ -909,6 +1309,479 @@ export default function SuperAdminPanel() {
                   }}
                 >
                   {creating ? 'Creating...' : createStep === 3 ? 'Create Community' : 'Next'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Webhook Create/Edit Modal */}
+      {showWebhookModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => closeWebhookModal()}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '500px',
+              maxHeight: '90vh',
+              overflow: 'auto',
+            }}
+          >
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>
+                  {createdSecretKey ? 'Webhook Created' : editingWebhook ? 'Edit Webhook' : 'Create Webhook'}
+                </h2>
+                <button
+                  onClick={() => closeWebhookModal()}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748B' }}
+                >
+                  &times;
+                </button>
+              </div>
+            </div>
+
+            <div style={{ padding: '24px' }}>
+              {webhookError && (
+                <div style={{ padding: '12px', backgroundColor: '#FEE2E2', color: '#DC2626', borderRadius: '8px', marginBottom: '16px' }}>
+                  {webhookError}
+                </div>
+              )}
+
+              {createdSecretKey ? (
+                <div>
+                  <div style={{ padding: '16px', backgroundColor: '#FEF3C7', borderRadius: '8px', marginBottom: '16px' }}>
+                    <p style={{ margin: '0 0 8px 0', fontWeight: 600, color: '#92400E' }}>
+                      Important: Copy your secret key now!
+                    </p>
+                    <p style={{ margin: 0, fontSize: '13px', color: '#92400E' }}>
+                      This key will only be shown once. Use it to verify webhook signatures.
+                    </p>
+                  </div>
+                  <div style={{ marginBottom: '16px' }}>
+                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500 }}>
+                      Secret Key
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <input
+                        type="text"
+                        value={createdSecretKey}
+                        readOnly
+                        style={{
+                          flex: 1,
+                          padding: '10px 12px',
+                          border: '1px solid #E2E8F0',
+                          borderRadius: '8px',
+                          fontSize: '13px',
+                          fontFamily: 'monospace',
+                          backgroundColor: '#F8FAFC',
+                        }}
+                      />
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(createdSecretKey);
+                        }}
+                        style={{
+                          padding: '10px 16px',
+                          backgroundColor: '#2B7CF6',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                        }}
+                      >
+                        Copy
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => closeWebhookModal()}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      backgroundColor: '#2B7CF6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Done
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500 }}>
+                      Community *
+                    </label>
+                    <select
+                      value={webhookCommunityId}
+                      onChange={(e) => {
+                        setWebhookCommunityId(e.target.value);
+                        setWebhookOrgId('');
+                        loadOrganizationsForCommunity(e.target.value);
+                      }}
+                      disabled={!!editingWebhook}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        backgroundColor: editingWebhook ? '#F8FAFC' : 'white',
+                      }}
+                    >
+                      <option value="">Select a community</option>
+                      {webhookCommunities.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500 }}>
+                      Organization (optional)
+                    </label>
+                    <select
+                      value={webhookOrgId}
+                      onChange={(e) => setWebhookOrgId(e.target.value)}
+                      disabled={!webhookCommunityId}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                      }}
+                    >
+                      <option value="">All organizations (community-wide)</option>
+                      {webhookOrganizations.map((o) => (
+                        <option key={o.id} value={o.id}>
+                          {o.name}
+                        </option>
+                      ))}
+                    </select>
+                    <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748B' }}>
+                      Leave empty to trigger for any organization in this community
+                    </p>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500 }}>
+                      Event Type *
+                    </label>
+                    <select
+                      value={webhookEventType}
+                      onChange={(e) => setWebhookEventType(e.target.value as EventType)}
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                      }}
+                    >
+                      <option value="crisis_alert">Crisis Alert (Critical Severity)</option>
+                      <option value="high_severity_alert">High Severity Alert</option>
+                      <option value="user_report">User Report</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '6px', fontSize: '14px', fontWeight: 500 }}>
+                      Endpoint URL *
+                    </label>
+                    <input
+                      type="url"
+                      value={webhookEndpointUrl}
+                      onChange={(e) => setWebhookEndpointUrl(e.target.value)}
+                      placeholder="https://your-service.com/webhook"
+                      style={{
+                        width: '100%',
+                        padding: '10px 12px',
+                        border: '1px solid #E2E8F0',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      style={{
+                        display: 'flex',
+                        alignItems: 'flex-start',
+                        gap: '10px',
+                        padding: '12px',
+                        backgroundColor: '#FEF3C7',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={webhookIncludePii}
+                        onChange={(e) => setWebhookIncludePii(e.target.checked)}
+                        style={{ marginTop: '2px' }}
+                      />
+                      <div>
+                        <span style={{ fontWeight: 500, fontSize: '14px', color: '#92400E' }}>
+                          Include PII (user name & email)
+                        </span>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#92400E' }}>
+                          When enabled, webhook payloads will include the user's email and name for crisis response.
+                        </p>
+                      </div>
+                    </label>
+                  </div>
+
+                  {editingWebhook && (
+                    <div>
+                      <label
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '10px',
+                          padding: '12px',
+                          backgroundColor: '#F8FAFC',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={webhookIsActive}
+                          onChange={(e) => setWebhookIsActive(e.target.checked)}
+                        />
+                        <span style={{ fontWeight: 500, fontSize: '14px' }}>
+                          Webhook is active
+                        </span>
+                      </label>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {!createdSecretKey && (
+              <div
+                style={{
+                  padding: '16px 24px',
+                  borderTop: '1px solid #E2E8F0',
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: '12px',
+                }}
+              >
+                <button
+                  onClick={() => closeWebhookModal()}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: 'transparent',
+                    color: '#64748B',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveWebhook}
+                  disabled={webhookSaving || !webhookCommunityId || !webhookEndpointUrl}
+                  style={{
+                    padding: '10px 20px',
+                    backgroundColor: '#2B7CF6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: 500,
+                    opacity: webhookSaving || !webhookCommunityId || !webhookEndpointUrl ? 0.5 : 1,
+                  }}
+                >
+                  {webhookSaving ? 'Saving...' : editingWebhook ? 'Save Changes' : 'Create Webhook'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Delivery Log Modal */}
+      {showDeliveryLog && selectedWebhookForLog && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={() => setShowDeliveryLog(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              width: '100%',
+              maxWidth: '800px',
+              maxHeight: '90vh',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 600 }}>Delivery Log</h2>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: '#64748B' }}>
+                    {selectedWebhookForLog.endpointUrl}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowDeliveryLog(false)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '20px', color: '#64748B' }}
+                >
+                  &times;
+                </button>
+              </div>
+            </div>
+
+            <div style={{ flex: 1, overflow: 'auto', padding: '16px 24px' }}>
+              {deliveriesLoading ? (
+                <p style={{ textAlign: 'center', color: '#64748B', padding: '24px' }}>Loading...</p>
+              ) : deliveries.length === 0 ? (
+                <p style={{ textAlign: 'center', color: '#64748B', padding: '24px' }}>No delivery attempts yet</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {deliveries.map((delivery) => (
+                    <div
+                      key={delivery.id}
+                      style={{
+                        padding: '16px',
+                        backgroundColor: delivery.status === 'failed' ? '#FEF2F2' : '#F8FAFC',
+                        borderRadius: '8px',
+                        border: `1px solid ${delivery.status === 'failed' ? '#FECACA' : '#E2E8F0'}`,
+                      }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span
+                            style={{
+                              padding: '2px 8px',
+                              backgroundColor: getStatusColor(delivery.status).bg,
+                              color: getStatusColor(delivery.status).color,
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              fontWeight: 500,
+                            }}
+                          >
+                            {delivery.status}
+                          </span>
+                          <span style={{ fontSize: '13px', color: '#64748B' }}>
+                            {getEventTypeLabel(delivery.eventType)}
+                          </span>
+                          <span style={{ fontSize: '13px', color: '#94A3B8' }}>
+                            Attempt {delivery.attemptNumber}
+                          </span>
+                        </div>
+                        <span style={{ fontSize: '12px', color: '#94A3B8' }}>
+                          {new Date(delivery.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+
+                      {delivery.responseStatus && (
+                        <p style={{ margin: '0 0 4px 0', fontSize: '13px' }}>
+                          <strong>Response:</strong> HTTP {delivery.responseStatus}
+                        </p>
+                      )}
+
+                      {delivery.errorMessage && (
+                        <p style={{ margin: 0, fontSize: '13px', color: '#DC2626' }}>
+                          <strong>Error:</strong> {delivery.errorMessage}
+                        </p>
+                      )}
+
+                      {delivery.deliveredAt && (
+                        <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748B' }}>
+                          Delivered at: {new Date(delivery.deliveredAt).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {deliveryTotalPages > 1 && (
+              <div
+                style={{
+                  padding: '16px 24px',
+                  borderTop: '1px solid #E2E8F0',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  gap: '8px',
+                }}
+              >
+                <button
+                  onClick={() => loadDeliveries(selectedWebhookForLog.id, deliveryPage - 1)}
+                  disabled={deliveryPage <= 1}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: 'white',
+                    color: '#64748B',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '6px',
+                    cursor: deliveryPage <= 1 ? 'not-allowed' : 'pointer',
+                    opacity: deliveryPage <= 1 ? 0.5 : 1,
+                  }}
+                >
+                  Previous
+                </button>
+                <span style={{ padding: '8px 16px', color: '#64748B', fontSize: '14px' }}>
+                  Page {deliveryPage} of {deliveryTotalPages}
+                </span>
+                <button
+                  onClick={() => loadDeliveries(selectedWebhookForLog.id, deliveryPage + 1)}
+                  disabled={deliveryPage >= deliveryTotalPages}
+                  style={{
+                    padding: '8px 16px',
+                    backgroundColor: 'white',
+                    color: '#64748B',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '6px',
+                    cursor: deliveryPage >= deliveryTotalPages ? 'not-allowed' : 'pointer',
+                    opacity: deliveryPage >= deliveryTotalPages ? 0.5 : 1,
+                  }}
+                >
+                  Next
                 </button>
               </div>
             )}

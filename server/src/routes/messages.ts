@@ -5,6 +5,7 @@ import { emitToConversation, getUserSocketIds } from '../config/socket';
 import { generatePeerBotResponse } from '../services/peerbot';
 import { analyzeMessageSafety, shouldShowCrisisResources, mapRiskLevelToSeverity, SafetyAnalysisResult } from '../services/safety';
 import { sendPushNotification, sendPushToMultipleUsers, shouldSendMessagePush } from '../services/push-notifications';
+import { dispatchWebhooks, getUserDataForWebhook } from '../services/webhookDispatcher';
 
 const router = Router();
 
@@ -158,9 +159,10 @@ async function runSafetyAnalysis(
     });
 
     // Log to alert_events table
-    await query(
+    const alertResult = await query<{ id: string }>(
       `INSERT INTO alert_events (community_id, conversation_id, alert_type, severity, context)
-       VALUES ($1, $2, 'safety', $3, $4)`,
+       VALUES ($1, $2, 'safety', $3, $4)
+       RETURNING id`,
       [
         communityId,
         conversationId,
@@ -173,8 +175,45 @@ async function runSafetyAnalysis(
         }),
       ]
     );
+    const alertId = alertResult.rows[0]?.id;
 
     console.log(`[SAFETY] Alert logged to database for conversation: ${conversationId}`);
+
+    // Dispatch webhooks for crisis/high severity alerts (non-blocking)
+    const severity = mapRiskLevelToSeverity(safetyResult.riskLevel);
+    const eventType = severity === 'critical' ? 'crisis_alert' : 'high_severity_alert';
+
+    // Get organization_id from conversation's seeker membership
+    const orgResult = await query<{ organization_id: string | null }>(
+      `SELECT m.organization_id FROM conversations c
+       JOIN memberships m ON m.id = c.seeker_membership_id
+       WHERE c.id = $1`,
+      [conversationId]
+    );
+    const organizationId = orgResult.rows[0]?.organization_id || null;
+
+    // Get user data for potential PII inclusion
+    getUserDataForWebhook(conversationId).then((userData) => {
+      dispatchWebhooks(
+        eventType,
+        communityId,
+        organizationId,
+        {
+          alert_id: alertId,
+          conversation_id: conversationId,
+          severity,
+          risk_level: safetyResult.riskLevel,
+          flags: safetyResult.flags,
+          suggested_action: safetyResult.suggestedAction,
+          message_excerpt: content.substring(0, 100),
+        },
+        userData
+      ).catch((err) => {
+        console.error('[WEBHOOK] Dispatch error from safety alert:', err);
+      });
+    }).catch((err) => {
+      console.error('[WEBHOOK] Error getting user data:', err);
+    });
 
     // Send push notifications to community admins for crisis-level alerts
     if (safetyResult.riskLevel === 'crisis') {

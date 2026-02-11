@@ -30,6 +30,7 @@ import reportsRoutes from './routes/reports';
 import suggestionsRoutes from './routes/suggestions';
 import pushRoutes from './routes/push';
 import superAdminRoutes from './routes/super-admin';
+import webhookRoutes from './routes/webhooks';
 import { initializeSocket } from './config/socket';
 
 const app = express();
@@ -81,6 +82,7 @@ app.use('/api/reports', reportsRoutes);
 app.use('/api/suggestions', suggestionsRoutes);
 app.use('/api/push', pushRoutes);
 app.use('/api/super-admin', superAdminRoutes);
+app.use('/api/webhooks', webhookRoutes);
 
 // Serve static files from client build in production
 const clientDistPath = path.join(__dirname, '../../client/dist');

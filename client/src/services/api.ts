@@ -1111,4 +1111,105 @@ export async function getSuperAdminOrganizations(): Promise<SuperAdminOrganizati
   return response.data;
 }
 
+// ============================================================================
+// WEBHOOKS API
+// ============================================================================
+
+export interface WebhookConfig {
+  id: string;
+  communityId: string;
+  communityName?: string;
+  organizationId: string | null;
+  organizationName?: string | null;
+  eventType: 'crisis_alert' | 'high_severity_alert' | 'user_report';
+  endpointUrl: string;
+  secretKey?: string; // Only returned on creation
+  isActive: boolean;
+  includePii: boolean;
+  createdAt: string;
+  updatedAt?: string;
+  lastDeliveryStatus?: string | null;
+  lastDeliveryAt?: string | null;
+}
+
+export interface WebhookDelivery {
+  id: string;
+  eventType: string;
+  payload: Record<string, unknown>;
+  responseStatus: number | null;
+  responseBody: string | null;
+  attemptNumber: number;
+  status: 'pending' | 'success' | 'failed' | 'retrying';
+  errorMessage: string | null;
+  createdAt: string;
+  deliveredAt: string | null;
+}
+
+export interface WebhookDeliveriesResponse {
+  deliveries: WebhookDelivery[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalCount: number;
+    totalPages: number;
+  };
+}
+
+export interface CreateWebhookData {
+  community_id: string;
+  organization_id?: string | null;
+  event_type: 'crisis_alert' | 'high_severity_alert' | 'user_report';
+  endpoint_url: string;
+  include_pii?: boolean;
+}
+
+export interface UpdateWebhookData {
+  event_type?: 'crisis_alert' | 'high_severity_alert' | 'user_report';
+  endpoint_url?: string;
+  is_active?: boolean;
+  include_pii?: boolean;
+  organization_id?: string | null;
+}
+
+export async function getWebhooks(communityId?: string): Promise<WebhookConfig[]> {
+  const params = communityId ? `?community_id=${communityId}` : '';
+  const response = await api.get<WebhookConfig[]>(`/api/webhooks${params}`);
+  return response.data;
+}
+
+export async function createWebhook(data: CreateWebhookData): Promise<WebhookConfig> {
+  const response = await api.post<WebhookConfig>('/api/webhooks', data);
+  return response.data;
+}
+
+export async function updateWebhook(id: string, data: UpdateWebhookData): Promise<WebhookConfig> {
+  const response = await api.put<WebhookConfig>(`/api/webhooks/${id}`, data);
+  return response.data;
+}
+
+export async function deleteWebhook(id: string): Promise<{ success: boolean }> {
+  const response = await api.delete<{ success: boolean }>(`/api/webhooks/${id}`);
+  return response.data;
+}
+
+export async function testWebhook(id: string): Promise<{ success: boolean; statusCode?: number; error?: string }> {
+  const response = await api.post<{ success: boolean; statusCode?: number; error?: string }>(`/api/webhooks/${id}/test`);
+  return response.data;
+}
+
+export async function getWebhookDeliveries(id: string, page: number = 1, limit: number = 20): Promise<WebhookDeliveriesResponse> {
+  const response = await api.get<WebhookDeliveriesResponse>(`/api/webhooks/${id}/deliveries?page=${page}&limit=${limit}`);
+  return response.data;
+}
+
+export async function getWebhookCommunities(): Promise<{ id: string; name: string; slug: string }[]> {
+  const response = await api.get<{ id: string; name: string; slug: string }[]>('/api/webhooks/communities');
+  return response.data;
+}
+
+export async function getWebhookOrganizations(communityId: string): Promise<{ id: string; name: string; slug: string }[]> {
+  const response = await api.get<{ id: string; name: string; slug: string }[]>(`/api/webhooks/organizations/${communityId}`);
+  return response.data;
+}
+
 export default api;
