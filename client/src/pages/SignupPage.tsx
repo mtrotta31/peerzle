@@ -6,6 +6,8 @@ import { AxiosError } from 'axios';
 const CURRENT_TOS_VERSION = '1.0';
 
 export default function SignupPage() {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -18,6 +20,11 @@ export default function SignupPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError('');
+
+    if (!firstName.trim() || !lastName.trim()) {
+      setError('First name and last name are required');
+      return;
+    }
 
     if (password !== confirmPassword) {
       setError('Passwords do not match');
@@ -32,7 +39,7 @@ export default function SignupPage() {
     setIsSubmitting(true);
 
     try {
-      await signup(email, password, CURRENT_TOS_VERSION);
+      await signup(email, password, CURRENT_TOS_VERSION, firstName.trim(), lastName.trim());
       navigate('/communities');
     } catch (err) {
       const axiosError = err as AxiosError<{ error: string }>;
@@ -123,6 +130,60 @@ export default function SignupPage() {
           )}
 
           <form onSubmit={handleSubmit}>
+            {/* Name fields - side by side */}
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ flex: 1 }}>
+                <label
+                  htmlFor="firstName"
+                  style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 500,
+                    color: '#1E3A5F',
+                    fontSize: '14px',
+                  }}
+                >
+                  First Name
+                </label>
+                <input
+                  id="firstName"
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  maxLength={100}
+                  style={inputStyle}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label
+                  htmlFor="lastName"
+                  style={{
+                    display: 'block',
+                    marginBottom: '8px',
+                    fontWeight: 500,
+                    color: '#1E3A5F',
+                    fontSize: '14px',
+                  }}
+                >
+                  Last Name
+                </label>
+                <input
+                  id="lastName"
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  maxLength={100}
+                  style={inputStyle}
+                  onFocus={handleFocus}
+                  onBlur={handleBlur}
+                />
+              </div>
+            </div>
+
             <div style={{ marginBottom: '20px' }}>
               <label
                 htmlFor="email"

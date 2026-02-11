@@ -35,6 +35,8 @@ interface UserRow {
   password_hash: string;
   created_at: Date;
   is_super_admin: boolean;
+  first_name: string | null;
+  last_name: string | null;
 }
 
 function generateToken(userId: string, email: string, isSuperAdmin: boolean = false): string {
@@ -49,10 +51,30 @@ function generateToken(userId: string, email: string, isSuperAdmin: boolean = fa
 // POST /api/auth/signup
 router.post('/signup', signupLimiter, async (req: Request, res: Response) => {
   try {
-    const { email, password, acceptedTermsVersion } = req.body;
+    const { email, password, acceptedTermsVersion, firstName, lastName } = req.body;
 
+    // Validate required fields
     if (!email || !password) {
       res.status(400).json({ error: 'Email and password are required' });
+      return;
+    }
+
+    if (!firstName || !lastName) {
+      res.status(400).json({ error: 'First name and last name are required' });
+      return;
+    }
+
+    // Validate name lengths
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+
+    if (trimmedFirstName.length === 0 || trimmedFirstName.length > 100) {
+      res.status(400).json({ error: 'First name must be 1-100 characters' });
+      return;
+    }
+
+    if (trimmedLastName.length === 0 || trimmedLastName.length > 100) {
+      res.status(400).json({ error: 'Last name must be 1-100 characters' });
       return;
     }
 
@@ -84,12 +106,12 @@ router.post('/signup', signupLimiter, async (req: Request, res: Response) => {
 
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-    // Insert user with TOS acceptance
+    // Insert user with TOS acceptance and name
     const result = await query<UserRow>(
-      `INSERT INTO users (email, password_hash, tos_accepted_at, tos_version)
-       VALUES ($1, $2, CURRENT_TIMESTAMP, $3)
-       RETURNING id, email, created_at`,
-      [email.toLowerCase(), passwordHash, CURRENT_TOS_VERSION]
+      `INSERT INTO users (email, password_hash, first_name, last_name, tos_accepted_at, tos_version)
+       VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP, $5)
+       RETURNING id, email, first_name, last_name, created_at`,
+      [email.toLowerCase(), passwordHash, trimmedFirstName, trimmedLastName, CURRENT_TOS_VERSION]
     );
 
     const user = result.rows[0];
@@ -113,6 +135,8 @@ router.post('/signup', signupLimiter, async (req: Request, res: Response) => {
       user: {
         id: user.id,
         email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
         createdAt: user.created_at,
       },
       token,
@@ -134,7 +158,9 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
     }
 
     const result = await query<UserRow>(
-      'SELECT id, email, password_hash, created_at, COALESCE(is_super_admin, false) as is_super_admin FROM users WHERE email = $1',
+      `SELECT id, email, password_hash, created_at, first_name, last_name,
+              COALESCE(is_super_admin, false) as is_super_admin
+       FROM users WHERE email = $1`,
       [email.toLowerCase()]
     );
 
@@ -158,12 +184,18 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
 
     const token = generateToken(user.id, user.email, user.is_super_admin);
 
+    // Check if user needs to update their profile (missing name)
+    const needsProfileUpdate = !user.first_name || !user.last_name;
+
     res.json({
       user: {
         id: user.id,
         email: user.email,
+        firstName: user.first_name,
+        lastName: user.last_name,
         createdAt: user.created_at,
         isSuperAdmin: user.is_super_admin,
+        needsProfileUpdate,
       },
       token,
     });
@@ -177,7 +209,9 @@ router.post('/login', loginLimiter, async (req: Request, res: Response) => {
 router.get('/me', authenticate, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const result = await query<UserRow>(
-      'SELECT id, email, created_at, COALESCE(is_super_admin, false) as is_super_admin FROM users WHERE id = $1',
+      `SELECT id, email, first_name, last_name, created_at,
+              COALESCE(is_super_admin, false) as is_super_admin
+       FROM users WHERE id = $1`,
       [req.user!.userId]
     );
 
@@ -187,12 +221,16 @@ router.get('/me', authenticate, async (req: AuthenticatedRequest, res: Response)
     }
 
     const user = result.rows[0];
+    const needsProfileUpdate = !user.first_name || !user.last_name;
 
     res.json({
       id: user.id,
       email: user.email,
+      firstName: user.first_name,
+      lastName: user.last_name,
       createdAt: user.created_at,
       isSuperAdmin: user.is_super_admin,
+      needsProfileUpdate,
     });
   } catch (error) {
     console.error('Get user error:', error);

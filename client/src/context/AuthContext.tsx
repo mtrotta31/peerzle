@@ -7,9 +7,10 @@ interface AuthContextType {
   isLoading: boolean;
   sessionExpiredMessage: string | null;
   login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, acceptedTermsVersion: string) => Promise<void>;
+  signup: (email: string, password: string, acceptedTermsVersion: string, firstName: string, lastName: string) => Promise<void>;
   logout: () => void;
   clearSessionExpiredMessage: () => void;
+  updateUserProfile: (firstName: string, lastName: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -60,8 +61,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(response.user);
   };
 
-  const signup = async (email: string, password: string, acceptedTermsVersion: string) => {
-    const response = await apiSignup(email, password, acceptedTermsVersion);
+  const signup = async (email: string, password: string, acceptedTermsVersion: string, firstName: string, lastName: string) => {
+    const response = await apiSignup(email, password, acceptedTermsVersion, firstName, lastName);
     localStorage.setItem('token', response.token);
     setUser(response.user);
   };
@@ -69,6 +70,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     localStorage.removeItem('token');
     setUser(null);
+  };
+
+  const updateUserProfile = (firstName: string, lastName: string) => {
+    if (user) {
+      setUser({ ...user, firstName, lastName, needsProfileUpdate: false });
+    }
   };
 
   return (
@@ -82,6 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signup,
         logout,
         clearSessionExpiredMessage,
+        updateUserProfile,
       }}
     >
       {children}

@@ -38,8 +38,11 @@ api.interceptors.response.use(
 export interface User {
   id: string;
   email: string;
+  firstName?: string | null;
+  lastName?: string | null;
   createdAt: string;
   isSuperAdmin?: boolean;
+  needsProfileUpdate?: boolean;
 }
 
 export interface AuthResponse {
@@ -47,8 +50,20 @@ export interface AuthResponse {
   token: string;
 }
 
-export async function signup(email: string, password: string, acceptedTermsVersion: string): Promise<AuthResponse> {
-  const response = await api.post<AuthResponse>('/api/auth/signup', { email, password, acceptedTermsVersion });
+export async function signup(
+  email: string,
+  password: string,
+  acceptedTermsVersion: string,
+  firstName: string,
+  lastName: string
+): Promise<AuthResponse> {
+  const response = await api.post<AuthResponse>('/api/auth/signup', {
+    email,
+    password,
+    acceptedTermsVersion,
+    firstName,
+    lastName,
+  });
   return response.data;
 }
 
@@ -698,6 +713,10 @@ export interface AdminAlert {
   suggestedAction: string;
   excerpt?: string;
   createdAt: string;
+  // User identity for admin safety context
+  userRealName?: string | null;
+  userDisplayName?: string | null;
+  userEmail?: string;
 }
 
 // Admin API
@@ -1209,6 +1228,57 @@ export async function getWebhookCommunities(): Promise<{ id: string; name: strin
 
 export async function getWebhookOrganizations(communityId: string): Promise<{ id: string; name: string; slug: string }[]> {
   const response = await api.get<{ id: string; name: string; slug: string }[]>(`/api/webhooks/organizations/${communityId}`);
+  return response.data;
+}
+
+// ============================================================================
+// PROFILE API
+// ============================================================================
+
+export interface EmergencyContact {
+  id: string;
+  contactName: string;
+  contactPhone: string;
+  relationship: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  firstName: string | null;
+  lastName: string | null;
+  createdAt: string;
+  emergencyContact: EmergencyContact | null;
+}
+
+export async function getProfile(): Promise<UserProfile> {
+  const response = await api.get<UserProfile>('/api/profile');
+  return response.data;
+}
+
+export async function updateProfile(data: { firstName?: string; lastName?: string }): Promise<UserProfile> {
+  const response = await api.put<UserProfile>('/api/profile', data);
+  return response.data;
+}
+
+export async function getEmergencyContact(): Promise<EmergencyContact | null> {
+  const response = await api.get<EmergencyContact | null>('/api/profile/emergency-contact');
+  return response.data;
+}
+
+export async function updateEmergencyContact(data: {
+  contactName: string;
+  contactPhone: string;
+  relationship?: string;
+}): Promise<EmergencyContact> {
+  const response = await api.put<EmergencyContact>('/api/profile/emergency-contact', data);
+  return response.data;
+}
+
+export async function deleteEmergencyContact(): Promise<{ success: boolean }> {
+  const response = await api.delete<{ success: boolean }>('/api/profile/emergency-contact');
   return response.data;
 }
 

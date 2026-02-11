@@ -24,6 +24,7 @@ import {
 } from '../services/push';
 import { useAuth } from '../context/AuthContext';
 import { AxiosError } from 'axios';
+import { updateProfile } from '../services/api';
 
 export default function CommunityDashboard() {
   const { slug } = useParams<{ slug: string }>();
@@ -38,8 +39,15 @@ export default function CommunityDashboard() {
   const [error, setError] = useState('');
   const [showPushBanner, setShowPushBanner] = useState(false);
   const [isEnablingPush, setIsEnablingPush] = useState(false);
-  const { logout } = useAuth();
+  const { user, logout, updateUserProfile } = useAuth();
   const navigate = useNavigate();
+
+  // Profile update modal state
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileFirstName, setProfileFirstName] = useState('');
+  const [profileLastName, setProfileLastName] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [profileError, setProfileError] = useState('');
 
   // Check if we should show the push notification banner
   useEffect(() => {
@@ -110,6 +118,41 @@ export default function CommunityDashboard() {
   const handleDismissPushBanner = () => {
     localStorage.setItem('pushBannerDismissed', 'true');
     setShowPushBanner(false);
+  };
+
+  // Show profile update modal for users missing name (existing users)
+  useEffect(() => {
+    if (user?.needsProfileUpdate && !sessionStorage.getItem('profileModalDismissed')) {
+      setShowProfileModal(true);
+    }
+  }, [user?.needsProfileUpdate]);
+
+  const handleSaveProfileModal = async () => {
+    if (!profileFirstName.trim() || !profileLastName.trim()) {
+      setProfileError('Please enter both first and last name');
+      return;
+    }
+
+    setSavingProfile(true);
+    setProfileError('');
+
+    try {
+      await updateProfile({
+        firstName: profileFirstName.trim(),
+        lastName: profileLastName.trim(),
+      });
+      updateUserProfile(profileFirstName.trim(), profileLastName.trim());
+      setShowProfileModal(false);
+    } catch (err) {
+      setProfileError('Failed to save. Please try again.');
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handleSkipProfileModal = () => {
+    sessionStorage.setItem('profileModalDismissed', 'true');
+    setShowProfileModal(false);
   };
 
   const loadPendingConversations = async () => {
@@ -379,29 +422,53 @@ export default function CommunityDashboard() {
                 )}
               </div>
             </div>
-            <button
-              onClick={logout}
-              style={{
-                padding: '8px 12px',
-                backgroundColor: 'white',
-                color: '#64748B',
-                border: '1px solid #E2E8F0',
-                borderRadius: '24px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 500,
-                transition: 'all 0.2s',
-                whiteSpace: 'nowrap',
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.backgroundColor = '#F8FAFC';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.backgroundColor = 'white';
-              }}
-            >
-              Logout
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Link
+                to="/profile"
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: 'white',
+                  color: '#64748B',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '24px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  textDecoration: 'none',
+                  transition: 'all 0.2s',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#F8FAFC';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white';
+                }}
+              >
+                Profile
+              </Link>
+              <button
+                onClick={logout}
+                style={{
+                  padding: '8px 12px',
+                  backgroundColor: 'white',
+                  color: '#64748B',
+                  border: '1px solid #E2E8F0',
+                  borderRadius: '24px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  transition: 'all 0.2s',
+                  whiteSpace: 'nowrap',
+                }}
+                onMouseOver={(e) => {
+                  e.currentTarget.style.backgroundColor = '#F8FAFC';
+                }}
+                onMouseOut={(e) => {
+                  e.currentTarget.style.backgroundColor = 'white';
+                }}
+              >
+                Logout
+              </button>
+            </div>
           </div>
         </div>
       </header>
@@ -1054,6 +1121,126 @@ export default function CommunityDashboard() {
         </div>
 
       </main>
+
+      {/* Profile Update Modal for Existing Users */}
+      {showProfileModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            backgroundColor: 'rgba(0,0,0,0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+            padding: '20px',
+          }}
+        >
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '20px',
+              padding: '32px',
+              maxWidth: '400px',
+              width: '100%',
+              textAlign: 'center',
+            }}
+          >
+            <div
+              style={{
+                width: '56px',
+                height: '56px',
+                borderRadius: '50%',
+                backgroundColor: '#EDF4FF',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 16px',
+                fontSize: '28px',
+              }}
+            >
+              &#128075;
+            </div>
+            <h2 style={{ margin: '0 0 8px 0', fontSize: '20px', fontWeight: 600, color: '#1E3A5F' }}>
+              Help us keep you safe
+            </h2>
+            <p style={{ margin: '0 0 24px 0', fontSize: '14px', color: '#64748B', lineHeight: 1.5 }}>
+              Adding your name helps our team assist you better in an emergency. This is never shown in conversations.
+            </p>
+
+            {profileError && (
+              <div style={{ padding: '10px', backgroundColor: '#FEE2E2', color: '#DC2626', borderRadius: '8px', marginBottom: '16px', fontSize: '13px' }}>
+                {profileError}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+              <input
+                type="text"
+                value={profileFirstName}
+                onChange={(e) => setProfileFirstName(e.target.value)}
+                placeholder="First Name"
+                maxLength={100}
+                style={{
+                  flex: 1,
+                  padding: '12px 14px',
+                  borderRadius: '10px',
+                  border: '1px solid #E2E8F0',
+                  fontSize: '15px',
+                }}
+              />
+              <input
+                type="text"
+                value={profileLastName}
+                onChange={(e) => setProfileLastName(e.target.value)}
+                placeholder="Last Name"
+                maxLength={100}
+                style={{
+                  flex: 1,
+                  padding: '12px 14px',
+                  borderRadius: '10px',
+                  border: '1px solid #E2E8F0',
+                  fontSize: '15px',
+                }}
+              />
+            </div>
+
+            <button
+              onClick={handleSaveProfileModal}
+              disabled={savingProfile || !profileFirstName.trim() || !profileLastName.trim()}
+              style={{
+                width: '100%',
+                padding: '14px',
+                backgroundColor: '#2B7CF6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '24px',
+                fontSize: '15px',
+                fontWeight: 600,
+                cursor: savingProfile || !profileFirstName.trim() || !profileLastName.trim() ? 'not-allowed' : 'pointer',
+                opacity: savingProfile || !profileFirstName.trim() || !profileLastName.trim() ? 0.5 : 1,
+                marginBottom: '12px',
+              }}
+            >
+              {savingProfile ? 'Saving...' : 'Save'}
+            </button>
+
+            <button
+              onClick={handleSkipProfileModal}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#64748B',
+                fontSize: '14px',
+                cursor: 'pointer',
+                textDecoration: 'underline',
+              }}
+            >
+              Skip for now
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

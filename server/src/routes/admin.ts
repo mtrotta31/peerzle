@@ -168,12 +168,16 @@ router.get('/:communitySlug/alerts', authenticate, requireAdmin, async (req: Aut
     const { organization_id: orgId } = req.query;
 
     // Build query with optional organization filter
+    // Include user real name and display name for admin safety context
     let queryText = `
-      SELECT ae.id, ae.conversation_id, ae.severity, ae.context, ae.created_at
+      SELECT ae.id, ae.conversation_id, ae.severity, ae.context, ae.created_at,
+             u.first_name, u.last_name, u.email as user_email,
+             seeker_m.display_name
       FROM alert_events ae
       JOIN communities c ON c.id = ae.community_id
       JOIN conversations conv ON conv.id = ae.conversation_id
       JOIN memberships seeker_m ON seeker_m.id = conv.seeker_membership_id
+      JOIN users u ON u.id = seeker_m.user_id
       WHERE c.slug = $1
     `;
     const queryParams: (string | null)[] = [communitySlug];
@@ -191,18 +195,33 @@ router.get('/:communitySlug/alerts', authenticate, requireAdmin, async (req: Aut
       severity: string;
       context: { risk_level?: string; flags?: string[]; suggested_action?: string; triggering_message?: string };
       created_at: Date;
+      first_name: string | null;
+      last_name: string | null;
+      user_email: string;
+      display_name: string | null;
     }>(queryText, queryParams);
 
-    const alerts = result.rows.map((row) => ({
-      id: row.id,
-      conversationId: row.conversation_id,
-      severity: row.severity,
-      riskLevel: row.context?.risk_level || row.severity,
-      flags: row.context?.flags || [],
-      suggestedAction: row.context?.suggested_action || '',
-      excerpt: row.context?.triggering_message || '',
-      createdAt: row.created_at,
-    }));
+    const alerts = result.rows.map((row) => {
+      // Build real name if available
+      const realName = row.first_name && row.last_name
+        ? `${row.first_name} ${row.last_name}`
+        : row.first_name || row.last_name || null;
+
+      return {
+        id: row.id,
+        conversationId: row.conversation_id,
+        severity: row.severity,
+        riskLevel: row.context?.risk_level || row.severity,
+        flags: row.context?.flags || [],
+        suggestedAction: row.context?.suggested_action || '',
+        excerpt: row.context?.triggering_message || '',
+        createdAt: row.created_at,
+        // Safety context: real identity for admins
+        userRealName: realName,
+        userDisplayName: row.display_name,
+        userEmail: row.user_email,
+      };
+    });
 
     res.json(alerts);
   } catch (error) {

@@ -907,6 +907,26 @@ export default function AdminDashboard() {
                                 {formatDateTime(alert.createdAt)}
                               </span>
                             </div>
+                            {/* User identity for safety context */}
+                            <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#1E3A5F', fontWeight: 500 }}>
+                              {alert.userRealName ? (
+                                <>
+                                  {alert.userRealName}
+                                  {alert.userDisplayName && (
+                                    <span style={{ fontWeight: 400, color: '#64748B' }}> ({alert.userDisplayName})</span>
+                                  )}
+                                </>
+                              ) : alert.userDisplayName ? (
+                                alert.userDisplayName
+                              ) : (
+                                <span style={{ color: '#94A3B8', fontStyle: 'italic' }}>Anonymous user</span>
+                              )}
+                              {alert.userEmail && (
+                                <span style={{ display: 'block', fontSize: '12px', color: '#64748B', fontWeight: 400, marginTop: '2px' }}>
+                                  {alert.userEmail}
+                                </span>
+                              )}
+                            </p>
                             {alert.flags.length > 0 && (
                               <p style={{ margin: '0 0 8px 0', fontSize: '14px', color: '#1E3A5F' }}>
                                 <strong>Flags:</strong> {alert.flags.join(', ')}

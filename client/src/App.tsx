@@ -21,6 +21,7 @@ import TermsAcceptanceModal from './components/TermsAcceptanceModal';
 import OnboardingFlow from './pages/OnboardingFlow';
 import SuperAdminPanel from './pages/SuperAdminPanel';
 import CommunityManagement from './pages/CommunityManagement';
+import ProfilePage from './pages/ProfilePage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -201,6 +202,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <ChatPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <ProfilePage />
           </ProtectedRoute>
         }
       />
