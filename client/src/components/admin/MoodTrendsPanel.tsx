@@ -2,11 +2,9 @@ import { useState, useEffect } from 'react';
 import {
   MoodTrendsResponse,
   MoodAlert,
+  getAdminMoodTrends,
+  getAdminMoodAlerts,
 } from '../../services/api';
-import {
-  getMockMoodTrendsAsync,
-  getMockMoodAlertsAsync,
-} from '../../services/mockMoodTrendsData';
 
 // Color mapping for mood scores (matches MoodHistoryPage)
 const MOOD_COLORS: Record<number, string> = {
@@ -36,10 +34,11 @@ const getMoodEmoji = (mood: number): string => {
 };
 
 interface MoodTrendsPanelProps {
+  communitySlug: string;
   selectedOrgId: string | null;
 }
 
-export default function MoodTrendsPanel({ selectedOrgId }: MoodTrendsPanelProps) {
+export default function MoodTrendsPanel({ communitySlug, selectedOrgId }: MoodTrendsPanelProps) {
   const [period, setPeriod] = useState<'7d' | '30d' | '90d'>('30d');
   const [trends, setTrends] = useState<MoodTrendsResponse | null>(null);
   const [alerts, setAlerts] = useState<MoodAlert[]>([]);
@@ -50,20 +49,20 @@ export default function MoodTrendsPanel({ selectedOrgId }: MoodTrendsPanelProps)
     async function loadData() {
       setIsLoading(true);
       try {
-        // TODO: Replace with real API calls when backend is ready
-        // const [trendsData, alertsData] = await Promise.all([
-        //   getAdminMoodTrends(communitySlug, period, selectedOrgId || undefined),
-        //   getAdminMoodAlerts(communitySlug, selectedOrgId || undefined),
-        // ]);
-
         const [trendsData, alertsData] = await Promise.all([
-          getMockMoodTrendsAsync(period, selectedOrgId || undefined),
-          getMockMoodAlertsAsync(selectedOrgId || undefined),
+          getAdminMoodTrends(communitySlug, period, selectedOrgId || undefined),
+          getAdminMoodAlerts(communitySlug, selectedOrgId || undefined),
         ]);
 
-        setTrends(trendsData);
-        setAlerts(alertsData.alerts);
-        setNotEnoughData(alertsData.not_enough_data);
+        if (trendsData.privacy_limited) {
+          setNotEnoughData(true);
+          setTrends(null);
+          setAlerts([]);
+        } else {
+          setTrends(trendsData);
+          setAlerts(alertsData.alerts);
+          setNotEnoughData(alertsData.privacy_limited);
+        }
       } catch (err) {
         console.error('Failed to load mood trends:', err);
       } finally {
@@ -72,7 +71,7 @@ export default function MoodTrendsPanel({ selectedOrgId }: MoodTrendsPanelProps)
     }
 
     loadData();
-  }, [period, selectedOrgId]);
+  }, [communitySlug, period, selectedOrgId]);
 
   if (isLoading) {
     return (
@@ -116,9 +115,11 @@ export default function MoodTrendsPanel({ selectedOrgId }: MoodTrendsPanelProps)
 
   const { summary, daily_averages, distribution, topic_correlation } = trends;
 
-  // Calculate percentage change
-  const percentChange = summary.avg_mood_previous > 0
-    ? ((summary.avg_mood_current - summary.avg_mood_previous) / summary.avg_mood_previous) * 100
+  // Calculate percentage change (handle null values)
+  const currentMood = summary.avg_mood_current ?? 0;
+  const previousMood = summary.avg_mood_previous ?? 0;
+  const percentChange = previousMood > 0
+    ? ((currentMood - previousMood) / previousMood) * 100
     : 0;
 
   return (
@@ -150,8 +151,8 @@ export default function MoodTrendsPanel({ selectedOrgId }: MoodTrendsPanelProps)
 
       {/* Wellness Pulse Card */}
       <WellnessPulseCard
-        currentMood={summary.avg_mood_current}
-        previousMood={summary.avg_mood_previous}
+        currentMood={currentMood}
+        previousMood={previousMood}
         trend={summary.trend}
         percentChange={percentChange}
       />
@@ -742,7 +743,7 @@ function TopicCorrelation({
 
 // Attention Needed List Component
 function AttentionNeededList({ alerts }: { alerts: MoodAlert[] }) {
-  const patternConfig = {
+  const alertTypeConfig: Record<string, { badge: string; badgeColor: string; badgeBg: string; borderColor: string }> = {
     consecutive_low: {
       badge: 'Critical Pattern',
       badgeColor: '#DC2626',
@@ -755,24 +756,12 @@ function AttentionNeededList({ alerts }: { alerts: MoodAlert[] }) {
       badgeBg: '#FEF3C7',
       borderColor: '#FDE68A',
     },
-    disengaged: {
+    disengagement: {
       badge: 'Disengaged',
       badgeColor: '#64748B',
       badgeBg: '#F1F5F9',
       borderColor: '#E2E8F0',
     },
-  };
-
-  const formatLastSeen = (dateStr?: string) => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-    if (diffHours < 24) return `${diffHours}h ago`;
-    return `${diffDays}d ago`;
   };
 
   return (
@@ -807,7 +796,7 @@ function AttentionNeededList({ alerts }: { alerts: MoodAlert[] }) {
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
         {alerts.map((alert, index) => {
-          const config = patternConfig[alert.pattern];
+          const config = alertTypeConfig[alert.alert_type] || alertTypeConfig.disengagement;
 
           return (
             <div
@@ -846,14 +835,9 @@ function AttentionNeededList({ alerts }: { alerts: MoodAlert[] }) {
                     {config.badge}
                   </span>
                 </div>
-                {alert.last_seen && (
-                  <span style={{ fontSize: '12px', color: '#94A3B8' }}>
-                    Last seen: {formatLastSeen(alert.last_seen)}
-                  </span>
-                )}
               </div>
               <p style={{ margin: '0 0 8px', fontSize: '13px', color: '#64748B' }}>
-                {alert.pattern_description}
+                {alert.message}
               </p>
               <p style={{ margin: 0, fontSize: '12px', color: '#94A3B8', fontStyle: 'italic' }}>
                 This member may benefit from outreach

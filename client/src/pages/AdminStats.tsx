@@ -370,7 +370,7 @@ export default function AdminStats() {
             </div>
 
             {/* Section 2.5: Mood Trends */}
-            <MoodTrendsPanel selectedOrgId={selectedOrgId} />
+            <MoodTrendsPanel communitySlug={slug!} selectedOrgId={selectedOrgId} />
 
             {/* Section 3: Usage */}
             <div

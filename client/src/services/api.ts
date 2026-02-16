@@ -1356,8 +1356,8 @@ export async function getTodayCheckIn(communityId: string): Promise<TodayCheckIn
 // ============================================================================
 
 export interface MoodTrendsSummary {
-  avg_mood_current: number;
-  avg_mood_previous: number;
+  avg_mood_current: number | null;
+  avg_mood_previous: number | null;
   trend: 'improving' | 'declining' | 'stable';
   total_checkins: number;
   participation_rate: number;
@@ -1385,6 +1385,8 @@ export interface MoodTrendsTopicCorrelation {
 }
 
 export interface MoodTrendsResponse {
+  privacy_limited: boolean;
+  message?: string;
   summary: MoodTrendsSummary;
   daily_averages: MoodTrendsDailyAverage[];
   distribution: MoodTrendsDistribution;
@@ -1393,14 +1395,16 @@ export interface MoodTrendsResponse {
 
 export interface MoodAlert {
   display_name: string;
-  pattern: 'consecutive_low' | 'significant_decline' | 'disengaged';
-  pattern_description: string;
-  last_seen?: string;
+  alert_type: 'consecutive_low' | 'significant_decline' | 'disengagement';
+  message: string;
+  days?: number;
+  decline?: number;
+  days_inactive?: number;
 }
 
 export interface MoodAlertsResponse {
+  privacy_limited: boolean;
   alerts: MoodAlert[];
-  not_enough_data: boolean;
 }
 
 // Placeholder API functions - will be wired to real endpoints when backend is ready
