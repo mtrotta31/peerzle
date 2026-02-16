@@ -8,6 +8,7 @@ import {
   getAdminStats,
   getOrganizations,
 } from '../services/api';
+import MoodTrendsPanel from '../components/admin/MoodTrendsPanel';
 
 export default function AdminStats() {
   const { slug } = useParams<{ slug: string }>();
@@ -367,6 +368,9 @@ export default function AdminStats() {
                 )}
               </div>
             </div>
+
+            {/* Section 2.5: Mood Trends */}
+            <MoodTrendsPanel selectedOrgId={selectedOrgId} />
 
             {/* Section 3: Usage */}
             <div

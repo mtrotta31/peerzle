@@ -1351,4 +1351,81 @@ export async function getTodayCheckIn(communityId: string): Promise<TodayCheckIn
   return response.data;
 }
 
+// ============================================================================
+// ADMIN MOOD TRENDS API
+// ============================================================================
+
+export interface MoodTrendsSummary {
+  avg_mood_current: number;
+  avg_mood_previous: number;
+  trend: 'improving' | 'declining' | 'stable';
+  total_checkins: number;
+  participation_rate: number;
+  critical_alerts: number;
+}
+
+export interface MoodTrendsDailyAverage {
+  date: string;
+  avg_mood: number;
+  checkin_count: number;
+}
+
+export interface MoodTrendsDistribution {
+  much_worse: number;
+  slightly_down: number;
+  neutral: number;
+  okay: number;
+  good: number;
+}
+
+export interface MoodTrendsTopicCorrelation {
+  topic: string;
+  avg_mood: number;
+  volume: number;
+}
+
+export interface MoodTrendsResponse {
+  summary: MoodTrendsSummary;
+  daily_averages: MoodTrendsDailyAverage[];
+  distribution: MoodTrendsDistribution;
+  topic_correlation: MoodTrendsTopicCorrelation[];
+}
+
+export interface MoodAlert {
+  display_name: string;
+  pattern: 'consecutive_low' | 'significant_decline' | 'disengaged';
+  pattern_description: string;
+  last_seen?: string;
+}
+
+export interface MoodAlertsResponse {
+  alerts: MoodAlert[];
+  not_enough_data: boolean;
+}
+
+// Placeholder API functions - will be wired to real endpoints when backend is ready
+export async function getAdminMoodTrends(
+  communitySlug: string,
+  period: '7d' | '30d' | '90d',
+  organizationId?: string
+): Promise<MoodTrendsResponse> {
+  const params = new URLSearchParams({ period });
+  if (organizationId) params.append('organization_id', organizationId);
+  const response = await api.get<MoodTrendsResponse>(
+    `/api/admin/mood-trends/${communitySlug}?${params.toString()}`
+  );
+  return response.data;
+}
+
+export async function getAdminMoodAlerts(
+  communitySlug: string,
+  organizationId?: string
+): Promise<MoodAlertsResponse> {
+  const params = organizationId ? `?organization_id=${organizationId}` : '';
+  const response = await api.get<MoodAlertsResponse>(
+    `/api/admin/mood-alerts/${communitySlug}${params}`
+  );
+  return response.data;
+}
+
 export default api;
