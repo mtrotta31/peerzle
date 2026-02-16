@@ -33,6 +33,7 @@ import superAdminRoutes from './routes/super-admin';
 import webhookRoutes from './routes/webhooks';
 import profileRoutes from './routes/profile';
 import moodCheckinsRoutes from './routes/mood-checkins';
+import adminMoodRoutes from './routes/admin-mood';
 import { initializeSocket } from './config/socket';
 import { startMoodCheckinScheduler } from './services/mood-checkin-scheduler';
 
@@ -88,6 +89,7 @@ app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/mood-checkins', moodCheckinsRoutes);
+app.use('/api/admin', adminMoodRoutes);
 
 // Serve static files from client build in production
 const clientDistPath = path.join(__dirname, '../../client/dist');
