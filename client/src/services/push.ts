@@ -80,6 +80,7 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
 /**
  * Register the service worker and subscribe to push notifications.
  * This sends the subscription to the backend.
+ * Handles VAPID key changes by unsubscribing old subscription and creating new one.
  */
 export async function subscribeToPush(): Promise<boolean> {
   if (!isPushSupported()) {
@@ -103,11 +104,30 @@ export async function subscribeToPush(): Promise<boolean> {
     // Get VAPID public key from server
     const publicKey = await getVapidPublicKey();
 
-    // Subscribe to push
-    const subscription = await registration.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(publicKey),
-    });
+    let subscription: PushSubscription;
+    try {
+      // Subscribe to push
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+    } catch (subscribeError) {
+      // If subscribe fails, it might be due to VAPID key change
+      // Unsubscribe the old subscription and try again
+      console.log('[PUSH] Subscribe failed, checking for stale subscription...');
+      const existingSubscription = await registration.pushManager.getSubscription();
+      if (existingSubscription) {
+        console.log('[PUSH] Unsubscribing stale subscription (VAPID key changed)');
+        await existingSubscription.unsubscribe();
+        // Try subscribing again with the new key
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        });
+      } else {
+        throw subscribeError;
+      }
+    }
 
     console.log('[PUSH] Push subscription created');
 
@@ -126,6 +146,28 @@ export async function subscribeToPush(): Promise<boolean> {
   } catch (error) {
     console.error('[PUSH] Subscription error:', error);
     return false;
+  }
+}
+
+/**
+ * Ensure push subscription is synced with the server.
+ * Call this on app load to handle cases where server-side subscriptions
+ * were cleared (e.g., after VAPID key change).
+ */
+export async function ensurePushSubscription(): Promise<void> {
+  if (!isPushSupported()) return;
+  if (Notification.permission !== 'granted') return;
+
+  try {
+    const registration = await navigator.serviceWorker.getRegistration();
+    if (!registration) return;
+
+    // Always re-subscribe to ensure server has our subscription
+    // This handles the case where server DB was cleared
+    await subscribeToPush();
+    console.log('[PUSH] Subscription synced with server');
+  } catch (error) {
+    console.error('[PUSH] Failed to sync subscription:', error);
   }
 }
 

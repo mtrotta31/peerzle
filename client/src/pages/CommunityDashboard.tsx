@@ -27,6 +27,7 @@ import {
   requestNotificationPermission,
   subscribeToPush,
   isPushEnabled,
+  ensurePushSubscription,
 } from '../services/push';
 import { useAuth } from '../context/AuthContext';
 import { AxiosError } from 'axios';
@@ -90,11 +91,12 @@ export default function CommunityDashboard() {
         return;
       }
 
-      // Don't show if already enabled
+      // If already enabled, sync subscription with server (handles VAPID key changes)
       const enabled = await isPushEnabled();
       console.log('[PUSH DEBUG] isPushEnabled:', enabled);
       if (enabled) {
-        console.log('[PUSH DEBUG] Exiting: Push already enabled');
+        console.log('[PUSH DEBUG] Push enabled, syncing subscription with server');
+        ensurePushSubscription();
         return;
       }
 
