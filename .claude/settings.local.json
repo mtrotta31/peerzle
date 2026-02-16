@@ -17,7 +17,9 @@
       "Bash(grep:*)",
       "Bash(echo:*)",
       "Bash(npm install:*)",
-      "Bash(npx web-push:*)"
+      "Bash(npx web-push:*)",
+      "Bash(git rebase:*)",
+      "Bash(GIT_EDITOR=true git rebase:*)"
     ]
   }
 }

@@ -8,11 +8,11 @@ This is a deeply personal project connected to the founder's brother's story. Tr
 
 ## Tech Stack
 
-- **Frontend:** React PWA with Vite, Tailwind CSS (dynamic theming per community)
+- **Frontend:** React PWA with Vite, CSS with CSS Variables (dynamic theming per community)
 - **Backend:** Node.js / Express
 - **Database:** PostgreSQL (hosted on Railway)
 - **Real-time:** Socket.io for chat
-- **AI:** OpenAI API for PeerBot (AI companion), moderation pipeline, and crisis detection
+- **AI:** Claude/Anthropic API for PeerBot (AI companion), moderation pipeline, and crisis detection
 - **Auth:** JWT-based authentication
 - **Push:** Web Push API with VAPID keys
 - **Deployment:** Railway (main app + PostgreSQL), Vercel (marketing website at peerzle-website repo)
@@ -22,11 +22,11 @@ This is a deeply personal project connected to the founder's brother's story. Tr
 
 ```
 peerzle/
-├── client/           # React PWA frontend (Vite + Tailwind)
+├── client/           # React PWA frontend (Vite + CSS Variables)
 ├── server/           # Node.js/Express backend
 ├── database/
 │   ├── schema.sql    # Base database schema
-│   ├── migrations/   # Sequential migration files (001-015+)
+│   ├── migrations/   # Sequential migration files (001-017+)
 │   └── seeds/        # Community seed data
 ├── .env.example      # Environment variable template
 └── CLAUDE.md         # This file
@@ -35,10 +35,10 @@ peerzle/
 ## Current State
 
 - **Live at:** peerzle-production.up.railway.app
-- **Database migration:** 015 (always check for the latest before creating new ones)
+- **Database migration:** 017 (always check for the latest before creating new ones)
 - **Tier 1:** COMPLETE — 12 core features + community join flow, helper verification, helper training module, password reset, TOS acceptance
 - **Tier 2:** COMPLETE — All 5 phases shipped. Matching algorithm with weighted scoring, connection cards with match percentages, mood checks, compliment badges, coaching tips, dynamic suggestions, admin stats summary
-- **Tier 3:** Phases 1-3 COMPLETE, phases 4-5 remaining
+- **Tier 3:** COMPLETE — All 5 phases shipped
 - **Communities:** 5 live communities running
 
 ### Tier 3 Status
@@ -49,19 +49,19 @@ peerzle/
 | 2 | Push Notifications | ✅ Complete |
 | 3 | Community & Org Admin Creation Tool | ✅ Complete |
 | 4 | Crisis Webhook Dispatcher | ✅ Complete (HMAC signing + retry logic) |
-| 5 | User Profile Enhancements | Remaining |
+| 5 | User Profile Enhancements | ✅ Complete (name fields, emergency contacts, admin safety integration) |
 
 ## Architecture Decisions (Don't Change These)
 
 - **PWA over Native:** The app is text-based chat. PWA gives us single codebase, instant updates, no app store approval. iOS push limitations are accepted.
 - **PostgreSQL over Firestore:** Relational queries are essential for the community/membership model. Socket.io handles real-time.
 - **Railway over AWS:** Simplicity. One platform for app + database. Good for current scale.
-- **Tailwind dynamic theming:** Each community has its own branding colors applied via Tailwind config. Don't hardcode community-specific colors.
+- **CSS Variables for theming:** Each community has its own branding colors applied dynamically via CSS variables. Don't hardcode community-specific colors.
 - **Anonymous by default:** Users get generated display names (e.g., "CommittedArmadillo51") and avatars. Real names are only visible to org admins in safety contexts, NEVER in conversations.
 
 ## Database Conventions
 
-- **Migrations are sequential:** Files in `database/migrations/` are numbered (001, 002, ... 015). Always check the latest migration number before creating a new one. The next migration would be `016_description.sql`.
+- **Migrations are sequential:** Files in `database/migrations/` are numbered (001, 002, ... 017). Always check the latest migration number before creating a new one. The next migration would be `018_description.sql`.
 - **Manual migration in production:** Automated deployment doesn't always handle schema changes reliably. Run migrations manually against the Railway PostgreSQL using the public DATABASE_URL.
 - **JSONB for flexible config:** Community and organization settings use JSONB columns for branding, topics, onboarding settings, etc.
 - **UUID primary keys:** All tables use UUID for `id`.
@@ -104,7 +104,7 @@ Platform (Peerzle)
 - Components live in `client/src/components/`
 - Pages/views in `client/src/pages/`
 - API calls through a centralized service layer
-- Tailwind for all styling — no inline styles, no separate CSS files
+- Inline styles with CSS variables for all styling — global styles in `index.css`
 - Mobile-first design is critical — most users access on phones
 - Community theming: colors come from community config, applied dynamically
 
@@ -135,9 +135,8 @@ When no human helpers are available AND cross-org matching is exhausted, fall ba
 
 ### Things Claude Code Gets Wrong (Add to this list!)
 
-- **Don't create React components with inline styles** — use Tailwind classes only
+- **Keep styling consistent with existing patterns** — use inline styles with CSS variables as established in the codebase
 - **Don't hardcode community-specific values** — everything should come from the community config JSONB
-- **Don't use `console.log` for production logging** — use the proper logging utility
 - **Don't skip mobile testing** — a recent comprehensive mobile UI overhaul fixed critical privacy violations and usability issues. Always check mobile layouts.
 - **Don't modify migration files that have already been run** — create a new migration instead
 - **Don't put PII in places it shouldn't be** — notifications, webhooks (unless opted in), public-facing components
@@ -157,7 +156,7 @@ See `.env.example` for the full list. Key ones:
 
 - `DATABASE_URL` — PostgreSQL connection string
 - `JWT_SECRET` — For token signing
-- `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` — For AI features
+- `ANTHROPIC_API_KEY` — For AI features (PeerBot, safety monitoring, suggestions)
 - `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` — For Web Push
 - `VAPID_SUBJECT` — mailto:support@peerzle.com
 - `NODE_ENV` — production/development
@@ -183,10 +182,8 @@ Each community has specific requirements:
 ## Running Locally
 
 ```bash
-# Install dependencies
-npm install          # Root dependencies
-cd client && npm install
-cd ../server && npm install
+# Install dependencies (workspaces handle client + server)
+npm install
 
 # Set up environment
 cp .env.example .env
