@@ -35,10 +35,11 @@ peerzle/
 ## Current State
 
 - **Live at:** peerzle-production.up.railway.app
-- **Database migration:** 017 (always check for the latest before creating new ones)
+- **Database migration:** 018 (always check for the latest before creating new ones)
 - **Tier 1:** COMPLETE — 12 core features + community join flow, helper verification, helper training module, password reset, TOS acceptance
 - **Tier 2:** COMPLETE — All 5 phases shipped. Matching algorithm with weighted scoring, connection cards with match percentages, mood checks, compliment badges, coaching tips, dynamic suggestions, admin stats summary
 - **Tier 3:** COMPLETE — All 5 phases shipped
+- **Tier 4:** COMPLETE — Daily Mood Check-Ins + Admin Mood Trend Analytics
 - **Communities:** 5 live communities running
 
 ### Tier 3 Status
@@ -61,7 +62,7 @@ peerzle/
 
 ## Database Conventions
 
-- **Migrations are sequential:** Files in `database/migrations/` are numbered (001, 002, ... 017). Always check the latest migration number before creating a new one. The next migration would be `018_description.sql`.
+- **Migrations are sequential:** Files in `database/migrations/` are numbered (001, 002, ... 018). Always check the latest migration number before creating a new one.
 - **Manual migration in production:** Automated deployment doesn't always handle schema changes reliably. Run migrations manually against the Railway PostgreSQL using the public DATABASE_URL.
 - **JSONB for flexible config:** Community and organization settings use JSONB columns for branding, topics, onboarding settings, etc.
 - **UUID primary keys:** All tables use UUID for `id`.
@@ -77,6 +78,9 @@ peerzle/
 - `push_subscriptions` — Web Push subscription data (no PII in notification payloads)
 - `webhook_configs` — Crisis webhook endpoints per community/organization
 - `emergency_contacts` — Optional emergency contact info (always optional for users)
+- `mood_checkins` — Daily mood scores (1-5) per user, source (standalone/conversation)
+- `mood_checkin_notification_log` — Tracks reminder notifications sent to users
+- `mood_nudge_log` — Tracks follow-up nudges for disengaged users
 
 ### Hierarchy
 
@@ -118,6 +122,7 @@ This is a mental health platform. Safety is non-negotiable.
 - **Anonymous conversations:** Display names only. Real names are NEVER visible in chat contexts.
 - **Emergency contacts are always optional:** Never force users to provide emergency contact info. Use warm framing.
 - **Webhook security:** All webhook payloads use HMAC signing. Retry logic: 3 attempts with exponential backoff.
+- **Mood analytics privacy:** Admin mood endpoints require minimum 5 users for aggregation. Individual mood scores are never exposed to admins — only aggregate averages and anonymous alert patterns (display names only).
 
 ## Matching Algorithm
 
