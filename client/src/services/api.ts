@@ -1282,4 +1282,73 @@ export async function deleteEmergencyContact(): Promise<{ success: boolean }> {
   return response.data;
 }
 
+// ============================================================================
+// MOOD CHECK-IN API
+// ============================================================================
+
+export interface MoodCheckIn {
+  id: string;
+  mood_score: number;
+  source: 'standalone' | 'conversation';
+  note: string | null;
+  created_at: string;
+}
+
+export interface MoodCheckInResponse {
+  id: string;
+  mood_score: number;
+  created_at: string;
+  streak: number;
+}
+
+export interface MoodStreakResponse {
+  current_streak: number;
+  longest_streak: number;
+  checked_in_today: boolean;
+}
+
+export interface TodayCheckInResponse {
+  checked_in: boolean;
+  check_in?: MoodCheckIn;
+}
+
+export interface MoodHistoryResponse {
+  checkins: MoodCheckIn[];
+  period_days: number;
+}
+
+export async function submitMoodCheckIn(
+  communityId: string,
+  moodScore: number,
+  note?: string
+): Promise<MoodCheckInResponse> {
+  const response = await api.post<MoodCheckInResponse>('/api/mood-checkins', {
+    community_id: communityId,
+    mood_score: moodScore,
+    note: note || null,
+  });
+  return response.data;
+}
+
+export async function getMoodHistory(communityId: string, days: number = 30): Promise<MoodHistoryResponse> {
+  const response = await api.get<MoodHistoryResponse>(
+    `/api/mood-checkins/me?community_id=${communityId}&days=${days}`
+  );
+  return response.data;
+}
+
+export async function getMoodStreak(communityId: string): Promise<MoodStreakResponse> {
+  const response = await api.get<MoodStreakResponse>(
+    `/api/mood-checkins/streak?community_id=${communityId}`
+  );
+  return response.data;
+}
+
+export async function getTodayCheckIn(communityId: string): Promise<TodayCheckInResponse> {
+  const response = await api.get<TodayCheckInResponse>(
+    `/api/mood-checkins/today?community_id=${communityId}`
+  );
+  return response.data;
+}
+
 export default api;

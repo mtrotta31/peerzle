@@ -22,6 +22,8 @@ import OnboardingFlow from './pages/OnboardingFlow';
 import SuperAdminPanel from './pages/SuperAdminPanel';
 import CommunityManagement from './pages/CommunityManagement';
 import ProfilePage from './pages/ProfilePage';
+import MoodCheckInPage from './pages/MoodCheckInPage';
+import MoodHistoryPage from './pages/MoodHistoryPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -194,6 +196,22 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <HelperTraining />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/community/:slug/mood-checkin"
+        element={
+          <ProtectedRoute>
+            <MoodCheckInPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/community/:slug/mood-history"
+        element={
+          <ProtectedRoute>
+            <MoodHistoryPage />
           </ProtectedRoute>
         }
       />

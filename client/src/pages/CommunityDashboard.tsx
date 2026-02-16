@@ -13,7 +13,13 @@ import {
   getPendingConversations,
   acceptConversation,
   getOnboardingStatus,
+  getTodayCheckIn,
+  submitMoodCheckIn,
+  getMoodStreak,
+  TodayCheckInResponse,
+  MoodStreakResponse,
 } from '../services/api';
+import { MOODS } from '../components/MoodCheckModal';
 import { connectSocket, getSocket, HelpRequestEvent } from '../services/socket';
 import {
   isPushSupported,
@@ -48,6 +54,12 @@ export default function CommunityDashboard() {
   const [profileLastName, setProfileLastName] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [profileError, setProfileError] = useState('');
+
+  // Mood check-in state
+  const [moodTodayStatus, setMoodTodayStatus] = useState<TodayCheckInResponse | null>(null);
+  const [moodStreak, setMoodStreak] = useState<MoodStreakResponse | null>(null);
+  const [isSubmittingMood, setIsSubmittingMood] = useState(false);
+  const [moodJustSubmitted, setMoodJustSubmitted] = useState(false);
 
   // Check if we should show the push notification banner
   useEffect(() => {
@@ -229,6 +241,24 @@ export default function CommunityDashboard() {
     return undefined;
   }, [membership?.is_available, community?.id]);
 
+  // Load mood check-in status when community is loaded
+  useEffect(() => {
+    async function loadMoodStatus() {
+      if (!community) return;
+      try {
+        const [todayStatus, streak] = await Promise.all([
+          getTodayCheckIn(community.id),
+          getMoodStreak(community.id),
+        ]);
+        setMoodTodayStatus(todayStatus);
+        setMoodStreak(streak);
+      } catch (err) {
+        console.error('Failed to load mood status:', err);
+      }
+    }
+    loadMoodStatus();
+  }, [community?.id]);
+
   // Listen for real-time help_request socket events
   useEffect(() => {
     if (!membership?.is_available || !community) return;
@@ -356,6 +386,24 @@ export default function CommunityDashboard() {
     const diffHours = Math.floor(diffMins / 60);
     if (diffHours < 24) return `${diffHours} hr ago`;
     return `${Math.floor(diffHours / 24)} days ago`;
+  };
+
+  const handleMoodSubmit = async (moodScore: number) => {
+    if (!community || isSubmittingMood) return;
+
+    setIsSubmittingMood(true);
+    try {
+      const result = await submitMoodCheckIn(community.id, moodScore);
+      setMoodTodayStatus({ checked_in: true, check_in: { id: result.id, mood_score: moodScore, source: 'standalone', note: null, created_at: result.created_at } });
+      setMoodStreak({ current_streak: result.streak, longest_streak: moodStreak?.longest_streak || result.streak, checked_in_today: true });
+      setMoodJustSubmitted(true);
+      // Reset the just-submitted state after a few seconds
+      setTimeout(() => setMoodJustSubmitted(false), 3000);
+    } catch (err) {
+      console.error('Failed to submit mood:', err);
+    } finally {
+      setIsSubmittingMood(false);
+    }
   };
 
   if (isLoading) {
@@ -652,6 +700,129 @@ export default function CommunityDashboard() {
             <strong>Welcome back</strong>
           )}
         </p>
+
+        {/* Mood Check-In Card */}
+        <div
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '20px',
+            marginBottom: '16px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          }}
+        >
+          {moodJustSubmitted ? (
+            // Success state after submission
+            <div style={{ textAlign: 'center', padding: '8px 0' }}>
+              <div
+                style={{
+                  width: '48px',
+                  height: '48px',
+                  borderRadius: '50%',
+                  backgroundColor: '#DCFCE7',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  margin: '0 auto 12px',
+                  fontSize: '24px',
+                }}
+              >
+                ✓
+              </div>
+              <p style={{ margin: '0 0 4px', fontWeight: 600, color: '#1E3A5F' }}>
+                Thanks for checking in!
+              </p>
+              {moodStreak && moodStreak.current_streak > 0 && (
+                <p style={{ margin: 0, fontSize: '14px', color: '#64748B' }}>
+                  {moodStreak.current_streak} day streak {moodStreak.current_streak >= 3 ? '🔥' : '⭐'}
+                </p>
+              )}
+            </div>
+          ) : moodTodayStatus?.checked_in ? (
+            // Already checked in today
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '28px' }}>
+                  {MOODS.find(m => m.value === moodTodayStatus.check_in?.mood_score)?.emoji || '✓'}
+                </span>
+                <div>
+                  <p style={{ margin: 0, fontWeight: 500, color: '#1E3A5F', fontSize: '14px' }}>
+                    Checked in today
+                  </p>
+                  {moodStreak && moodStreak.current_streak > 0 && (
+                    <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748B' }}>
+                      {moodStreak.current_streak} day streak {moodStreak.current_streak >= 3 ? '🔥' : '⭐'}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <Link
+                to={`/community/${slug}/mood-history`}
+                style={{
+                  padding: '8px 16px',
+                  backgroundColor: '#F8FAFC',
+                  color: '#64748B',
+                  borderRadius: '20px',
+                  textDecoration: 'none',
+                  fontSize: '13px',
+                  fontWeight: 500,
+                  border: '1px solid #E2E8F0',
+                }}
+              >
+                View History
+              </Link>
+            </div>
+          ) : (
+            // Not checked in - show emoji scale
+            <>
+              <p style={{ margin: '0 0 16px', fontWeight: 600, color: '#1E3A5F', fontSize: '15px' }}>
+                How are you feeling today?
+              </p>
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  gap: '4px',
+                }}
+              >
+                {MOODS.map((mood) => (
+                  <button
+                    key={mood.value}
+                    onClick={() => handleMoodSubmit(mood.value)}
+                    disabled={isSubmittingMood}
+                    style={{
+                      flex: 1,
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '12px 4px',
+                      backgroundColor: 'transparent',
+                      border: 'none',
+                      borderRadius: '12px',
+                      cursor: isSubmittingMood ? 'not-allowed' : 'pointer',
+                      opacity: isSubmittingMood ? 0.5 : 1,
+                      transition: 'background-color 0.2s',
+                    }}
+                    onMouseOver={(e) => {
+                      if (!isSubmittingMood) {
+                        e.currentTarget.style.backgroundColor = '#F8FAFC';
+                      }
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}
+                  >
+                    <span style={{ fontSize: '28px', lineHeight: 1 }}>{mood.emoji}</span>
+                    <span style={{ fontSize: '11px', color: '#64748B', whiteSpace: 'nowrap' }}>
+                      {mood.label}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
 
         {/* Helper Section - State Aware */}
         {(() => {
