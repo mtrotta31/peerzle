@@ -312,9 +312,9 @@ router.put('/:id/pre-mood', authenticate, async (req: AuthenticatedRequest, res:
       return;
     }
 
-    // Verify user is the seeker
-    const convResult = await query<ConversationRow>(
-      `SELECT c.* FROM conversations c
+    // Verify user is the seeker and get membership details
+    const convResult = await query<ConversationRow & { organization_id: string | null }>(
+      `SELECT c.*, m.organization_id FROM conversations c
        JOIN memberships m ON m.id = c.seeker_membership_id
        WHERE c.id = $1 AND m.user_id = $2`,
       [id, userId]
@@ -334,6 +334,13 @@ router.put('/:id/pre-mood', authenticate, async (req: AuthenticatedRequest, res:
     const updateResult = await query<ConversationRow>(
       `UPDATE conversations SET seeker_pre_mood = $1 WHERE id = $2 RETURNING *`,
       [mood, id]
+    );
+
+    // Also write to mood_checkins table for unified mood tracking
+    await query(
+      `INSERT INTO mood_checkins (user_id, community_id, organization_id, mood_score, source)
+       VALUES ($1, $2, $3, $4, 'conversation')`,
+      [userId, conversation.community_id, conversation.organization_id, mood]
     );
 
     res.json(updateResult.rows[0]);

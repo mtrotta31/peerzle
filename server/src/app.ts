@@ -32,7 +32,9 @@ import pushRoutes from './routes/push';
 import superAdminRoutes from './routes/super-admin';
 import webhookRoutes from './routes/webhooks';
 import profileRoutes from './routes/profile';
+import moodCheckinsRoutes from './routes/mood-checkins';
 import { initializeSocket } from './config/socket';
+import { startMoodCheckinScheduler } from './services/mood-checkin-scheduler';
 
 const app = express();
 const httpServer = createServer(app);
@@ -85,6 +87,7 @@ app.use('/api/push', pushRoutes);
 app.use('/api/super-admin', superAdminRoutes);
 app.use('/api/webhooks', webhookRoutes);
 app.use('/api/profile', profileRoutes);
+app.use('/api/mood-checkins', moodCheckinsRoutes);
 
 // Serve static files from client build in production
 const clientDistPath = path.join(__dirname, '../../client/dist');
@@ -99,6 +102,9 @@ if (fs.existsSync(clientDistPath)) {
 
 httpServer.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+
+  // Start the daily mood check-in notification scheduler
+  startMoodCheckinScheduler();
 });
 
 export { app, httpServer };

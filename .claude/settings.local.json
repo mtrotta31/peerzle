@@ -19,7 +19,27 @@
       "Bash(npm install:*)",
       "Bash(npx web-push:*)",
       "Bash(git rebase:*)",
-      "Bash(GIT_EDITOR=true git rebase:*)"
+      "Bash(GIT_EDITOR=true git rebase:*)",
+      "Bash(node -e:*)",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIzNzNlNzlkMS02M2QwLTQ3YzAtYTlmYi05MWVmMzcyNGZiNzYiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJpc1N1cGVyQWRtaW4iOmZhbHNlLCJpYXQiOjE3NzEyNzI5ODMsImV4cCI6MTc3MTM1OTM4M30.n73b13T8CN_E5NVyzAGPPiS1mu8Bahbkn-8geZfr9m8\" COMMUNITY_ID=\"d339965f-1f71-4621-8c2b-c120c11e4a1a\" __NEW_LINE_78f373e079da954f__ echo \"=== Test 1: GET /api/mood-checkins/today ===\" curl -s \"http://localhost:3001/api/mood-checkins/today?community_id=$COMMUNITY_ID\" -H \"Authorization: Bearer $TOKEN\")",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIzNzNlNzlkMS02M2QwLTQ3YzAtYTlmYi05MWVmMzcyNGZiNzYiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJpc1N1cGVyQWRtaW4iOmZhbHNlLCJpYXQiOjE3NzEyNzI5ODMsImV4cCI6MTc3MTM1OTM4M30.n73b13T8CN_E5NVyzAGPPiS1mu8Bahbkn-8geZfr9m8\")",
+      "Bash(COMMUNITY_ID=\"d339965f-1f71-4621-8c2b-c120c11e4a1a\":*)",
+      "Bash(__NEW_LINE_121f55c27a42cb7d__ echo \"Test 1: GET /api/mood-checkins/today\")",
+      "Bash(__NEW_LINE_1980c1fd9f7ecb04__ echo \"Test 2: POST /api/mood-checkins \\(submit\\)\")",
+      "Bash(__NEW_LINE_cbe88b799254b6b3__ echo \"Test 3: GET /api/mood-checkins/today \\(should be true now\\)\")",
+      "Bash(__NEW_LINE_0be0ef51a8ec3e81__ echo \"Test 4: GET /api/mood-checkins/streak\")",
+      "Bash(__NEW_LINE_de2b2b2f0e8e1f5d__ echo \"Test 5: GET /api/mood-checkins/me\")",
+      "Bash(USER_ID=\"373e79d1-63d0-47c0-a9fb-91ef3724fb76\":*)",
+      "Bash(__NEW_LINE_e2794408a541b7af__ echo \"Test 6: Insert 3 consecutive Much Worse check-ins to trigger PeerBot nudge\")",
+      "Bash(__NEW_LINE_e2794408a541b7af__ echo \"Inserted historical Much Worse check-ins\")",
+      "Bash(__NEW_LINE_c10f60ae0356d533__ echo \"Test 7: POST /api/mood-checkins \\(Much Worse to trigger nudge check\\)\")",
+      "Bash(__NEW_LINE_6feb989f94be16b1__ echo \"\")",
+      "Bash(__NEW_LINE_ea97b4bdd29b6558__ echo \"Deleted today''s check-ins, now submit a Much Worse\")",
+      "Bash(__NEW_LINE_ea97b4bdd29b6558__ TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiIzNzNlNzlkMS02M2QwLTQ3YzAtYTlmYi05MWVmMzcyNGZiNzYiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJpc1N1cGVyQWRtaW4iOmZhbHNlLCJpYXQiOjE3NzEyNzI5ODMsImV4cCI6MTc3MTM1OTM4M30.n73b13T8CN_E5NVyzAGPPiS1mu8Bahbkn-8geZfr9m8\")",
+      "Bash(__NEW_LINE_ea97b4bdd29b6558__ curl -s -X POST \"http://localhost:3001/api/mood-checkins\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" -d \"{\"\"mood_score\"\":1,\"\"community_id\"\":\"\"$COMMUNITY_ID\"\"}\")",
+      "Bash(__NEW_LINE_a4daaf4792269c0a__ echo \"\")",
+      "Bash(__NEW_LINE_5ff336ba8443e3a9__ echo \"Test nudge cooldown - submit another Much Worse \\(should NOT create another nudge\\)\")",
+      "Bash(__NEW_LINE_5ff336ba8443e3a9__ echo \"\")"
     ]
   }
 }
