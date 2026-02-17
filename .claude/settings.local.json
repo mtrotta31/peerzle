@@ -39,7 +39,19 @@
       "Bash(__NEW_LINE_ea97b4bdd29b6558__ curl -s -X POST \"http://localhost:3001/api/mood-checkins\" -H \"Authorization: Bearer $TOKEN\" -H \"Content-Type: application/json\" -d \"{\"\"mood_score\"\":1,\"\"community_id\"\":\"\"$COMMUNITY_ID\"\"}\")",
       "Bash(__NEW_LINE_a4daaf4792269c0a__ echo \"\")",
       "Bash(__NEW_LINE_5ff336ba8443e3a9__ echo \"Test nudge cooldown - submit another Much Worse \\(should NOT create another nudge\\)\")",
-      "Bash(__NEW_LINE_5ff336ba8443e3a9__ echo \"\")"
+      "Bash(__NEW_LINE_5ff336ba8443e3a9__ echo \"\")",
+      "Bash(COMMUNITY_ADMIN_TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmZDQwMjdiMi1jY2U3LTQ0OWQtODQ2NC0xYzZmMjk4ZmM4ZWEiLCJlbWFpbCI6Im1hdHQudHJvdHRhMzFAZ21haWwuY29tIiwiaXNTdXBlckFkbWluIjpmYWxzZSwiaWF0IjoxNzcxMjc1Mzk2LCJleHAiOjE3NzEzNjE3OTZ9.uLM7B1YIZ9uCyDWxKZW1ZQXdx48QHDSljSqVRlL_4HA\")",
+      "Bash(__NEW_LINE_bf13e096b2eb1b82__ curl -s \"http://localhost:3001/api/admin/mood-trends/first-responders\" -H \"Authorization: Bearer $COMMUNITY_ADMIN_TOKEN\")",
+      "Bash(ORG_ADMIN_TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJlZTFjM2ExNy03ODIyLTQ0NDQtYjhlYy0yNGY3NTkwZDM1OGQiLCJlbWFpbCI6InRlc3Rtb29kMUBleGFtcGxlLmNvbSIsImlzU3VwZXJBZG1pbiI6ZmFsc2UsImlhdCI6MTc3MTI3NTQwNCwiZXhwIjoxNzcxMzYxODA0fQ.t3dQ7toI6vXoakkapui_Jw0jsse3pGtseLE3vXtZ8t8\":*)",
+      "Bash(__NEW_LINE_7f2d051d9ce7c54f__ echo \"=== Test 2: Org Admin - Mood Trends \\(filtered to their org\\) ===\")",
+      "Bash(__NEW_LINE_6542cb0b32df13bb__ echo \"=== Test 3: Privacy Threshold - Small Org \\(should be limited\\) ===\")",
+      "Bash(__NEW_LINE_b602be2b945de3b7__ echo \"=== Test 4: Mood Alerts \\(community admin\\) ===\")",
+      "Bash(__NEW_LINE_2d683b998a63bfbe__ echo \"=== Test 5: Mood Alerts \\(org admin - filtered\\) ===\")",
+      "Bash(COMMUNITY_ADMIN_TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmZDQwMjdiMi1jY2U3LTQ0OWQtODQ2NC0xYzZmMjk4ZmM4ZWEiLCJlbWFpbCI6Im1hdHQudHJvdHRhMzFAZ21haWwuY29tIiwiaXNTdXBlckFkbWluIjpmYWxzZSwiaWF0IjoxNzcxMjc1Mzk2LCJleHAiOjE3NzEzNjE3OTZ9.uLM7B1YIZ9uCyDWxKZW1ZQXdx48QHDSljSqVRlL_4HA\" __NEW_LINE_7072de6b0775a3ff__ echo \"=== Test 6: Mood Trends 7-day period ===\" curl -s \"http://localhost:3001/api/admin/mood-trends/first-responders?period=7d\" -H \"Authorization: Bearer $COMMUNITY_ADMIN_TOKEN\")",
+      "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmZDQwMjdiMi1jY2U3LTQ0OWQtODQ2NC0xYzZmMjk4ZmM4ZWEiLCJlbWFpbCI6Im1hdHQudHJvdHRhMzFAZ21haWwuY29tIiwiaXNTdXBlckFkbWluIjpmYWxzZSwiaWF0IjoxNzcxMjc1Mzk2LCJleHAiOjE3NzEzNjE3OTZ9.uLM7B1YIZ9uCyDWxKZW1ZQXdx48QHDSljSqVRlL_4HA\" curl -s \"http://localhost:3001/api/admin/mood-trends/first-responders?period=7d\" -H \"Authorization: Bearer $TOKEN\")",
+      "Bash(ls:*)",
+      "Bash(VAPID_PUBLIC_KEY=\"\" VAPID_PRIVATE_KEY=\"\" VAPID_SUBJECT=\"\" node:*)",
+      "Bash(npx ts-node:*)"
     ]
   }
 }
