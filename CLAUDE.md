@@ -35,7 +35,7 @@ peerzle/
 ## Current State
 
 - **Live at:** peerzle-production.up.railway.app
-- **Database migration:** 018 (always check for the latest before creating new ones)
+- **Database migration:** 019 (always check for the latest before creating new ones)
 - **Tier 1:** COMPLETE — 12 core features + community join flow, helper verification, helper training module, password reset, TOS acceptance
 - **Tier 2:** COMPLETE — All 5 phases shipped. Matching algorithm with weighted scoring, connection cards with match percentages, mood checks, compliment badges, coaching tips, dynamic suggestions, admin stats summary
 - **Tier 3:** COMPLETE — All 5 phases shipped
@@ -62,7 +62,7 @@ peerzle/
 
 ## Database Conventions
 
-- **Migrations are sequential:** Files in `database/migrations/` are numbered (001, 002, ... 018). Always check the latest migration number before creating a new one.
+- **Migrations are sequential:** Files in `database/migrations/` are numbered (001, 002, ... 019). Always check the latest migration number before creating a new one.
 - **Manual migration in production:** Automated deployment doesn't always handle schema changes reliably. Run migrations manually against the Railway PostgreSQL using the public DATABASE_URL.
 - **JSONB for flexible config:** Community and organization settings use JSONB columns for branding, topics, onboarding settings, etc.
 - **UUID primary keys:** All tables use UUID for `id`.
@@ -145,6 +145,8 @@ When no human helpers are available AND cross-org matching is exhausted, fall ba
 - **Don't skip mobile testing** — a recent comprehensive mobile UI overhaul fixed critical privacy violations and usability issues. Always check mobile layouts.
 - **Don't modify migration files that have already been run** — create a new migration instead
 - **Don't put PII in places it shouldn't be** — notifications, webhooks (unless opted in), public-facing components
+- **Use PNG icons, never SVG, for PWA manifest and push notifications** — iOS does not support SVG icons. Always use peerzle-icon-192x192.png and peerzle-icon-512x512.png in client/public/
+- **Always wrap the entire SW push handler in event.waitUntil()** — early returns before waitUntil cause iOS to kill the service worker before the notification displays
 - **Don't forget to update this CLAUDE.md** when you discover new patterns or fix recurring issues
 
 ### Development Workflow
