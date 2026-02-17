@@ -6,6 +6,7 @@ import { generatePeerBotResponse } from '../services/peerbot';
 import { analyzeMessageSafety, shouldShowCrisisResources, mapRiskLevelToSeverity, SafetyAnalysisResult } from '../services/safety';
 import { sendPushNotification, sendPushToMultipleUsers, shouldSendMessagePush } from '../services/push-notifications';
 import { dispatchWebhooks, getUserDataForWebhook } from '../services/webhookDispatcher';
+import { sendCrisisSupportMessage } from '../services/crisis-support';
 
 const router = Router();
 
@@ -157,6 +158,13 @@ async function runSafetyAnalysis(
       riskLevel: safetyResult.riskLevel,
       messageId,
     });
+
+    // Send PeerBot crisis support message with warm resources
+    sendCrisisSupportMessage(conversationId, communityId, safetyResult.riskLevel, messageId).catch(
+      (err) => {
+        console.error('[CRISIS-SUPPORT] Error sending crisis message:', err);
+      }
+    );
 
     // Log to alert_events table
     const alertResult = await query<{ id: string }>(

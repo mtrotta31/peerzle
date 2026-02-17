@@ -54,6 +54,7 @@ export default function ChatPage() {
   const [error, setError] = useState('');
   const [typingUser, setTypingUser] = useState<string | null>(null);
   const [showCrisisBanner, setShowCrisisBanner] = useState(false);
+  const [safetyResourcesShared, setSafetyResourcesShared] = useState(false);
   const [helperJoined, setHelperJoined] = useState<string | null>(null);
   const [sendError, setSendError] = useState<string | null>(null);
   const [showEndSessionModal, setShowEndSessionModal] = useState(false);
@@ -163,6 +164,20 @@ export default function ChatPage() {
           }
         });
 
+        // Listen for safety resources shared (helper notification)
+        socket.on('safety_resources_shared', (event: { conversationId: string; riskLevel: string; messageId: string }) => {
+          try {
+            console.log('Safety resources shared:', event);
+            if (event.conversationId === conversationId) {
+              setSafetyResourcesShared(true);
+              // Auto-dismiss after 10 seconds
+              setTimeout(() => setSafetyResourcesShared(false), 10000);
+            }
+          } catch (err) {
+            console.error('Error handling safety resources shared:', err);
+          }
+        });
+
         // Listen for helper joining
         socket.on('helper_joined', (event: HelperJoinedEvent) => {
           try {
@@ -247,6 +262,7 @@ export default function ChatPage() {
       socket?.off('new_message');
       socket?.off('user_typing');
       socket?.off('safety_alert');
+      socket?.off('safety_resources_shared');
       socket?.off('helper_joined');
       socket?.off('conversation_ended');
       socket?.off('peerbot_fallback');
@@ -716,6 +732,41 @@ Take your time, be yourself, and remember — you're not alone.`;
               Connected with a <strong>Peer Supporter</strong>
             </>
           )}
+        </div>
+      )}
+
+      {/* Safety Resources Shared Notification - shown to helpers */}
+      {safetyResourcesShared && userRole === 'helper' && (
+        <div
+          style={{
+            padding: '12px 20px',
+            backgroundColor: '#FEF3C7',
+            color: '#92400E',
+            textAlign: 'center',
+            fontSize: '14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: '8px',
+          }}
+        >
+          <span style={{ fontSize: '16px' }}>&#9432;</span>
+          <span>Crisis resources have been shared with your peer</span>
+          <button
+            onClick={() => setSafetyResourcesShared(false)}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#92400E',
+              cursor: 'pointer',
+              fontSize: '18px',
+              padding: '0 4px',
+              lineHeight: 1,
+            }}
+            aria-label="Dismiss notification"
+          >
+            &times;
+          </button>
         </div>
       )}
 
