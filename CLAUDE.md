@@ -116,7 +116,9 @@ Platform (Peerzle)
 
 This is a mental health platform. Safety is non-negotiable.
 
-- **Crisis detection:** The AI moderation pipeline monitors messages for crisis-level content. When detected, safety alerts fire and webhook dispatchers notify configured endpoints.
+- **Crisis detection:** The AI moderation pipeline monitors messages for crisis-level content. Risk levels: `safe`, `mild_concern`, `moderate_concern`, `crisis`. When `moderate_concern` or `crisis` detected, multiple safety actions fire.
+- **PeerBot crisis support:** When concerning content is detected, PeerBot sends a warm, supportive message IN the conversation with crisis resources. Community-specific resources (Veterans get 988 Press 1). 5-minute cooldown prevents message spam. Helpers see a subtle notification when resources are shared. See `server/src/services/crisis-support.ts`.
+- **Crisis resources:** Defined in `server/src/data/crisis-resources.ts`. Default: 988 Lifeline + Crisis Text Line. Veterans: Veterans Crisis Line (988 Press 1).
 - **No PII in webhooks by default:** Webhook payloads do NOT include user PII unless the org admin has explicitly opted in.
 - **No PII in push notifications:** Notification content is always generic ("Someone in your community needs support").
 - **Anonymous conversations:** Display names only. Real names are NEVER visible in chat contexts.
