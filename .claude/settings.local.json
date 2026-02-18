@@ -51,7 +51,9 @@
       "Bash(TOKEN=\"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJmZDQwMjdiMi1jY2U3LTQ0OWQtODQ2NC0xYzZmMjk4ZmM4ZWEiLCJlbWFpbCI6Im1hdHQudHJvdHRhMzFAZ21haWwuY29tIiwiaXNTdXBlckFkbWluIjpmYWxzZSwiaWF0IjoxNzcxMjc1Mzk2LCJleHAiOjE3NzEzNjE3OTZ9.uLM7B1YIZ9uCyDWxKZW1ZQXdx48QHDSljSqVRlL_4HA\" curl -s \"http://localhost:3001/api/admin/mood-trends/first-responders?period=7d\" -H \"Authorization: Bearer $TOKEN\")",
       "Bash(ls:*)",
       "Bash(VAPID_PUBLIC_KEY=\"\" VAPID_PRIVATE_KEY=\"\" VAPID_SUBJECT=\"\" node:*)",
-      "Bash(npx ts-node:*)"
+      "Bash(npx ts-node:*)",
+      "Bash(npm run typecheck:*)",
+      "Bash(npm run:*)"
     ]
   }
 }

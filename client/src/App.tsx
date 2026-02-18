@@ -24,6 +24,7 @@ import CommunityManagement from './pages/CommunityManagement';
 import SettingsPage from './pages/SettingsPage';
 import MoodCheckInPage from './pages/MoodCheckInPage';
 import MoodHistoryPage from './pages/MoodHistoryPage';
+import CommunityLayout from './components/CommunityLayout';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -139,7 +140,9 @@ function AppRoutes() {
         path="/community/:slug"
         element={
           <ProtectedRoute>
-            <CommunityDashboard />
+            <CommunityLayout>
+              <CommunityDashboard />
+            </CommunityLayout>
           </ProtectedRoute>
         }
       />
@@ -155,7 +158,9 @@ function AppRoutes() {
         path="/community/:slug/history"
         element={
           <ProtectedRoute>
-            <SessionHistory />
+            <CommunityLayout>
+              <SessionHistory />
+            </CommunityLayout>
           </ProtectedRoute>
         }
       />
@@ -163,7 +168,9 @@ function AppRoutes() {
         path="/community/:slug/helper-dashboard"
         element={
           <ProtectedRoute>
-            <HelperDashboard />
+            <CommunityLayout>
+              <HelperDashboard />
+            </CommunityLayout>
           </ProtectedRoute>
         }
       />
@@ -203,7 +210,9 @@ function AppRoutes() {
         path="/community/:slug/mood-checkin"
         element={
           <ProtectedRoute>
-            <MoodCheckInPage />
+            <CommunityLayout>
+              <MoodCheckInPage />
+            </CommunityLayout>
           </ProtectedRoute>
         }
       />
@@ -211,7 +220,9 @@ function AppRoutes() {
         path="/community/:slug/mood-history"
         element={
           <ProtectedRoute>
-            <MoodHistoryPage />
+            <CommunityLayout>
+              <MoodHistoryPage />
+            </CommunityLayout>
           </ProtectedRoute>
         }
       />
