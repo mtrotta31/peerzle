@@ -1,10 +1,8 @@
-import dotenv from 'dotenv';
+// Load environment variables FIRST, before any other imports
+import './config/env';
+
 import path from 'path';
 import fs from 'fs';
-
-// Load .env file (works in both development and production)
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
-
 import express from 'express';
 import { createServer } from 'http';
 import cors from 'cors';
