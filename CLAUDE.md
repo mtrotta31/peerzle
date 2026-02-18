@@ -150,6 +150,7 @@ When no human helpers are available AND cross-org matching is exhausted, fall ba
 - **Don't put PII in places it shouldn't be** — notifications, webhooks (unless opted in), public-facing components
 - **Use PNG icons, never SVG, for PWA manifest and push notifications** — iOS does not support SVG icons. Always use peerzle-icon-192x192.png and peerzle-icon-512x512.png in client/public/
 - **Always wrap the entire SW push handler in event.waitUntil()** — early returns before waitUntil cause iOS to kill the service worker before the notification displays
+- **Always run migrations on production after deploying** — Railway auto-deploy does NOT run migrations automatically. Run them manually via `psql $DATABASE_URL -f database/migrations/XXX.sql`
 - **Don't forget to update this CLAUDE.md** when you discover new patterns or fix recurring issues
 
 ### Development Workflow
