@@ -35,11 +35,12 @@ peerzle/
 ## Current State
 
 - **Live at:** peerzle-production.up.railway.app
-- **Database migration:** 019 (always check for the latest before creating new ones)
+- **Database migration:** 020 (always check for the latest before creating new ones)
 - **Tier 1:** COMPLETE — 12 core features + community join flow, helper verification, helper training module, password reset, TOS acceptance
 - **Tier 2:** COMPLETE — All 5 phases shipped. Matching algorithm with weighted scoring, connection cards with match percentages, mood checks, compliment badges, coaching tips, dynamic suggestions, admin stats summary
 - **Tier 3:** COMPLETE — All 5 phases shipped
 - **Tier 4:** COMPLETE — Daily Mood Check-Ins + Admin Mood Trend Analytics
+- **Settings Page:** COMPLETE — 5 sections (Account, Profile, Notifications, Emergency Contact, Privacy)
 - **Communities:** 5 live communities running
 
 ### Tier 3 Status
@@ -69,7 +70,7 @@ peerzle/
 
 ### Key Tables
 
-- `users` — Platform-level accounts (email, password_hash, first_name, last_name)
+- `users` — Platform-level accounts (email, password_hash, first_name, last_name, mood_checkin_notifications, helper_match_notifications)
 - `communities` — Industry verticals (First Responders, Healthcare, etc.) with config JSONB
 - `organizations` — Specific orgs within communities (Cincinnati IAFF, etc.) with settings JSONB
 - `memberships` — Links users to communities and organizations, tracks role (seeker/helper/admin)
