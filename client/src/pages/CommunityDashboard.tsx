@@ -474,7 +474,7 @@ export default function CommunityDashboard() {
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <Link
-                to="/profile"
+                to="/settings"
                 style={{
                   padding: '8px 12px',
                   backgroundColor: 'white',
@@ -493,7 +493,7 @@ export default function CommunityDashboard() {
                   e.currentTarget.style.backgroundColor = 'white';
                 }}
               >
-                Profile
+                Settings
               </Link>
               <button
                 onClick={logout}

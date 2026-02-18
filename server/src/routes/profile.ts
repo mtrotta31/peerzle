@@ -252,4 +252,48 @@ router.delete('/emergency-contact', authenticate, async (req: AuthenticatedReque
   }
 });
 
+interface UserExperienceTopic {
+  topic: string;
+  history_rating: number;
+  knowledge_rating: number;
+  coping_rating: number;
+}
+
+// GET /api/profile/membership/:communitySlug/topics - Get user's topics for a community membership
+router.get('/membership/:communitySlug/topics', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+    const { communitySlug } = req.params;
+
+    // Get membership
+    const membershipResult = await query<{ id: string }>(
+      `SELECT m.id FROM memberships m
+       JOIN communities c ON m.community_id = c.id
+       WHERE m.user_id = $1 AND c.slug = $2`,
+      [userId, communitySlug]
+    );
+
+    if (membershipResult.rows.length === 0) {
+      res.status(404).json({ error: 'Membership not found' });
+      return;
+    }
+
+    const membershipId = membershipResult.rows[0].id;
+
+    // Get topics
+    const topicsResult = await query<UserExperienceTopic>(
+      `SELECT topic, history_rating, knowledge_rating, coping_rating
+       FROM user_experience_topics
+       WHERE membership_id = $1
+       ORDER BY topic`,
+      [membershipId]
+    );
+
+    res.json({ topics: topicsResult.rows });
+  } catch (error) {
+    console.error('Get membership topics error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

@@ -92,4 +92,30 @@ router.post('/test', authenticate, async (req: AuthenticatedRequest, res: Respon
   }
 });
 
+// POST /api/push/test-user - Send a test notification (any authenticated user)
+router.post('/test-user', authenticate, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user!.userId;
+
+    const result = await sendPushNotification(userId, {
+      title: 'Peerzle',
+      body: 'Push notifications are working!',
+      data: { type: 'test' },
+    });
+
+    if (result.success === 0 && result.failed === 0) {
+      res.json({ success: false, message: 'No push subscriptions found. Enable notifications in your browser first.' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      message: `Test notification sent successfully`,
+    });
+  } catch (error) {
+    console.error('Push test-user error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

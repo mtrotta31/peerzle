@@ -21,7 +21,7 @@ import TermsAcceptanceModal from './components/TermsAcceptanceModal';
 import OnboardingFlow from './pages/OnboardingFlow';
 import SuperAdminPanel from './pages/SuperAdminPanel';
 import CommunityManagement from './pages/CommunityManagement';
-import ProfilePage from './pages/ProfilePage';
+import SettingsPage from './pages/SettingsPage';
 import MoodCheckInPage from './pages/MoodCheckInPage';
 import MoodHistoryPage from './pages/MoodHistoryPage';
 
@@ -227,7 +227,15 @@ function AppRoutes() {
         path="/profile"
         element={
           <ProtectedRoute>
-            <ProfilePage />
+            <SettingsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute>
+            <SettingsPage />
           </ProtectedRoute>
         }
       />

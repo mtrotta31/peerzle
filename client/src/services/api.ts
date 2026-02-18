@@ -1282,6 +1282,76 @@ export async function deleteEmergencyContact(): Promise<{ success: boolean }> {
   return response.data;
 }
 
+export async function changePassword(currentPassword: string, newPassword: string): Promise<{ message: string }> {
+  const response = await api.put<{ message: string }>('/api/auth/change-password', {
+    currentPassword,
+    newPassword,
+  });
+  return response.data;
+}
+
+// ============================================================================
+// NOTIFICATION SETTINGS API
+// ============================================================================
+
+export interface NotificationSettings {
+  moodCheckinNotifications: boolean;
+  helperMatchNotifications: boolean;
+}
+
+export async function getNotificationSettings(): Promise<NotificationSettings> {
+  const response = await api.get<NotificationSettings>('/api/settings/notifications');
+  return response.data;
+}
+
+export async function updateNotificationSettings(settings: Partial<NotificationSettings>): Promise<NotificationSettings> {
+  const response = await api.put<NotificationSettings>('/api/settings/notifications', settings);
+  return response.data;
+}
+
+export async function testPushNotificationUser(): Promise<{ success: boolean; message: string }> {
+  const response = await api.post<{ success: boolean; message: string }>('/api/push/test-user');
+  return response.data;
+}
+
+// ============================================================================
+// MEMBERSHIP PROFILE API (for display name, topics, role)
+// ============================================================================
+
+export interface MembershipProfile {
+  id: string;
+  displayName: string | null;
+  role: 'seeker' | 'helper' | 'both' | 'admin';
+  topics: { topic: string; historyRating: number; knowledgeRating: number; copingRating: number }[];
+  communityName: string;
+  communitySlug: string;
+}
+
+export async function getMembershipProfile(communitySlug: string): Promise<MembershipProfile> {
+  // Get membership data from the communities endpoint
+  const membershipResponse = await api.get<Membership>(`/api/communities/${communitySlug}/membership`);
+  const membership = membershipResponse.data;
+
+  // Get topics from user_experience_topics if available
+  const topicsResponse = await api.get<{ topics: { topic: string; history_rating: number; knowledge_rating: number; coping_rating: number }[] }>(
+    `/api/profile/membership/${communitySlug}/topics`
+  ).catch(() => ({ data: { topics: [] } }));
+
+  return {
+    id: membership.id,
+    displayName: membership.display_name || null,
+    role: membership.role,
+    topics: topicsResponse.data.topics.map(t => ({
+      topic: t.topic,
+      historyRating: t.history_rating,
+      knowledgeRating: t.knowledge_rating,
+      copingRating: t.coping_rating,
+    })),
+    communityName: membership.community_name || '',
+    communitySlug: communitySlug,
+  };
+}
+
 // ============================================================================
 // MOOD CHECK-IN API
 // ============================================================================
