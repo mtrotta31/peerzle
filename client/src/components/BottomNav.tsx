@@ -143,7 +143,7 @@ export default function BottomNav({ communitySlug, userRole, accentColor = '#2B7
         ]
       : []),
     {
-      path: '/settings',
+      path: `/community/${communitySlug}/settings`,
       label: 'Settings',
       Icon: SettingsIcon,
       exact: false,

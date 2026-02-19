@@ -248,6 +248,16 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/community/:slug/settings"
+        element={
+          <ProtectedRoute>
+            <CommunityLayout>
+              <SettingsPage />
+            </CommunityLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/chat/:conversationId"
         element={
           <ProtectedRoute>
