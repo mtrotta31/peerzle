@@ -24,6 +24,7 @@ import CommunityManagement from './pages/CommunityManagement';
 import SettingsPage from './pages/SettingsPage';
 import MoodCheckInPage from './pages/MoodCheckInPage';
 import MoodHistoryPage from './pages/MoodHistoryPage';
+import MessagesPage from './pages/MessagesPage';
 import CommunityLayout from './components/CommunityLayout';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -151,6 +152,16 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <OnboardingFlow />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/community/:slug/messages"
+        element={
+          <ProtectedRoute>
+            <CommunityLayout>
+              <MessagesPage />
+            </CommunityLayout>
           </ProtectedRoute>
         }
       />

@@ -118,7 +118,7 @@ export default function BottomNav({ communitySlug, userRole, accentColor = '#2B7
       exact: true,
     },
     {
-      path: `/community/${communitySlug}/history`,
+      path: `/community/${communitySlug}/messages`,
       label: 'Messages',
       Icon: MessagesIcon,
       exact: false,

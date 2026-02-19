@@ -134,17 +134,54 @@ router.get('/active', authenticate, async (req: AuthenticatedRequest, res: Respo
   try {
     const userId = req.user!.userId;
 
-    const result = await query<ConversationRow & { community_slug: string; community_name: string }>(
-      `SELECT c.*, cm.slug as community_slug, cm.name as community_name
+    // Get active conversations with last message and peer display name
+    const result = await query<ConversationRow & {
+      community_slug: string;
+      community_name: string;
+      last_message: string | null;
+      last_message_at: Date | null;
+      peer_display_name: string | null;
+      user_role: 'seeker' | 'helper';
+    }>(
+      `SELECT DISTINCT ON (c.id)
+         c.*,
+         cm.slug as community_slug,
+         cm.name as community_name,
+         latest_msg.content as last_message,
+         latest_msg.created_at as last_message_at,
+         CASE
+           WHEN m.id = c.seeker_membership_id THEN helper_m.display_name
+           ELSE seeker_m.display_name
+         END as peer_display_name,
+         CASE
+           WHEN m.id = c.seeker_membership_id THEN 'seeker'
+           ELSE 'helper'
+         END as user_role
        FROM conversations c
        JOIN communities cm ON cm.id = c.community_id
-       JOIN memberships m ON m.id = c.seeker_membership_id OR m.id = c.helper_membership_id
-       WHERE m.user_id = $1 AND c.status != 'ended'
-       ORDER BY c.started_at DESC`,
+       JOIN memberships m ON (m.id = c.seeker_membership_id OR m.id = c.helper_membership_id) AND m.user_id = $1
+       LEFT JOIN memberships seeker_m ON seeker_m.id = c.seeker_membership_id
+       LEFT JOIN memberships helper_m ON helper_m.id = c.helper_membership_id
+       LEFT JOIN LATERAL (
+         SELECT content, created_at
+         FROM messages
+         WHERE conversation_id = c.id
+         ORDER BY created_at DESC
+         LIMIT 1
+       ) latest_msg ON true
+       WHERE c.status != 'ended'
+       ORDER BY c.id, c.started_at DESC`,
       [userId]
     );
 
-    res.json(result.rows);
+    // Re-sort by last_message_at or started_at (most recent first)
+    const sorted = result.rows.sort((a, b) => {
+      const aTime = a.last_message_at || a.started_at;
+      const bTime = b.last_message_at || b.started_at;
+      return new Date(bTime).getTime() - new Date(aTime).getTime();
+    });
+
+    res.json(sorted);
   } catch (error) {
     console.error('Get active conversations error:', error);
     res.status(500).json({ error: 'Internal server error' });

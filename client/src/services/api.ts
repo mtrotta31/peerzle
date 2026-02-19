@@ -438,6 +438,11 @@ export interface Conversation {
   community_name?: string;
   messages?: Message[];
   connection_data?: ConnectionData | null;
+  // Added for MessagesPage
+  last_message?: string | null;
+  last_message_at?: string | null;
+  peer_display_name?: string | null;
+  user_role?: 'seeker' | 'helper';
 }
 
 // Conversation API
