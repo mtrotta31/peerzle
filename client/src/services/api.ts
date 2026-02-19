@@ -595,6 +595,7 @@ export interface HelperDashboardStats {
   recentSessions: RecentHelperSession[];
   averageMoodImprovement: number | null;
   badgeCounts: BadgeCount[];
+  responseStreak: number;
 }
 
 // Helper Dashboard API

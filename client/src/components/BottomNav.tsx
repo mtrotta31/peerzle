@@ -135,7 +135,7 @@ export default function BottomNav({ communitySlug, userRole, accentColor = '#2B7
     ...(isHelper
       ? [
           {
-            path: `/community/${communitySlug}/helper-dashboard`,
+            path: `/community/${communitySlug}/helper`,
             label: 'Helper',
             Icon: HelperIcon,
             exact: false,
@@ -157,6 +157,12 @@ export default function BottomNav({ communitySlug, userRole, accentColor = '#2B7
     // Special case: mood-history and mood-checkin should also highlight Check-In tab
     if (tabPath.endsWith('/check-in')) {
       if (location.pathname.includes('/mood-history') || location.pathname.includes('/mood-checkin') || location.pathname.includes('/check-in')) {
+        return true;
+      }
+    }
+    // Special case: helper-dashboard should also highlight Helper tab
+    if (tabPath.endsWith('/helper')) {
+      if (location.pathname.includes('/helper-dashboard') || location.pathname.endsWith('/helper')) {
         return true;
       }
     }

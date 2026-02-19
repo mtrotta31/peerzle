@@ -20,6 +20,7 @@ interface HelperStats {
   recentSessions: RecentSession[];
   averageMoodImprovement: number | null;
   badgeCounts: BadgeCount[];
+  responseStreak: number;
 }
 
 interface RecentSession {
@@ -175,6 +176,45 @@ router.get('/:communitySlug/helper', authenticate, async (req: AuthenticatedRequ
       count: parseInt(r.count, 10),
     }));
 
+    // Calculate response streak (consecutive days with ended sessions)
+    const streakResult = await query<{ session_date: string }>(
+      `SELECT DISTINCT DATE(ended_at AT TIME ZONE 'UTC') as session_date
+       FROM conversations
+       WHERE helper_membership_id = $1 AND community_id = $2 AND status = 'ended'
+       ORDER BY session_date DESC`,
+      [membershipId, communityId]
+    );
+
+    let responseStreak = 0;
+    if (streakResult.rows.length > 0) {
+      const today = new Date();
+      today.setUTCHours(0, 0, 0, 0);
+
+      // Check if most recent session was today or yesterday (streak can start from either)
+      const mostRecentDate = new Date(streakResult.rows[0].session_date);
+      mostRecentDate.setUTCHours(0, 0, 0, 0);
+
+      const daysSinceMostRecent = Math.floor((today.getTime() - mostRecentDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      // Only count streak if most recent session was today or yesterday
+      if (daysSinceMostRecent <= 1) {
+        responseStreak = 1;
+        let expectedDate = new Date(mostRecentDate);
+
+        for (let i = 1; i < streakResult.rows.length; i++) {
+          expectedDate.setDate(expectedDate.getDate() - 1);
+          const sessionDate = new Date(streakResult.rows[i].session_date);
+          sessionDate.setUTCHours(0, 0, 0, 0);
+
+          if (sessionDate.getTime() === expectedDate.getTime()) {
+            responseStreak++;
+          } else {
+            break;
+          }
+        }
+      }
+    }
+
     const helperStats: HelperStats = {
       totalSessions,
       activeSessions,
@@ -186,6 +226,7 @@ router.get('/:communitySlug/helper', authenticate, async (req: AuthenticatedRequ
       recentSessions: recentSessionsResult.rows,
       averageMoodImprovement,
       badgeCounts,
+      responseStreak,
     };
 
     res.json(helperStats);

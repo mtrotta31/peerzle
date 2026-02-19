@@ -62,6 +62,7 @@ peerzle/
 | 2 | Messages Tab (Active + Past conversations) | ✅ Complete |
 | 3 | Check-In Tab (mood check-in + history + badge indicator) | ✅ Complete |
 | 4 | Cleanup + Resources Migration to Settings | ✅ Complete |
+| 5 | Helper Tab (impact stats, badges, streak, coaching tips, pending requests) | ✅ Complete |
 
 ## Architecture Decisions (Don't Change These)
 
@@ -139,7 +140,8 @@ Platform (Peerzle)
 | `/community/:slug` | CommunityDashboard | Home |
 | `/community/:slug/messages` | MessagesPage | Messages |
 | `/community/:slug/check-in` | MoodCheckInPage | Check-In |
-| `/community/:slug/helper-dashboard` | HelperDashboard | Helper (helpers only) |
+| `/community/:slug/helper` | HelperPage | Helper (helpers only) |
+| `/community/:slug/helper-dashboard` | HelperDashboard | - (verification workflows) |
 | `/community/:slug/settings` | SettingsPage | Settings |
 
 ## Critical Safety Rules

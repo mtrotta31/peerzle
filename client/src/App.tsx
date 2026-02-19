@@ -10,6 +10,7 @@ import CommunitiesPage from './pages/CommunitiesPage';
 import CommunityDashboard from './pages/CommunityDashboard';
 import SessionHistory from './pages/SessionHistory';
 import HelperDashboard from './pages/HelperDashboard';
+import HelperPage from './pages/HelperPage';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminStats from './pages/AdminStats';
 import OrgAdminDashboard from './pages/OrgAdminDashboard';
@@ -171,6 +172,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <CommunityLayout>
               <SessionHistory />
+            </CommunityLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/community/:slug/helper"
+        element={
+          <ProtectedRoute>
+            <CommunityLayout>
+              <HelperPage />
             </CommunityLayout>
           </ProtectedRoute>
         }
