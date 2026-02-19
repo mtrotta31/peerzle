@@ -41,6 +41,7 @@ peerzle/
 - **Tier 3:** COMPLETE — All 5 phases shipped
 - **Tier 4:** COMPLETE — Daily Mood Check-Ins + Admin Mood Trend Analytics
 - **Settings Page:** COMPLETE — 5 sections (Account, Profile, Notifications, Emergency Contact, Privacy)
+- **Bottom Navigation:** IN PROGRESS — Waves 1-3 complete (see below)
 - **Communities:** 5 live communities running
 
 ### Tier 3 Status
@@ -52,6 +53,15 @@ peerzle/
 | 3 | Community & Org Admin Creation Tool | ✅ Complete |
 | 4 | Crisis Webhook Dispatcher | ✅ Complete (HMAC signing + retry logic) |
 | 5 | User Profile Enhancements | ✅ Complete (name fields, emergency contacts, admin safety integration) |
+
+### Bottom Navigation Status
+
+| Wave | Feature | Status |
+|------|---------|--------|
+| 1 | Bottom Nav Component + CommunityLayout wrapper | ✅ Complete |
+| 2 | Messages Tab (Active + Past conversations) | ✅ Complete |
+| 3 | Check-In Tab (mood check-in + history + badge indicator) | ✅ Complete |
+| 4 | Cleanup + Resources Migration to Settings | Pending |
 
 ## Architecture Decisions (Don't Change These)
 
@@ -112,6 +122,25 @@ Platform (Peerzle)
 - Inline styles with CSS variables for all styling — global styles in `index.css`
 - Mobile-first design is critical — most users access on phones
 - Community theming: colors come from community config, applied dynamically
+
+### Bottom Navigation Architecture
+
+- **CommunityLayout** (`client/src/components/CommunityLayout.tsx`) wraps all community-scoped pages
+- **BottomNav** (`client/src/components/BottomNav.tsx`) renders the fixed bottom navigation bar
+- Bottom nav appears ONLY inside a community — hidden on login, signup, onboarding, chat, admin, and training pages
+- Tab count is role-based: seekers get 4 tabs, helpers/admins get 5 tabs (includes Helper tab)
+- Community accent color from config is used for active tab highlighting
+- Badge indicators (red dots) can be added to tabs via props (e.g., `needsCheckIn` for Check-In tab)
+
+### Key Routes (Community-Scoped)
+
+| Route | Page | Bottom Nav Tab |
+|-------|------|----------------|
+| `/community/:slug` | CommunityDashboard | Home |
+| `/community/:slug/messages` | MessagesPage | Messages |
+| `/community/:slug/check-in` | MoodCheckInPage | Check-In |
+| `/community/:slug/helper-dashboard` | HelperDashboard | Helper (helpers only) |
+| `/settings` | SettingsPage | Settings |
 
 ## Critical Safety Rules
 
