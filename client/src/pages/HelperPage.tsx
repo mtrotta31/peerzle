@@ -388,8 +388,8 @@ export default function HelperPage() {
               <div
                 style={{
                   display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
-                  gap: '10px',
+                  gridTemplateColumns: '1fr 1fr',
+                  gap: '12px',
                 }}
               >
                 {ALL_BADGES.map((badgeKey) => {
@@ -402,20 +402,22 @@ export default function HelperPage() {
                       style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '10px',
-                        padding: '12px',
+                        gap: '8px',
+                        padding: '10px',
                         backgroundColor: hasEarned ? '#F8FAFC' : '#FAFAFA',
                         borderRadius: '12px',
                         border: hasEarned ? `1px solid ${accentColor}20` : '1px solid #E2E8F0',
                         opacity: hasEarned ? 1 : 0.5,
+                        minWidth: 0,
+                        overflow: 'hidden',
                       }}
                     >
-                      <span style={{ fontSize: '24px' }}>{display.emoji}</span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: '20px', flexShrink: 0 }}>{display.emoji}</span>
+                      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
                         <p
                           style={{
                             margin: 0,
-                            fontSize: '13px',
+                            fontSize: '12px',
                             fontWeight: 500,
                             color: '#1E3A5F',
                             whiteSpace: 'nowrap',
@@ -426,8 +428,8 @@ export default function HelperPage() {
                           {display.label}
                         </p>
                         {hasEarned && (
-                          <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748B' }}>
-                            {count} time{count !== 1 ? 's' : ''}
+                          <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#64748B' }}>
+                            {count}x
                           </p>
                         )}
                       </div>
@@ -437,14 +439,15 @@ export default function HelperPage() {
                             display: 'inline-flex',
                             alignItems: 'center',
                             justifyContent: 'center',
-                            minWidth: '24px',
-                            height: '24px',
-                            borderRadius: '12px',
+                            minWidth: '22px',
+                            height: '22px',
+                            borderRadius: '11px',
                             backgroundColor: accentColor,
                             color: 'white',
-                            fontSize: '12px',
+                            fontSize: '11px',
                             fontWeight: 700,
-                            padding: '0 6px',
+                            padding: '0 5px',
+                            flexShrink: 0,
                           }}
                         >
                           {count}
