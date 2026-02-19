@@ -329,24 +329,9 @@ export default function MoodCheckInPage() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     {dayCheckins.map((c, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <span style={{ fontSize: '20px' }}>
-                          {MOODS.find((m) => m.value === c.mood_score)?.emoji}
-                        </span>
-                        {c.source === 'conversation' && (
-                          <span
-                            style={{
-                              fontSize: '9px',
-                              color: '#64748B',
-                              backgroundColor: '#E2E8F0',
-                              padding: '2px 4px',
-                              borderRadius: '4px',
-                            }}
-                          >
-                            chat
-                          </span>
-                        )}
-                      </div>
+                      <span key={i} style={{ fontSize: '20px' }}>
+                        {MOODS.find((m) => m.value === c.mood_score)?.emoji}
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -368,9 +353,23 @@ export default function MoodCheckInPage() {
         }}
       >
         <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1E3A5F' }}>
-            Daily Check-In
-          </h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <img
+              src="/peerzle-icon.svg"
+              alt="Peerzle"
+              style={{ width: '32px', height: '32px' }}
+            />
+            <div>
+              <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1E3A5F' }}>
+                Check-In
+              </h1>
+              {community && (
+                <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748B' }}>
+                  {community.name}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </header>
 

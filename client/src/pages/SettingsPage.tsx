@@ -1,9 +1,10 @@
 import { useState, useEffect, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   UserProfile,
   NotificationSettings,
+  Community,
   getProfile,
   updateProfile,
   updateEmergencyContact,
@@ -16,6 +17,7 @@ import {
   subscribeToPushNotifications,
   getCommunities,
   getMembership,
+  getCommunity,
 } from '../services/api';
 import { AxiosError } from 'axios';
 
@@ -38,8 +40,12 @@ interface MembershipInfo {
 }
 
 export default function SettingsPage() {
+  const { slug } = useParams<{ slug: string }>();
   const { logout, updateUserProfile } = useAuth();
   const navigate = useNavigate();
+
+  // Community context (for community-scoped settings)
+  const [community, setCommunity] = useState<Community | null>(null);
 
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -118,6 +124,16 @@ export default function SettingsPage() {
         }
 
         setNotificationSettings(notifSettings);
+
+        // Load community if we're in community-scoped settings
+        if (slug) {
+          try {
+            const communityData = await getCommunity(slug);
+            setCommunity(communityData);
+          } catch {
+            // Community not found or not a member - that's okay
+          }
+        }
       } catch (err) {
         setError('Failed to load settings');
         console.error(err);
@@ -435,10 +451,15 @@ export default function SettingsPage() {
       <header style={{ backgroundColor: 'white', borderBottom: '1px solid #E2E8F0', padding: '16px 24px' }}>
         <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Link to="/communities">
-              <img src="/peerzle-icon.svg" alt="Peerzle" style={{ width: '32px', height: '32px' }} />
-            </Link>
-            <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1E3A5F' }}>Settings</h1>
+            <img src="/peerzle-icon.svg" alt="Peerzle" style={{ width: '32px', height: '32px' }} />
+            <div>
+              <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1E3A5F' }}>Settings</h1>
+              {community && (
+                <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748B' }}>
+                  {community.name}
+                </p>
+              )}
+            </div>
           </div>
           <button
             onClick={logout}

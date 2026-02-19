@@ -145,13 +145,17 @@ export default function HelperPage() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <span style={{ fontSize: '24px' }}>⭐</span>
+          <img
+            src="/peerzle-icon.svg"
+            alt="Peerzle"
+            style={{ width: '32px', height: '32px' }}
+          />
           <div>
-            <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 600, color: '#1E3A5F' }}>
-              Your Impact
+            <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1E3A5F' }}>
+              Helper
             </h1>
             <p style={{ margin: '2px 0 0', fontSize: '13px', color: '#64748B' }}>
-              Thank you for helping others in {community.name}
+              {community.name}
             </p>
           </div>
         </div>
@@ -413,46 +417,24 @@ export default function HelperPage() {
                       }}
                     >
                       <span style={{ fontSize: '20px', flexShrink: 0 }}>{display.emoji}</span>
-                      <div style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <p
                           style={{
                             margin: 0,
-                            fontSize: '12px',
+                            fontSize: '11px',
                             fontWeight: 500,
                             color: '#1E3A5F',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
+                            lineHeight: 1.3,
                           }}
                         >
                           {display.label}
                         </p>
                         {hasEarned && (
-                          <p style={{ margin: '2px 0 0', fontSize: '11px', color: '#64748B' }}>
-                            {count}x
+                          <p style={{ margin: '2px 0 0', fontSize: '10px', color: '#64748B' }}>
+                            {count} time{count !== 1 ? 's' : ''}
                           </p>
                         )}
                       </div>
-                      {hasEarned && (
-                        <span
-                          style={{
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            minWidth: '22px',
-                            height: '22px',
-                            borderRadius: '11px',
-                            backgroundColor: accentColor,
-                            color: 'white',
-                            fontSize: '11px',
-                            fontWeight: 700,
-                            padding: '0 5px',
-                            flexShrink: 0,
-                          }}
-                        >
-                          {count}
-                        </span>
-                      )}
                     </div>
                   );
                 })}
@@ -541,7 +523,7 @@ export default function HelperPage() {
                     color: '#1E3A5F',
                   }}
                 >
-                  Your Impact
+                  Session Outcomes
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                   {stats.averageMoodImprovement !== null && (

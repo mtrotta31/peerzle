@@ -502,7 +502,9 @@ export default function CommunityDashboard() {
       <main style={{ maxWidth: '800px', margin: '0 auto', padding: '16px 24px' }}>
         {/* Greeting */}
         <p style={{ margin: '0 0 16px 0', fontSize: '15px', color: '#1E3A5F' }}>
-          {membership.display_name ? (
+          {user?.firstName ? (
+            <>Welcome back, <strong>{user.firstName}</strong></>
+          ) : membership.display_name ? (
             <>Hi, <strong>{membership.display_name}</strong></>
           ) : (
             <strong>Welcome back</strong>
