@@ -41,7 +41,7 @@ peerzle/
 - **Tier 3:** COMPLETE — All 5 phases shipped
 - **Tier 4:** COMPLETE — Daily Mood Check-Ins + Admin Mood Trend Analytics
 - **Settings Page:** COMPLETE — 5 sections (Account, Profile, Notifications, Emergency Contact, Privacy)
-- **Bottom Navigation:** IN PROGRESS — Waves 1-3 complete (see below)
+- **Bottom Navigation:** COMPLETE — All 4 waves shipped (see below)
 - **Communities:** 5 live communities running
 
 ### Tier 3 Status
@@ -61,7 +61,7 @@ peerzle/
 | 1 | Bottom Nav Component + CommunityLayout wrapper | ✅ Complete |
 | 2 | Messages Tab (Active + Past conversations) | ✅ Complete |
 | 3 | Check-In Tab (mood check-in + history + badge indicator) | ✅ Complete |
-| 4 | Cleanup + Resources Migration to Settings | Pending |
+| 4 | Cleanup + Resources Migration to Settings | ✅ Complete |
 
 ## Architecture Decisions (Don't Change These)
 
