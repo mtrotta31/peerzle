@@ -218,6 +218,16 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/community/:slug/check-in"
+        element={
+          <ProtectedRoute>
+            <CommunityLayout>
+              <MoodCheckInPage />
+            </CommunityLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/community/:slug/mood-checkin"
         element={
           <ProtectedRoute>

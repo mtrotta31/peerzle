@@ -1,29 +1,39 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { MOODS } from '../components/MoodCheckModal';
 import {
   getCommunity,
   getTodayCheckIn,
   submitMoodCheckIn,
   getMoodStreak,
+  getMoodHistory,
   Community,
   TodayCheckInResponse,
   MoodStreakResponse,
+  MoodCheckIn,
 } from '../services/api';
+
+// Color mapping for mood scores (from MoodHistoryPage)
+const MOOD_COLORS: Record<number, string> = {
+  1: '#DC2626', // Much Worse - red
+  2: '#F59E0B', // Slightly Down - amber
+  3: '#94A3B8', // Neutral - gray
+  4: '#22C55E', // Okay - light green
+  5: '#16A34A', // Good - green
+};
 
 export default function MoodCheckInPage() {
   const { slug } = useParams<{ slug: string }>();
-  const navigate = useNavigate();
 
   const [community, setCommunity] = useState<Community | null>(null);
   const [todayStatus, setTodayStatus] = useState<TodayCheckInResponse | null>(null);
   const [streakData, setStreakData] = useState<MoodStreakResponse | null>(null);
+  const [checkins, setCheckins] = useState<MoodCheckIn[]>([]);
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
-  const [submittedStreak, setSubmittedStreak] = useState(0);
+  const [justSubmitted, setJustSubmitted] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
@@ -34,13 +44,15 @@ export default function MoodCheckInPage() {
         const communityData = await getCommunity(slug);
         setCommunity(communityData);
 
-        const [today, streak] = await Promise.all([
+        const [today, streak, historyData] = await Promise.all([
           getTodayCheckIn(communityData.id),
           getMoodStreak(communityData.id),
+          getMoodHistory(communityData.id, 30),
         ]);
 
         setTodayStatus(today);
         setStreakData(streak);
+        setCheckins(historyData.checkins);
       } catch (err) {
         console.error('Failed to load data:', err);
         setError('Failed to load data');
@@ -58,14 +70,67 @@ export default function MoodCheckInPage() {
     setIsSubmitting(true);
     try {
       const result = await submitMoodCheckIn(community.id, selectedMood, note || undefined);
-      setSubmittedStreak(result.streak);
-      setSubmitted(true);
+
+      // Update local state
+      setStreakData(prev => ({
+        current_streak: result.streak,
+        longest_streak: prev?.longest_streak || result.streak,
+        checked_in_today: true,
+      }));
+      setTodayStatus({
+        checked_in: true,
+        check_in: {
+          id: result.id,
+          mood_score: selectedMood,
+          source: 'standalone',
+          note: note || null,
+          created_at: result.created_at,
+        },
+      });
+
+      // Add to checkins list
+      setCheckins(prev => [{
+        id: result.id,
+        mood_score: selectedMood,
+        source: 'standalone',
+        note: note || null,
+        created_at: result.created_at,
+      }, ...prev]);
+
+      setJustSubmitted(true);
+      setSelectedMood(null);
+      setNote('');
     } catch (err) {
       console.error('Failed to submit mood:', err);
       setError('Failed to save your check-in. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  // Group check-ins by date
+  const getCheckInsByDate = () => {
+    const byDate: Record<string, MoodCheckIn[]> = {};
+
+    checkins.forEach((checkin) => {
+      const date = new Date(checkin.created_at).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+      if (!byDate[date]) {
+        byDate[date] = [];
+      }
+      byDate[date].push(checkin);
+    });
+
+    return byDate;
+  };
+
+  // Calculate average mood
+  const getAverageMood = () => {
+    if (checkins.length === 0) return null;
+    const sum = checkins.reduce((acc, c) => acc + c.mood_score, 0);
+    return (sum / checkins.length).toFixed(1);
   };
 
   if (isLoading) {
@@ -88,226 +153,210 @@ export default function MoodCheckInPage() {
     return (
       <div style={{ padding: '20px', maxWidth: '600px', margin: '0 auto' }}>
         <p style={{ color: '#DC2626' }}>{error}</p>
-        <Link to="/communities" style={{ color: '#2B7CF6' }}>
-          Back to Communities
-        </Link>
       </div>
     );
   }
 
-  // Already checked in today
-  if (todayStatus?.checked_in && !submitted) {
-    const checkedInMood = MOODS.find((m) => m.value === todayStatus.check_in?.mood_score);
-    return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC' }}>
-        {/* Header */}
-        <header
+  const checkInsByDate = getCheckInsByDate();
+  const averageMood = getAverageMood();
+  const hasCheckedInToday = todayStatus?.checked_in || false;
+
+  // Render history section (used after check-in or if already checked in)
+  const renderHistory = () => (
+    <>
+      {/* Stats summary */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: '12px',
+          marginBottom: '20px',
+        }}
+      >
+        <div
           style={{
             backgroundColor: 'white',
-            borderBottom: '1px solid #E2E8F0',
-            padding: '16px 24px',
+            borderRadius: '16px',
+            padding: '16px',
+            textAlign: 'center',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
           }}
         >
-          <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <button
-              onClick={() => navigate(`/community/${slug}`)}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '20px',
-                padding: '4px',
-              }}
-            >
-              &larr;
-            </button>
-            <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1E3A5F' }}>
-              Daily Check-In
-            </h1>
-          </div>
-        </header>
-
-        <main style={{ maxWidth: '600px', margin: '0 auto', padding: '40px 24px', textAlign: 'center' }}>
-          <div
-            style={{
-              backgroundColor: 'white',
-              borderRadius: '24px',
-              padding: '40px 32px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-            }}
-          >
-            <div style={{ fontSize: '64px', marginBottom: '16px' }}>
-              {checkedInMood?.emoji || '✓'}
-            </div>
-            <h2 style={{ margin: '0 0 8px 0', fontSize: '22px', fontWeight: 600, color: '#1E3A5F' }}>
-              You've already checked in today
-            </h2>
-            <p style={{ margin: '0 0 24px 0', fontSize: '15px', color: '#64748B' }}>
-              You're feeling <strong>{checkedInMood?.label || 'good'}</strong>
-            </p>
-
-            {streakData && streakData.current_streak > 0 && (
-              <div
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '12px 20px',
-                  backgroundColor: '#FEF3C7',
-                  borderRadius: '20px',
-                  marginBottom: '24px',
-                }}
-              >
-                <span style={{ fontSize: '20px' }}>
-                  {streakData.current_streak >= 3 ? '🔥' : '⭐'}
-                </span>
-                <span style={{ fontSize: '15px', fontWeight: 600, color: '#92400E' }}>
-                  {streakData.current_streak} day streak
-                </span>
-              </div>
-            )}
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <Link
-                to={`/community/${slug}/mood-history`}
-                style={{
-                  display: 'block',
-                  padding: '14px',
-                  backgroundColor: '#2B7CF6',
-                  color: 'white',
-                  borderRadius: '24px',
-                  textDecoration: 'none',
-                  fontSize: '16px',
-                  fontWeight: 600,
-                }}
-              >
-                View My Mood History
-              </Link>
-              <button
-                onClick={() => navigate(`/community/${slug}`)}
-                style={{
-                  padding: '14px',
-                  backgroundColor: 'transparent',
-                  color: '#64748B',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '24px',
-                  fontSize: '16px',
-                  fontWeight: 500,
-                  cursor: 'pointer',
-                }}
-              >
-                Back to Dashboard
-              </button>
-            </div>
-          </div>
-        </main>
+          <p style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: 700, color: '#1E3A5F' }}>
+            {checkins.length}
+          </p>
+          <p style={{ margin: 0, fontSize: '12px', color: '#64748B' }}>Check-ins</p>
+        </div>
+        <div
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '16px',
+            textAlign: 'center',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          }}
+        >
+          <p style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: 700, color: '#1E3A5F' }}>
+            {streakData?.current_streak || 0}
+            {streakData && streakData.current_streak >= 3 && ' '}
+          </p>
+          <p style={{ margin: 0, fontSize: '12px', color: '#64748B' }}>
+            Day Streak {streakData && streakData.current_streak >= 3 && '!'}
+          </p>
+        </div>
+        <div
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '16px',
+            textAlign: 'center',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          }}
+        >
+          <p style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: 700, color: '#1E3A5F' }}>
+            {averageMood || '-'}
+          </p>
+          <p style={{ margin: 0, fontSize: '12px', color: '#64748B' }}>Avg Mood</p>
+        </div>
       </div>
-    );
-  }
 
-  // Success state after submission
-  if (submitted) {
-    return (
-      <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC' }}>
-        <main style={{ maxWidth: '600px', margin: '0 auto', padding: '80px 24px', textAlign: 'center' }}>
+      {/* Mood visualization */}
+      {checkins.length > 0 && (
+        <div
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '20px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+            marginBottom: '20px',
+          }}
+        >
+          <h3 style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: 600, color: '#1E3A5F' }}>
+            How You've Been Feeling
+          </h3>
+
+          {/* Simple dot visualization */}
           <div
             style={{
-              backgroundColor: 'white',
-              borderRadius: '24px',
-              padding: '48px 32px',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '8px',
+              marginBottom: '16px',
             }}
           >
-            <div
-              style={{
-                width: '80px',
-                height: '80px',
-                borderRadius: '50%',
-                backgroundColor: '#DCFCE7',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 20px',
-                fontSize: '40px',
-              }}
-            >
-              ✓
-            </div>
-            <h2 style={{ margin: '0 0 8px 0', fontSize: '24px', fontWeight: 600, color: '#1E3A5F' }}>
-              Thanks for checking in!
-            </h2>
-
-            {submittedStreak > 0 && (
+            {checkins.slice().reverse().map((checkin) => (
               <div
+                key={checkin.id}
+                title={`${new Date(checkin.created_at).toLocaleDateString()} - ${MOODS.find(m => m.value === checkin.mood_score)?.label || ''}`}
                 style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  padding: '12px 24px',
-                  backgroundColor: submittedStreak >= 3 ? '#FEF3C7' : '#EDF4FF',
-                  borderRadius: '24px',
-                  margin: '16px 0 24px',
+                  width: '24px',
+                  height: '24px',
+                  borderRadius: '50%',
+                  backgroundColor: MOOD_COLORS[checkin.mood_score] || '#94A3B8',
+                  opacity: checkin.source === 'conversation' ? 0.7 : 1,
+                  border: checkin.source === 'conversation' ? '2px solid white' : 'none',
+                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
                 }}
-              >
-                <span style={{ fontSize: '24px' }}>
-                  {submittedStreak >= 3 ? '🔥' : '⭐'}
-                </span>
-                <span
+              />
+            ))}
+          </div>
+
+          {/* Legend */}
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '12px',
+              paddingTop: '12px',
+              borderTop: '1px solid #E2E8F0',
+            }}
+          >
+            {MOODS.map((mood) => (
+              <div key={mood.value} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div
                   style={{
-                    fontSize: '17px',
-                    fontWeight: 600,
-                    color: submittedStreak >= 3 ? '#92400E' : '#1E40AF',
+                    width: '10px',
+                    height: '10px',
+                    borderRadius: '50%',
+                    backgroundColor: MOOD_COLORS[mood.value],
+                  }}
+                />
+                <span style={{ fontSize: '11px', color: '#64748B' }}>{mood.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent check-ins list */}
+      {checkins.length > 0 && (
+        <div
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '16px',
+            padding: '20px',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+          }}
+        >
+          <h3 style={{ margin: '0 0 16px', fontSize: '15px', fontWeight: 600, color: '#1E3A5F' }}>
+            Recent Check-ins
+          </h3>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {Object.entries(checkInsByDate)
+              .slice(0, 7)
+              .map(([date, dayCheckins]) => (
+                <div
+                  key={date}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    padding: '12px',
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: '12px',
                   }}
                 >
-                  {submittedStreak} day streak!
-                </span>
-              </div>
-            )}
-
-            <p style={{ margin: '0 0 32px 0', fontSize: '15px', color: '#64748B' }}>
-              Checking in daily helps you track how you're doing over time.
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <button
-                onClick={() => navigate(`/community/${slug}`)}
-                style={{
-                  padding: '14px',
-                  backgroundColor: '#2B7CF6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '24px',
-                  fontSize: '16px',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                Back to Dashboard
-              </button>
-              <Link
-                to={`/community/${slug}/mood-history`}
-                style={{
-                  display: 'block',
-                  padding: '14px',
-                  backgroundColor: 'transparent',
-                  color: '#64748B',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '24px',
-                  textDecoration: 'none',
-                  fontSize: '16px',
-                  fontWeight: 500,
-                }}
-              >
-                View Mood History
-              </Link>
-            </div>
+                  <div>
+                    <p style={{ margin: '0 0 2px', fontSize: '14px', fontWeight: 500, color: '#1E3A5F' }}>
+                      {date}
+                    </p>
+                    {dayCheckins[0].note && (
+                      <p style={{ margin: 0, fontSize: '12px', color: '#64748B' }}>
+                        "{dayCheckins[0].note}"
+                      </p>
+                    )}
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    {dayCheckins.map((c, i) => (
+                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span style={{ fontSize: '20px' }}>
+                          {MOODS.find((m) => m.value === c.mood_score)?.emoji}
+                        </span>
+                        {c.source === 'conversation' && (
+                          <span
+                            style={{
+                              fontSize: '9px',
+                              color: '#64748B',
+                              backgroundColor: '#E2E8F0',
+                              padding: '2px 4px',
+                              borderRadius: '4px',
+                            }}
+                          >
+                            chat
+                          </span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
           </div>
-        </main>
-      </div>
-    );
-  }
+        </div>
+      )}
+    </>
+  );
 
-  // Main check-in form
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#F8FAFC' }}>
       {/* Header */}
@@ -318,203 +367,284 @@ export default function MoodCheckInPage() {
           padding: '16px 24px',
         }}
       >
-        <div style={{ maxWidth: '600px', margin: '0 auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <button
-            onClick={() => navigate(`/community/${slug}`)}
-            style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              fontSize: '20px',
-              padding: '4px',
-            }}
-          >
-            &larr;
-          </button>
+        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
           <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 600, color: '#1E3A5F' }}>
             Daily Check-In
           </h1>
         </div>
       </header>
 
-      <main style={{ maxWidth: '600px', margin: '0 auto', padding: '24px' }}>
-        <div
-          style={{
-            backgroundColor: 'white',
-            borderRadius: '24px',
-            padding: '32px 24px',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-            textAlign: 'center',
-          }}
-        >
-          <h2
-            style={{
-              margin: '0 0 8px 0',
-              fontSize: '22px',
-              fontWeight: 600,
-              color: '#1E3A5F',
-            }}
-          >
-            How are you feeling today?
-          </h2>
-          <p
-            style={{
-              margin: '0 0 32px 0',
-              fontSize: '14px',
-              color: '#64748B',
-            }}
-          >
-            Quick check-in to track how you're doing
-          </p>
-
-          {error && (
-            <div
-              style={{
-                padding: '12px',
-                backgroundColor: '#FEE2E2',
-                color: '#DC2626',
-                borderRadius: '12px',
-                marginBottom: '24px',
-                fontSize: '14px',
-              }}
-            >
-              {error}
-            </div>
-          )}
-
-          {/* Mood options */}
+      <main style={{ maxWidth: '600px', margin: '0 auto', padding: '20px 24px' }}>
+        {/* Just submitted success message */}
+        {justSubmitted && (
           <div
             style={{
-              display: 'flex',
-              justifyContent: 'space-evenly',
-              flexWrap: 'nowrap',
-              marginBottom: '32px',
-              padding: '0 8px',
+              backgroundColor: '#DCFCE7',
+              borderRadius: '16px',
+              padding: '20px',
+              marginBottom: '20px',
+              textAlign: 'center',
             }}
           >
-            {MOODS.map((mood) => {
-              const isSelected = selectedMood === mood.value;
-              return (
-                <button
-                  key={mood.value}
-                  type="button"
-                  onClick={() => setSelectedMood(mood.value)}
-                  style={{
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: '6px',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                    padding: '8px',
-                    borderRadius: '12px',
-                    transition: 'transform 0.2s',
-                    transform: isSelected ? 'scale(1.1)' : 'scale(1)',
-                    minWidth: '56px',
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: '36px',
-                      lineHeight: 1,
-                      width: '52px',
-                      height: '52px',
-                      borderRadius: '50%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      boxShadow: isSelected ? '0 0 0 3px #2B7CF6' : 'none',
-                      backgroundColor: isSelected ? '#EDF4FF' : 'transparent',
-                      transition: 'all 0.2s',
-                    }}
-                  >
-                    {mood.emoji}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: '12px',
-                      color: isSelected ? '#2B7CF6' : '#94A3B8',
-                      fontWeight: isSelected ? 600 : 400,
-                      whiteSpace: 'nowrap',
-                    }}
-                  >
-                    {mood.label}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Optional note */}
-          <div style={{ marginBottom: '24px', textAlign: 'left' }}>
-            <label
+            <div
               style={{
-                display: 'block',
-                fontSize: '14px',
-                fontWeight: 500,
-                color: '#64748B',
-                marginBottom: '8px',
+                width: '48px',
+                height: '48px',
+                borderRadius: '50%',
+                backgroundColor: '#16A34A',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 12px',
+                color: 'white',
+                fontSize: '24px',
               }}
             >
-              Add a quick note (optional)
-            </label>
-            <textarea
-              value={note}
-              onChange={(e) => setNote(e.target.value.slice(0, 200))}
-              placeholder="e.g., rough shift, good day with family..."
-              rows={2}
-              style={{
-                width: '100%',
-                padding: '12px 14px',
-                borderRadius: '12px',
-                border: '1px solid #E2E8F0',
-                fontSize: '15px',
-                resize: 'none',
-                boxSizing: 'border-box',
-              }}
-            />
-            <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#94A3B8', textAlign: 'right' }}>
-              {note.length}/200
+              &#10003;
+            </div>
+            <p style={{ margin: '0 0 4px', fontWeight: 600, color: '#166534', fontSize: '16px' }}>
+              Thanks for checking in!
             </p>
+            {streakData && streakData.current_streak > 0 && (
+              <p style={{ margin: 0, fontSize: '14px', color: '#166534' }}>
+                {streakData.current_streak} day streak {streakData.current_streak >= 3 ? '!' : ''}
+              </p>
+            )}
           </div>
+        )}
 
-          {/* Submit button */}
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={selectedMood === null || isSubmitting}
+        {/* Show check-in form if not checked in today and not just submitted */}
+        {!hasCheckedInToday && !justSubmitted && (
+          <div
             style={{
-              width: '100%',
-              padding: '16px',
-              backgroundColor: '#2B7CF6',
-              color: 'white',
-              border: 'none',
+              backgroundColor: 'white',
               borderRadius: '24px',
-              fontSize: '16px',
-              fontWeight: 600,
-              cursor: selectedMood === null || isSubmitting ? 'not-allowed' : 'pointer',
-              opacity: selectedMood === null || isSubmitting ? 0.5 : 1,
-              transition: 'background-color 0.2s',
+              padding: '32px 24px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+              textAlign: 'center',
+              marginBottom: '24px',
             }}
           >
-            {isSubmitting ? 'Saving...' : 'Save Check-In'}
-          </button>
-        </div>
+            <h2
+              style={{
+                margin: '0 0 8px 0',
+                fontSize: '22px',
+                fontWeight: 600,
+                color: '#1E3A5F',
+              }}
+            >
+              How are you feeling today?
+            </h2>
+            <p
+              style={{
+                margin: '0 0 32px 0',
+                fontSize: '14px',
+                color: '#64748B',
+              }}
+            >
+              Quick check-in to track how you're doing
+            </p>
 
-        {/* Streak hint */}
-        {streakData && streakData.current_streak > 0 && (
+            {error && (
+              <div
+                style={{
+                  padding: '12px',
+                  backgroundColor: '#FEE2E2',
+                  color: '#DC2626',
+                  borderRadius: '12px',
+                  marginBottom: '24px',
+                  fontSize: '14px',
+                }}
+              >
+                {error}
+              </div>
+            )}
+
+            {/* Mood options */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-evenly',
+                flexWrap: 'nowrap',
+                marginBottom: '32px',
+                padding: '0 8px',
+              }}
+            >
+              {MOODS.map((mood) => {
+                const isSelected = selectedMood === mood.value;
+                return (
+                  <button
+                    key={mood.value}
+                    type="button"
+                    onClick={() => setSelectedMood(mood.value)}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      gap: '6px',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '8px',
+                      borderRadius: '12px',
+                      transition: 'transform 0.2s',
+                      transform: isSelected ? 'scale(1.1)' : 'scale(1)',
+                      minWidth: '56px',
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: '36px',
+                        lineHeight: 1,
+                        width: '52px',
+                        height: '52px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: isSelected ? '0 0 0 3px #2B7CF6' : 'none',
+                        backgroundColor: isSelected ? '#EDF4FF' : 'transparent',
+                        transition: 'all 0.2s',
+                      }}
+                    >
+                      {mood.emoji}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: '12px',
+                        color: isSelected ? '#2B7CF6' : '#94A3B8',
+                        fontWeight: isSelected ? 600 : 400,
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      {mood.label}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Optional note */}
+            <div style={{ marginBottom: '24px', textAlign: 'left' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  color: '#64748B',
+                  marginBottom: '8px',
+                }}
+              >
+                Add a quick note (optional)
+              </label>
+              <textarea
+                value={note}
+                onChange={(e) => setNote(e.target.value.slice(0, 200))}
+                placeholder="e.g., rough shift, good day with family..."
+                rows={2}
+                style={{
+                  width: '100%',
+                  padding: '12px 14px',
+                  borderRadius: '12px',
+                  border: '1px solid #E2E8F0',
+                  fontSize: '15px',
+                  resize: 'none',
+                  boxSizing: 'border-box',
+                }}
+              />
+              <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#94A3B8', textAlign: 'right' }}>
+                {note.length}/200
+              </p>
+            </div>
+
+            {/* Submit button */}
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={selectedMood === null || isSubmitting}
+              style={{
+                width: '100%',
+                padding: '16px',
+                backgroundColor: '#2B7CF6',
+                color: 'white',
+                border: 'none',
+                borderRadius: '24px',
+                fontSize: '16px',
+                fontWeight: 600,
+                cursor: selectedMood === null || isSubmitting ? 'not-allowed' : 'pointer',
+                opacity: selectedMood === null || isSubmitting ? 0.5 : 1,
+                transition: 'background-color 0.2s',
+              }}
+            >
+              {isSubmitting ? 'Saving...' : 'Save Check-In'}
+            </button>
+          </div>
+        )}
+
+        {/* Streak hint when form is shown */}
+        {!hasCheckedInToday && !justSubmitted && streakData && streakData.current_streak > 0 && (
           <p
             style={{
               textAlign: 'center',
-              marginTop: '16px',
+              marginBottom: '24px',
               fontSize: '14px',
               color: '#64748B',
             }}
           >
             Keep it going! You're on a {streakData.current_streak} day streak{' '}
-            {streakData.current_streak >= 3 ? '🔥' : '⭐'}
+            {streakData.current_streak >= 3 ? '' : ''}
           </p>
+        )}
+
+        {/* Today's mood summary if checked in */}
+        {hasCheckedInToday && !justSubmitted && todayStatus?.check_in && (
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              padding: '20px',
+              marginBottom: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '16px',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+            }}
+          >
+            <span style={{ fontSize: '40px' }}>
+              {MOODS.find(m => m.value === todayStatus.check_in?.mood_score)?.emoji || ''}
+            </span>
+            <div>
+              <p style={{ margin: '0 0 4px', fontWeight: 600, color: '#1E3A5F', fontSize: '15px' }}>
+                Today you're feeling {MOODS.find(m => m.value === todayStatus.check_in?.mood_score)?.label || 'good'}
+              </p>
+              {streakData && streakData.current_streak > 0 && (
+                <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
+                  {streakData.current_streak} day streak {streakData.current_streak >= 3 ? '' : ''}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Always show history if we have data */}
+        {(hasCheckedInToday || justSubmitted) && renderHistory()}
+
+        {/* Empty state if no check-ins yet and haven't just submitted */}
+        {checkins.length === 0 && !justSubmitted && !hasCheckedInToday && (
+          <div
+            style={{
+              backgroundColor: 'white',
+              borderRadius: '16px',
+              padding: '40px 20px',
+              textAlign: 'center',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+            }}
+          >
+            <p style={{ fontSize: '40px', marginBottom: '12px' }}>&#128200;</p>
+            <p style={{ margin: 0, color: '#64748B' }}>
+              Start tracking how you're feeling. Your history will appear here.
+            </p>
+          </div>
         )}
       </main>
     </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getMembership, getCommunity, Membership, Community } from '../services/api';
+import { getMembership, getCommunity, getTodayCheckIn, Membership, Community } from '../services/api';
 import BottomNav from './BottomNav';
 
 interface CommunityLayoutProps {
@@ -12,6 +12,7 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
   const navigate = useNavigate();
   const [membership, setMembership] = useState<Membership | null>(null);
   const [community, setCommunity] = useState<Community | null>(null);
+  const [needsCheckIn, setNeedsCheckIn] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -29,6 +30,14 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
         ]);
         setMembership(membershipData);
         setCommunity(communityData);
+
+        // Check if user needs to check in today
+        try {
+          const todayStatus = await getTodayCheckIn(communityData.id);
+          setNeedsCheckIn(!todayStatus.checked_in);
+        } catch {
+          // Silently fail - don't block layout for check-in status
+        }
       } catch (err) {
         console.error('Failed to load community layout data:', err);
         setError('Failed to load community data');
@@ -82,6 +91,8 @@ export default function CommunityLayout({ children }: CommunityLayoutProps) {
         communitySlug={slug}
         userRole={membership.role as 'seeker' | 'helper' | 'both' | 'admin'}
         accentColor={accentColor}
+        needsCheckIn={needsCheckIn}
+        onCheckInComplete={() => setNeedsCheckIn(false)}
       />
     </div>
   );

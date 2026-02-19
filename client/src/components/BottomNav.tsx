@@ -4,6 +4,8 @@ interface BottomNavProps {
   communitySlug: string;
   userRole: 'seeker' | 'helper' | 'both' | 'admin';
   accentColor?: string;
+  needsCheckIn?: boolean;
+  onCheckInComplete?: () => void;
 }
 
 // Inline SVG Icons (24x24 viewbox, filled when active)
@@ -84,7 +86,7 @@ const SettingsIcon = ({ active }: { active: boolean }) => (
   </svg>
 );
 
-export default function BottomNav({ communitySlug, userRole, accentColor = '#2B7CF6' }: BottomNavProps) {
+export default function BottomNav({ communitySlug, userRole, accentColor = '#2B7CF6', needsCheckIn = false }: BottomNavProps) {
   const location = useLocation();
 
   // Hide on chat pages
@@ -124,10 +126,11 @@ export default function BottomNav({ communitySlug, userRole, accentColor = '#2B7
       exact: false,
     },
     {
-      path: `/community/${communitySlug}/mood-checkin`,
+      path: `/community/${communitySlug}/check-in`,
       label: 'Check-In',
       Icon: CheckInIcon,
       exact: false,
+      showBadge: needsCheckIn,
     },
     ...(isHelper
       ? [
@@ -151,9 +154,11 @@ export default function BottomNav({ communitySlug, userRole, accentColor = '#2B7
     if (exact) {
       return location.pathname === tabPath;
     }
-    // Special case: mood-history should also highlight Check-In tab
-    if (tabPath.endsWith('/mood-checkin') && location.pathname.includes('/mood-history')) {
-      return true;
+    // Special case: mood-history and mood-checkin should also highlight Check-In tab
+    if (tabPath.endsWith('/check-in')) {
+      if (location.pathname.includes('/mood-history') || location.pathname.includes('/mood-checkin') || location.pathname.includes('/check-in')) {
+        return true;
+      }
     }
     return location.pathname.startsWith(tabPath);
   };
@@ -182,6 +187,7 @@ export default function BottomNav({ communitySlug, userRole, accentColor = '#2B7
       >
         {tabs.map((tab) => {
           const active = isActive(tab.path, tab.exact);
+          const showBadge = 'showBadge' in tab && tab.showBadge;
           return (
             <NavLink
               key={tab.path}
@@ -199,9 +205,26 @@ export default function BottomNav({ communitySlug, userRole, accentColor = '#2B7
                 minWidth: '64px',
                 padding: '8px 0',
                 WebkitTapHighlightColor: 'transparent',
+                position: 'relative',
               }}
             >
-              <tab.Icon active={active} />
+              <div style={{ position: 'relative' }}>
+                <tab.Icon active={active} />
+                {showBadge && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: '-2px',
+                      right: '-4px',
+                      width: '8px',
+                      height: '8px',
+                      backgroundColor: '#EF4444',
+                      borderRadius: '50%',
+                      border: '2px solid white',
+                    }}
+                  />
+                )}
+              </div>
               <span
                 style={{
                   fontSize: '11px',
