@@ -140,7 +140,7 @@ Platform (Peerzle)
 | `/community/:slug/messages` | MessagesPage | Messages |
 | `/community/:slug/check-in` | MoodCheckInPage | Check-In |
 | `/community/:slug/helper-dashboard` | HelperDashboard | Helper (helpers only) |
-| `/settings` | SettingsPage | Settings |
+| `/community/:slug/settings` | SettingsPage | Settings |
 
 ## Critical Safety Rules
 
