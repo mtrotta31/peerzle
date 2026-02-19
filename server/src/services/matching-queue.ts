@@ -3,6 +3,7 @@ import { emitToUser, emitToConversation } from '../config/socket';
 import { findMatchesForConversation, calculateMatchScore, MatchResult } from './matching';
 import { generatePeerBotResponse } from './peerbot';
 import { sendPushToMultipleUsers } from './push-notifications';
+import { generateDisplayName } from '../data/display-names';
 
 export interface HelpRequestEvent {
   conversationId: string;
@@ -20,8 +21,164 @@ interface MatchProcess {
   cancelled: boolean;
 }
 
+// Demo connection data for fake helper matching (matches frontend ConnectionData interface)
+export interface DemoConnectionData {
+  match_score: number;
+  seeker_display_name: string | null;
+  helper_display_name: string;
+  helper_is_verified: boolean;
+  shared_topics: string[];
+}
+
 // In-memory map of active matching processes
 const activeProcesses = new Map<string, MatchProcess>();
+
+/**
+ * Check if a community is a demo community (bypasses real matching).
+ */
+async function isDemoCommunity(communityId: string): Promise<boolean> {
+  const result = await query<{ is_demo: boolean }>(
+    'SELECT is_demo FROM communities WHERE id = $1',
+    [communityId]
+  );
+  return result.rows[0]?.is_demo === true;
+}
+
+/**
+ * Get seeker's topics for generating the connection card.
+ */
+async function getSeekerTopics(seekerMembershipId: string): Promise<string[]> {
+  const result = await query<{ topic: string }>(
+    'SELECT topic FROM user_experience_topics WHERE membership_id = $1',
+    [seekerMembershipId]
+  );
+  return result.rows.map((r) => r.topic);
+}
+
+/**
+ * Get seeker's display name for the connection card.
+ */
+async function getSeekerDisplayName(seekerMembershipId: string): Promise<string | null> {
+  const result = await query<{ display_name: string | null }>(
+    'SELECT display_name FROM memberships WHERE id = $1',
+    [seekerMembershipId]
+  );
+  return result.rows[0]?.display_name || null;
+}
+
+/**
+ * Generate fake connection data for demo matching.
+ */
+function generateDemoConnectionData(
+  seekerTopics: string[],
+  conversationTopic: string | null,
+  seekerDisplayName: string | null
+): DemoConnectionData {
+  // Random match score between 78-95%
+  const matchScore = Math.floor(Math.random() * 18) + 78;
+
+  // Pick 1-2 shared topics (prefer the conversation topic if it exists)
+  const sharedTopics: string[] = [];
+  if (conversationTopic && seekerTopics.includes(conversationTopic)) {
+    sharedTopics.push(conversationTopic);
+  }
+
+  // Add another topic if available
+  const otherTopics = seekerTopics.filter((t) => t !== conversationTopic);
+  if (otherTopics.length > 0 && (sharedTopics.length === 0 || Math.random() > 0.5)) {
+    const randomTopic = otherTopics[Math.floor(Math.random() * otherTopics.length)];
+    sharedTopics.push(randomTopic);
+  }
+
+  // Fallback to conversation topic or first seeker topic
+  if (sharedTopics.length === 0) {
+    sharedTopics.push(conversationTopic || seekerTopics[0] || 'General Support');
+  }
+
+  return {
+    match_score: matchScore,
+    seeker_display_name: seekerDisplayName,
+    helper_display_name: generateDisplayName(),
+    helper_is_verified: true, // Demo helper is always "verified"
+    shared_topics: sharedTopics.slice(0, 2),
+  };
+}
+
+/**
+ * Handle demo community matching (bypass real matching, auto-connect to PeerBot).
+ */
+async function handleDemoMatching(conversationId: string): Promise<void> {
+  // Get conversation details
+  const convResult = await query<{
+    community_id: string;
+    seeker_membership_id: string;
+    topic: string | null;
+    community_name: string;
+  }>(
+    `SELECT c.community_id, c.seeker_membership_id, c.topic, cm.name as community_name
+     FROM conversations c
+     JOIN communities cm ON cm.id = c.community_id
+     WHERE c.id = $1`,
+    [conversationId]
+  );
+
+  if (convResult.rows.length === 0) return;
+  const conv = convResult.rows[0];
+
+  // Get seeker's topics and display name
+  const [seekerTopics, seekerDisplayName] = await Promise.all([
+    getSeekerTopics(conv.seeker_membership_id),
+    getSeekerDisplayName(conv.seeker_membership_id),
+  ]);
+
+  // Generate fake connection data
+  const connectionData = generateDemoConnectionData(seekerTopics, conv.topic, seekerDisplayName);
+
+  // Simulated matching delay: 3-5 seconds
+  const delay = Math.floor(Math.random() * 2000) + 3000;
+  await new Promise((resolve) => setTimeout(resolve, delay));
+
+  // Update conversation to active with match score
+  await query(
+    `UPDATE conversations SET status = 'active', match_score = $1 WHERE id = $2`,
+    [connectionData.match_score, conversationId]
+  );
+
+  // Emit demo_match_found event with connection data
+  emitToConversation(conversationId, 'demo_match_found', {
+    conversationId,
+    connection_data: connectionData,
+  });
+
+  // Generate PeerBot greeting (using existing persona for now - Wave 2 adds new persona)
+  const greetingContent = await generatePeerBotResponse(
+    [{ content: 'Hello, I need someone to talk to.', sender_email: null, is_peerbot: false }],
+    { topic: conv.topic, community_name: conv.community_name }
+  );
+
+  // Insert PeerBot message with demo_helper marker
+  const msgResult = await query<{
+    id: string;
+    conversation_id: string;
+    sender_membership_id: string | null;
+    content: string;
+    created_at: Date;
+    moderation_result: { sender?: string; demo_helper?: boolean } | null;
+  }>(
+    `INSERT INTO messages (conversation_id, sender_membership_id, content, moderation_result)
+     VALUES ($1, NULL, $2, $3)
+     RETURNING *`,
+    [conversationId, greetingContent, JSON.stringify({ sender: 'peerbot', demo_helper: true })]
+  );
+
+  const peerBotMessage = msgResult.rows[0];
+
+  // Emit the greeting message
+  emitToConversation(conversationId, 'new_message', {
+    ...peerBotMessage,
+    sender_email: null,
+  });
+}
 
 /**
  * Send help_request to a set of helpers for a conversation.
@@ -153,6 +310,13 @@ export async function startMatchingProcess(conversationId: string): Promise<void
   if (convResult.rows.length === 0) return;
   const { community_id, topic, started_at } = convResult.rows[0];
   const startedAt = started_at.toISOString();
+
+  // Check if this is a demo community - bypass real matching
+  if (await isDemoCommunity(community_id)) {
+    console.log(`[MATCHING] Demo community detected for conversation ${conversationId}, bypassing real matching`);
+    await handleDemoMatching(conversationId);
+    return;
+  }
 
   // Find and score all available helpers
   const matches = await findMatchesForConversation(conversationId);

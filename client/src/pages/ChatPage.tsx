@@ -243,6 +243,29 @@ export default function ChatPage() {
             console.error('Error handling PeerBot fallback:', err);
           }
         });
+
+        // Listen for demo match found (demo community instant PeerBot connection)
+        socket.on('demo_match_found', (event: {
+          conversationId: string;
+          connection_data: ConnectionData;
+        }) => {
+          try {
+            if (event.conversationId === conversationId) {
+              // Update connection data with the fake helper info
+              setConnectionData(event.connection_data);
+              // Mark conversation as active
+              setConversation((prev) =>
+                prev ? { ...prev, status: 'active' } : prev
+              );
+              // Show "helper joined" indicator (using the fake display name)
+              setHelperJoined(event.connection_data.helper_display_name);
+              // Mark as PeerBot active
+              setPeerbotFallbackActive(true);
+            }
+          } catch (err) {
+            console.error('Error handling demo match found:', err);
+          }
+        });
       } catch (err) {
         setError('Failed to load conversation');
         console.error(err);
@@ -266,6 +289,7 @@ export default function ChatPage() {
       socket?.off('helper_joined');
       socket?.off('conversation_ended');
       socket?.off('peerbot_fallback');
+      socket?.off('demo_match_found');
     };
   }, [conversationId, user?.id]);
 
