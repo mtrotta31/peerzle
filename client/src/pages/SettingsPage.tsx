@@ -46,6 +46,7 @@ export default function SettingsPage() {
 
   // Community context (for community-scoped settings)
   const [community, setCommunity] = useState<Community | null>(null);
+  const [userRole, setUserRole] = useState<'seeker' | 'helper' | 'both' | 'admin' | null>(null);
 
   // Loading states
   const [loading, setLoading] = useState(true);
@@ -125,11 +126,15 @@ export default function SettingsPage() {
 
         setNotificationSettings(notifSettings);
 
-        // Load community if we're in community-scoped settings
+        // Load community and membership if we're in community-scoped settings
         if (slug) {
           try {
-            const communityData = await getCommunity(slug);
+            const [communityData, membershipData] = await Promise.all([
+              getCommunity(slug),
+              getMembership(slug),
+            ]);
             setCommunity(communityData);
+            setUserRole(membershipData.role);
           } catch {
             // Community not found or not a member - that's okay
           }
@@ -489,6 +494,34 @@ export default function SettingsPage() {
               x
             </button>
           </div>
+        )}
+
+        {/* Admin Dashboard Link - only for admins in community context */}
+        {slug && userRole === 'admin' && (
+          <button
+            onClick={() => navigate(`/community/${slug}/admin`)}
+            style={{
+              width: '100%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '16px 20px',
+              backgroundColor: '#1E3A5F',
+              color: 'white',
+              border: 'none',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              marginBottom: '20px',
+              fontSize: '15px',
+              fontWeight: 500,
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '20px' }}>🛡️</span>
+              <span>Admin Dashboard</span>
+            </div>
+            <span style={{ fontSize: '18px' }}>→</span>
+          </button>
         )}
 
         {/* Account Section */}
