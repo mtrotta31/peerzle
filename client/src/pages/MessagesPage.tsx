@@ -551,9 +551,29 @@ export default function MessagesPage() {
                   <h2 style={{ margin: '0 0 8px 0', color: '#1E3A5F' }}>
                     No active conversations
                   </h2>
-                  <p style={{ margin: 0, color: '#64748B' }}>
-                    Start a new conversation from the Home tab
-                  </p>
+                  <button
+                    onClick={() => navigate(`/community/${slug}`)}
+                    style={{
+                      marginTop: '16px',
+                      padding: '14px 32px',
+                      backgroundColor: '#2B7CF6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '24px',
+                      cursor: 'pointer',
+                      fontWeight: 600,
+                      fontSize: '15px',
+                      transition: 'background-color 0.2s',
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#1E6AD9';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#2B7CF6';
+                    }}
+                  >
+                    Start a Conversation
+                  </button>
                 </div>
               )
             )}
@@ -736,6 +756,44 @@ export default function MessagesPage() {
           </>
         )}
       </div>
+
+      {/* Floating Action Button - shown when there are conversations */}
+      {activeTab === 'active' && hasActiveContent && (
+        <button
+          onClick={() => navigate(`/community/${slug}`)}
+          style={{
+            position: 'fixed',
+            bottom: 'calc(80px + env(safe-area-inset-bottom))',
+            right: '20px',
+            width: '56px',
+            height: '56px',
+            borderRadius: '50%',
+            backgroundColor: '#2B7CF6',
+            color: 'white',
+            border: 'none',
+            boxShadow: '0 4px 12px rgba(43, 124, 246, 0.4)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '28px',
+            fontWeight: 300,
+            zIndex: 100,
+            transition: 'transform 0.2s, box-shadow 0.2s',
+          }}
+          onMouseOver={(e) => {
+            e.currentTarget.style.transform = 'scale(1.05)';
+            e.currentTarget.style.boxShadow = '0 6px 16px rgba(43, 124, 246, 0.5)';
+          }}
+          onMouseOut={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.boxShadow = '0 4px 12px rgba(43, 124, 246, 0.4)';
+          }}
+          title="Start a conversation"
+        >
+          +
+        </button>
+      )}
     </div>
   );
 }
