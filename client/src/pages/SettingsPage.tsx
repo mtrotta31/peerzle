@@ -27,7 +27,7 @@ const RELATIONSHIP_OPTIONS = [
   'Other',
 ];
 
-type SectionKey = 'account' | 'profile' | 'notifications' | 'emergency' | 'privacy';
+type SectionKey = 'account' | 'profile' | 'notifications' | 'resources' | 'emergency' | 'privacy';
 
 interface MembershipInfo {
   communitySlug: string;
@@ -788,6 +788,95 @@ export default function SettingsPage() {
           )}
         </section>
 
+        {/* Resources Section */}
+        <section style={sectionStyle}>
+          <div style={sectionHeaderStyle} onClick={() => toggleSection('resources')}>
+            <h2 style={{ margin: 0, fontSize: '17px', fontWeight: 600, color: '#1E3A5F' }}>Resources</h2>
+            <span style={{ color: '#64748B', fontSize: '20px' }}>{expandedSections.has('resources') ? '−' : '+'}</span>
+          </div>
+          {expandedSections.has('resources') && (
+            <div style={sectionContentStyle}>
+              <p style={{ margin: '0 0 16px 0', fontSize: '14px', color: '#64748B' }}>
+                If you or someone you know is in crisis, these resources are available 24/7.
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* 988 Lifeline */}
+                <div
+                  style={{
+                    padding: '16px',
+                    backgroundColor: '#EDF4FF',
+                    borderRadius: '12px',
+                    borderLeft: '4px solid #2B7CF6',
+                  }}
+                >
+                  <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: '#1E3A5F', fontSize: '15px' }}>
+                    988 Suicide & Crisis Lifeline
+                  </p>
+                  <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: '#2B7CF6', fontWeight: 500 }}>
+                    Call or text 988
+                  </p>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
+                    Free, confidential support 24/7
+                  </p>
+                </div>
+
+                {/* Crisis Text Line */}
+                <div
+                  style={{
+                    padding: '16px',
+                    backgroundColor: '#F8FAFC',
+                    borderRadius: '12px',
+                  }}
+                >
+                  <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: '#1E3A5F', fontSize: '15px' }}>
+                    Crisis Text Line
+                  </p>
+                  <p style={{ margin: 0, fontSize: '14px', color: '#475569' }}>
+                    Text HOME to 741741
+                  </p>
+                </div>
+
+                {/* Veterans Crisis Line */}
+                <div
+                  style={{
+                    padding: '16px',
+                    backgroundColor: '#F0FDF4',
+                    borderRadius: '12px',
+                    borderLeft: '4px solid #16A34A',
+                  }}
+                >
+                  <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: '#1E3A5F', fontSize: '15px' }}>
+                    Veterans Crisis Line
+                  </p>
+                  <p style={{ margin: '0 0 4px 0', fontSize: '14px', color: '#16A34A', fontWeight: 500 }}>
+                    Call 988, Press 1
+                  </p>
+                  <p style={{ margin: 0, fontSize: '13px', color: '#64748B' }}>
+                    Free, confidential support for Veterans 24/7
+                  </p>
+                </div>
+
+                {/* Emergency */}
+                <div
+                  style={{
+                    padding: '16px',
+                    backgroundColor: '#FEF2F2',
+                    borderRadius: '12px',
+                  }}
+                >
+                  <p style={{ margin: '0 0 4px 0', fontWeight: 600, color: '#1E3A5F', fontSize: '15px' }}>
+                    Emergency Services
+                  </p>
+                  <p style={{ margin: 0, fontSize: '14px', color: '#DC2626', fontWeight: 500 }}>
+                    Call 911
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
         {/* Emergency Contact Section */}
         <section style={sectionStyle}>
           <div style={sectionHeaderStyle} onClick={() => toggleSection('emergency')}>
@@ -937,9 +1026,9 @@ export default function SettingsPage() {
                 </Link>
                 {memberships.length > 0 && (
                   <p style={{ margin: '8px 0 0 0', fontSize: '14px', color: '#64748B' }}>
-                    View past conversations from your{' '}
-                    <Link to={`/community/${memberships[0].communitySlug}/history`} style={{ color: '#2B7CF6' }}>
-                      community dashboard
+                    View past conversations in your{' '}
+                    <Link to={`/community/${memberships[0].communitySlug}/messages`} style={{ color: '#2B7CF6' }}>
+                      Messages
                     </Link>
                     .
                   </p>
