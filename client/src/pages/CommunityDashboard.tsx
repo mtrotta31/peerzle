@@ -46,7 +46,7 @@ export default function CommunityDashboard() {
   const [error, setError] = useState('');
   const [showPushBanner, setShowPushBanner] = useState(false);
   const [isEnablingPush, setIsEnablingPush] = useState(false);
-  const { user, logout, updateUserProfile } = useAuth();
+  const { user, updateUserProfile } = useAuth();
   const navigate = useNavigate();
 
   // Profile update modal state
@@ -472,159 +472,10 @@ export default function CommunityDashboard() {
                 )}
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Link
-                to="/settings"
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: 'white',
-                  color: '#64748B',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '24px',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  textDecoration: 'none',
-                  transition: 'all 0.2s',
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#F8FAFC';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = 'white';
-                }}
-              >
-                Settings
-              </Link>
-              <button
-                onClick={logout}
-                style={{
-                  padding: '8px 12px',
-                  backgroundColor: 'white',
-                  color: '#64748B',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '24px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  transition: 'all 0.2s',
-                  whiteSpace: 'nowrap',
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#F8FAFC';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = 'white';
-                }}
-              >
-                Logout
-              </button>
-            </div>
           </div>
         </div>
       </header>
 
-      {/* Navigation Tabs */}
-      <div
-        style={{
-          backgroundColor: 'white',
-          borderBottom: '1px solid #E2E8F0',
-          padding: '0 24px',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '800px',
-            margin: '0 auto',
-            display: 'flex',
-            gap: '4px',
-          }}
-        >
-          <button
-            style={{
-              padding: '14px 20px',
-              backgroundColor: 'transparent',
-              color: '#2B7CF6',
-              border: 'none',
-              borderBottom: '2px solid #2B7CF6',
-              cursor: 'pointer',
-              fontSize: '14px',
-              fontWeight: 600,
-            }}
-          >
-            Home
-          </button>
-          <Link
-            to={`/community/${slug}/history`}
-            style={{
-              padding: '14px 20px',
-              backgroundColor: 'transparent',
-              color: '#64748B',
-              border: 'none',
-              borderBottom: '2px solid transparent',
-              textDecoration: 'none',
-              fontSize: '14px',
-              fontWeight: 500,
-              transition: 'all 0.2s',
-            }}
-            onMouseOver={(e) => {
-              e.currentTarget.style.color = '#2B7CF6';
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.color = '#64748B';
-            }}
-          >
-            Past Sessions
-          </Link>
-          {(membership.is_available || membership.role === 'helper' || membership.role === 'both' || membership.role === 'admin') && (
-            <Link
-              to={`/community/${slug}/helper-dashboard`}
-              style={{
-                padding: '14px 20px',
-                backgroundColor: 'transparent',
-                color: '#64748B',
-                border: 'none',
-                borderBottom: '2px solid transparent',
-                textDecoration: 'none',
-                fontSize: '14px',
-                fontWeight: 500,
-                transition: 'all 0.2s',
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.color = '#2B7CF6';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.color = '#64748B';
-              }}
-            >
-              Helper Dashboard
-            </Link>
-          )}
-          {membership.role === 'admin' && (
-            <Link
-              to={`/community/${slug}/admin`}
-              style={{
-                padding: '14px 20px',
-                backgroundColor: 'transparent',
-                color: '#64748B',
-                border: 'none',
-                borderBottom: '2px solid transparent',
-                textDecoration: 'none',
-                fontSize: '14px',
-                fontWeight: 500,
-                transition: 'all 0.2s',
-              }}
-              onMouseOver={(e) => {
-                e.currentTarget.style.color = '#2B7CF6';
-              }}
-              onMouseOut={(e) => {
-                e.currentTarget.style.color = '#64748B';
-              }}
-            >
-              Admin
-            </Link>
-          )}
-        </div>
-      </div>
 
       {/* Push Notification Banner */}
       {showPushBanner && (
