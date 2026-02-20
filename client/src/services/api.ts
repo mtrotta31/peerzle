@@ -443,6 +443,8 @@ export interface Conversation {
   last_message_at?: string | null;
   peer_display_name?: string | null;
   user_role?: 'seeker' | 'helper';
+  // Demo community flag
+  is_demo?: boolean;
 }
 
 // Conversation API

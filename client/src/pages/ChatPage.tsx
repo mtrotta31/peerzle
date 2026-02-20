@@ -250,6 +250,7 @@ export default function ChatPage() {
           connection_data: ConnectionData;
         }) => {
           try {
+            console.log('[DEMO] demo_match_found received:', event);
             if (event.conversationId === conversationId) {
               // Update connection data with the fake helper info
               setConnectionData(event.connection_data);
@@ -839,8 +840,8 @@ Take your time, be yourself, and remember — you're not alone.`;
             </span>
           </div>
 
-          {/* Wait context - only show if not yet connected to PeerBot */}
-          {!peerbotFallbackActive && (
+          {/* Wait context - only show if not yet connected to PeerBot and not demo */}
+          {!peerbotFallbackActive && !conversation?.is_demo && (
             <p
               style={{
                 textAlign: 'center',
@@ -853,8 +854,8 @@ Take your time, be yourself, and remember — you're not alone.`;
             </p>
           )}
 
-          {/* PeerBot early chat prompt - only show if not yet using PeerBot */}
-          {!peerbotFallbackActive && (
+          {/* PeerBot early chat prompt - hide for demo communities */}
+          {!peerbotFallbackActive && !conversation?.is_demo && (
             <div
               style={{
                 backgroundColor: 'white',

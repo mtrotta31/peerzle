@@ -145,10 +145,15 @@ async function handleDemoMatching(conversationId: string): Promise<void> {
   );
 
   // Emit demo_match_found event with connection data
+  console.log(`[MATCHING] Emitting demo_match_found for conversation ${conversationId}`);
   emitToConversation(conversationId, 'demo_match_found', {
     conversationId,
     connection_data: connectionData,
   });
+
+  // Delay to let frontend process demo_match_found and show connection card
+  // before PeerBot greeting arrives
+  await new Promise((resolve) => setTimeout(resolve, 1500));
 
   // Generate PeerBot greeting (using existing persona for now - Wave 2 adds new persona)
   const greetingContent = await generatePeerBotResponse(

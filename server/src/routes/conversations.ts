@@ -195,8 +195,8 @@ router.get('/:id', authenticate, async (req: AuthenticatedRequest, res: Response
     const userId = req.user!.userId;
 
     // First, try to get conversation as a participant (seeker or helper)
-    let conversationResult = await query<ConversationRow & { community_slug: string; community_name: string }>(
-      `SELECT c.*, cm.slug as community_slug, cm.name as community_name
+    let conversationResult = await query<ConversationRow & { community_slug: string; community_name: string; is_demo: boolean }>(
+      `SELECT c.*, cm.slug as community_slug, cm.name as community_name, cm.is_demo
        FROM conversations c
        JOIN communities cm ON cm.id = c.community_id
        JOIN memberships m ON m.id = c.seeker_membership_id OR m.id = c.helper_membership_id
@@ -206,8 +206,8 @@ router.get('/:id', authenticate, async (req: AuthenticatedRequest, res: Response
 
     // If not a participant, check if user is an admin of the conversation's community
     if (conversationResult.rows.length === 0) {
-      conversationResult = await query<ConversationRow & { community_slug: string; community_name: string }>(
-        `SELECT c.*, cm.slug as community_slug, cm.name as community_name
+      conversationResult = await query<ConversationRow & { community_slug: string; community_name: string; is_demo: boolean }>(
+        `SELECT c.*, cm.slug as community_slug, cm.name as community_name, cm.is_demo
          FROM conversations c
          JOIN communities cm ON cm.id = c.community_id
          JOIN memberships m ON m.community_id = c.community_id AND m.user_id = $2 AND m.role = 'admin'
