@@ -2,7 +2,7 @@ import { query } from '../config/database';
 import { sendPushNotification } from './push-notifications';
 
 const CHECK_INTERVAL_MS = 15 * 60 * 1000; // Check every 15 minutes
-const DEFAULT_NOTIFICATION_HOUR = 9; // 9 AM default
+const DEFAULT_NOTIFICATION_HOUR = 14; // 14:00 UTC = ~11 AM EST / 10 AM EDT
 
 interface UserToNotify {
   user_id: string;
@@ -29,7 +29,7 @@ async function runSchedulerCheck(): Promise<void> {
   try {
     const currentHour = new Date().getHours();
 
-    // Only send notifications during the notification window (9 AM - 10 AM by default)
+    // Only send notifications during the notification window (14:00 - 15:00 UTC = ~11 AM EST)
     // This is a simplified approach - in production, you'd want timezone awareness
     if (currentHour < DEFAULT_NOTIFICATION_HOUR || currentHour >= DEFAULT_NOTIFICATION_HOUR + 1) {
       return;

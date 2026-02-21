@@ -43,7 +43,14 @@ export default function CommunitiesPage() {
           })
         );
 
-        setCommunities(communitiesWithMembership);
+        // Sort demo communities to appear first
+        const sorted = communitiesWithMembership.sort((a, b) => {
+          if (a.is_demo && !b.is_demo) return -1;
+          if (!a.is_demo && b.is_demo) return 1;
+          return 0;
+        });
+
+        setCommunities(sorted);
       } catch (error) {
         console.error('Failed to load communities:', error);
       } finally {
