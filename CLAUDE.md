@@ -241,6 +241,8 @@ The Demo community (`slug: demo`, `is_demo: true`) provides a sandbox for users 
 - **Same-origin deployment requires relative URLs** — In production, frontend and API are served from app.peerzle.com. The client uses `import.meta.env.PROD` to detect production builds and uses empty string for API baseURL (relative URLs like `/api/auth/login`). Never hardcode absolute URLs for API calls.
 - **Marketing site requires www subdomain** — Links to the marketing site must use `www.peerzle.com` (not `peerzle.com`) for proper routing. The marketing site is a client-side SPA that requires the www subdomain.
 - **PWA install prompt uses localStorage** — The `pwa-install-dismissed` key tracks if user dismissed the install prompt. The `usePWAInstallPrompt` hook handles platform detection (iOS Safari vs Android Chrome), standalone mode detection, and the `beforeinstallprompt` event for native Android install.
+- **Seed files must explicitly set `is_active = true`** — Community seed files should include `is_active = true` in the INSERT. Many API routes filter by `is_active = true`, so communities without this flag won't work properly. The super-admin CommunityManagement page uses `getInviteCodes` which hits a non-super-admin route that filters by `is_active`.
+- **Super-admin topic templates in SuperAdminPanel.tsx** — When adding new community types, add a topic template to `TOPIC_TEMPLATES` object and a corresponding `<TemplateButton>` in the Create Community modal. Current templates: First Responders, Healthcare, Veterans, Education, Employee Wellness, Epilepsy.
 
 ### Development Workflow
 
@@ -278,6 +280,7 @@ Each community has specific requirements:
 | Veterans | Attestation | Optional | TBD |
 | Higher Education | .edu email | Optional | TBD |
 | Employee Wellness | Invite code | Training required | Custom |
+| Epilepsy | Open | Required | Purple (#7B2D8E) |
 | **Peerzle Demo** | Open | Not required | Blue (#2B7CF6) |
 
 ## Running Locally
