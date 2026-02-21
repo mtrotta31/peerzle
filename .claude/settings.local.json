@@ -76,7 +76,9 @@
       "WebFetch(domain:app.peerzle.com)",
       "WebFetch(domain:peerzle.com)",
       "WebFetch(domain:peerzle-website.vercel.app)",
-      "WebFetch(domain:www.peerzle.com)"
+      "WebFetch(domain:www.peerzle.com)",
+      "Bash(railway variables:*)",
+      "Bash(railway run psql:*)"
     ]
   }
 }
