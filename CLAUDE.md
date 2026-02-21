@@ -198,7 +198,7 @@ The Demo community (`slug: demo`, `is_demo: true`) provides a sandbox for users 
 
 ### Post-Session CTA + /demo Route (Wave 4)
 - After demo conversation ends (seeker or helper), show CTA card instead of standard "What's Next?" card
-- CTA includes: "Get in Touch" (mailto:matt.trotta31@gmail.com) and "Learn More" (peerzle.com/for-organizations)
+- CTA includes: "Get in Touch" (mailto:matt.trotta31@gmail.com) and "Learn More" (www.peerzle.com/for-organizations)
 - `/demo` route auto-joins demo community: unauthenticated users → login with returnTo → auto-join → redirect to /community/demo
 - LoginPage and SignupPage support `returnTo` query parameter for post-auth redirects
 

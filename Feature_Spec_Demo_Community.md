@@ -215,7 +215,7 @@ After a demo conversation ends, show a targeted prompt:
 ```
 
 - "Request a Demo Call" → opens email to matt.trotta31@gmail.com or Formspree form
-- "Learn More" → links to peerzle.com/for-organizations
+- "Learn More" → links to www.peerzle.com/for-organizations
 
 #### 3C. Shareable Demo Link
 
