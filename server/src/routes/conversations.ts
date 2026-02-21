@@ -312,14 +312,15 @@ router.post('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Res
     // Cancel any active matching process
     cancelMatchingProcess(id);
 
-    // End conversation and get community info
-    const result = await query<ConversationRow & { community_slug: string; community_name: string }>(
+    // End conversation and get community info (including is_demo for demo CTA)
+    const result = await query<ConversationRow & { community_slug: string; community_name: string; is_demo: boolean }>(
       `UPDATE conversations
        SET status = 'ended', ended_at = CURRENT_TIMESTAMP
        WHERE id = $1
        RETURNING *,
          (SELECT slug FROM communities WHERE id = conversations.community_id) as community_slug,
-         (SELECT name FROM communities WHERE id = conversations.community_id) as community_name`,
+         (SELECT name FROM communities WHERE id = conversations.community_id) as community_name,
+         (SELECT is_demo FROM communities WHERE id = conversations.community_id) as is_demo`,
       [id]
     );
 

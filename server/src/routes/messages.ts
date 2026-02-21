@@ -325,8 +325,8 @@ async function sendNewMessagePush(
 
 async function triggerPeerBotIfNeeded(conversationId: string, senderMembershipId: string): Promise<void> {
   // Get conversation info
-  const conversationResult = await query<ConversationInfo & { seeker_membership_id: string }>(
-    `SELECT c.helper_membership_id, c.seeker_membership_id, c.topic, cm.name as community_name, c.community_id, c.is_demo_seeker
+  const conversationResult = await query<ConversationInfo & { seeker_membership_id: string; is_demo: boolean }>(
+    `SELECT c.helper_membership_id, c.seeker_membership_id, c.topic, cm.name as community_name, c.community_id, c.is_demo_seeker, cm.is_demo
      FROM conversations c
      JOIN communities cm ON cm.id = c.community_id
      WHERE c.id = $1`,
@@ -335,7 +335,7 @@ async function triggerPeerBotIfNeeded(conversationId: string, senderMembershipId
 
   if (conversationResult.rows.length === 0) return;
 
-  const { helper_membership_id, seeker_membership_id, topic, community_name, is_demo_seeker } = conversationResult.rows[0];
+  const { helper_membership_id, seeker_membership_id, topic, community_name, is_demo_seeker, is_demo } = conversationResult.rows[0];
 
   // Handle demo seeker conversations: respond to helper messages as the simulated seeker
   if (is_demo_seeker && helper_membership_id !== null && senderMembershipId === helper_membership_id) {
@@ -387,18 +387,22 @@ async function triggerPeerBotIfNeeded(conversationId: string, senderMembershipId
     return;
   }
 
-  // Generate PeerBot response
+  // Generate PeerBot response (use demo helper persona if in demo community)
   const peerBotContent = await generatePeerBotResponse(messages, {
     topic,
     community_name,
-  });
+  }, is_demo ? { isDemo: true } : undefined);
 
   // Save PeerBot message (no safety analysis needed for PeerBot)
+  // Set demo_helper flag for demo communities so frontend shows helper name instead of "PeerBot"
+  const moderationResult = is_demo
+    ? { sender: 'peerbot', demo_helper: true }
+    : { sender: 'peerbot' };
   const peerBotMessageResult = await query<MessageRow>(
     `INSERT INTO messages (conversation_id, sender_membership_id, content, moderation_result)
      VALUES ($1, NULL, $2, $3)
      RETURNING *`,
-    [conversationId, peerBotContent, JSON.stringify({ sender: 'peerbot' })]
+    [conversationId, peerBotContent, JSON.stringify(moderationResult)]
   );
 
   const peerBotMessage = peerBotMessageResult.rows[0];

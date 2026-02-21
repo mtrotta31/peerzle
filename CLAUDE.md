@@ -227,6 +227,8 @@ The Demo community (`slug: demo`, `is_demo: true`) provides a sandbox for users 
 - **When generating AI responses for a new role, seed with context** — Empty message arrays cause the AI to default to helper behavior. Seed with a fake message from the other party so the AI knows its role (e.g., demo seeker needs a fake helper greeting first).
 - **LEFT JOIN for nullable foreign keys** — When a column can be NULL (like `seeker_membership_id` for demo seeker conversations), use LEFT JOIN not INNER JOIN, and handle NULL in WHERE conditions (`column IS NULL OR column != value`).
 - **Demo messages need special frontend handling** — Check `moderation_result.demo_helper` and `moderation_result.demo_seeker` flags to display proper names instead of "PeerBot" and hide the bot avatar.
+- **Demo helper responses need `is_demo` flag** — When triggering PeerBot in demo communities, pass `{ isDemo: true }` to `generatePeerBotResponse` and set `demo_helper: true` in moderation_result so frontend displays helper persona name instead of "PeerBot".
+- **API responses must include `is_demo` when needed** — The `endConversation` endpoint must return `is_demo` from the community so the frontend can show the demo CTA instead of the standard "What's Next?" card.
 
 ### Development Workflow
 
