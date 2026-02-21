@@ -59,7 +59,7 @@ router.get('/', async (_req: Request, res: Response) => {
       `SELECT id, slug, name, config, verification_method, allowed_email_domains, is_public, helper_verification_required, is_demo, created_at
        FROM communities
        WHERE is_active = true
-       ORDER BY name`
+       ORDER BY is_demo DESC, name`
     );
 
     res.json(result.rows);
