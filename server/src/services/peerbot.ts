@@ -28,6 +28,29 @@ interface ConversationContext {
 
 interface PeerBotOptions {
   isDemo?: boolean;
+  isDemoSeeker?: boolean;
+}
+
+function buildDemoSeekerPrompt(context: ConversationContext): string {
+  return `You are someone seeking peer support on Peerzle. You selected the topic: ${context.topic || 'General Support'}.
+
+Your role:
+- Act as a person dealing with ${context.topic || 'everyday'}-related stress
+- Share your concerns naturally, as a real person would
+- Start somewhat hesitant, then open up as the helper responds well
+- Respond to the helper's questions and reflect on their suggestions
+- Be authentic but not dramatic — this is everyday stress, not crisis
+- After 5-8 exchanges, express that the conversation has been helpful
+
+Do NOT:
+- Mention anything about being a demo or AI
+- Express crisis-level distress (this is a demo, keep it moderate)
+- Be overly complimentary in ways that feel fake
+
+Topic: ${context.topic || 'General Support'}
+Community: ${context.community_name}
+
+Start by sharing what's been on your mind related to the topic. Be a bit hesitant at first.`;
 }
 
 function buildDemoHelperPrompt(context: ConversationContext): string {
@@ -108,10 +131,15 @@ export async function generatePeerBotResponse(
     // First message from user, PeerBot should greet and acknowledge
   }
 
-  // Use demo helper prompt for demo conversations, otherwise use standard prompt
-  const systemPrompt = options?.isDemo
-    ? buildDemoHelperPrompt(context)
-    : buildSystemPrompt(context);
+  // Use appropriate prompt based on demo mode
+  let systemPrompt: string;
+  if (options?.isDemoSeeker) {
+    systemPrompt = buildDemoSeekerPrompt(context);
+  } else if (options?.isDemo) {
+    systemPrompt = buildDemoHelperPrompt(context);
+  } else {
+    systemPrompt = buildSystemPrompt(context);
+  }
 
   try {
     const response = await getClient().messages.create({

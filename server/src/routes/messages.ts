@@ -24,6 +24,7 @@ interface ConversationInfo {
   topic: string | null;
   community_name: string;
   community_id: string;
+  is_demo_seeker: boolean;
 }
 
 // POST /api/messages - Send a message
@@ -325,7 +326,7 @@ async function sendNewMessagePush(
 async function triggerPeerBotIfNeeded(conversationId: string, senderMembershipId: string): Promise<void> {
   // Get conversation info
   const conversationResult = await query<ConversationInfo & { seeker_membership_id: string }>(
-    `SELECT c.helper_membership_id, c.seeker_membership_id, c.topic, cm.name as community_name, c.community_id
+    `SELECT c.helper_membership_id, c.seeker_membership_id, c.topic, cm.name as community_name, c.community_id, c.is_demo_seeker
      FROM conversations c
      JOIN communities cm ON cm.id = c.community_id
      WHERE c.id = $1`,
@@ -334,7 +335,14 @@ async function triggerPeerBotIfNeeded(conversationId: string, senderMembershipId
 
   if (conversationResult.rows.length === 0) return;
 
-  const { helper_membership_id, seeker_membership_id, topic, community_name } = conversationResult.rows[0];
+  const { helper_membership_id, seeker_membership_id, topic, community_name, is_demo_seeker } = conversationResult.rows[0];
+
+  // Handle demo seeker conversations: respond to helper messages as the simulated seeker
+  if (is_demo_seeker && helper_membership_id !== null && senderMembershipId === helper_membership_id) {
+    console.log('[DEMO] Helper message in demo seeker conversation, triggering seeker response');
+    await triggerDemoSeekerResponse(conversationId, topic, community_name);
+    return;
+  }
 
   // Only respond if no human helper is assigned
   if (helper_membership_id !== null) {
@@ -400,6 +408,67 @@ async function triggerPeerBotIfNeeded(conversationId: string, senderMembershipId
     ...peerBotMessage,
     sender_email: null,
   });
+}
+
+/**
+ * Generate a demo seeker response when helper sends a message in a demo seeker conversation.
+ */
+async function triggerDemoSeekerResponse(
+  conversationId: string,
+  topic: string | null,
+  communityName: string
+): Promise<void> {
+  // Get recent messages for context
+  const messagesResult = await query<MessageRow & { sender_email: string | null }>(
+    `SELECT msg.*, u.email as sender_email
+     FROM messages msg
+     LEFT JOIN memberships m ON m.id = msg.sender_membership_id
+     LEFT JOIN users u ON u.id = m.user_id
+     WHERE msg.conversation_id = $1
+     ORDER BY msg.created_at ASC`,
+    [conversationId]
+  );
+
+  const messages = messagesResult.rows.map((msg) => ({
+    content: msg.content,
+    sender_email: msg.sender_email,
+    is_peerbot: msg.moderation_result?.sender === 'peerbot',
+  }));
+
+  // Small delay to feel natural
+  await new Promise((resolve) => setTimeout(resolve, 1500));
+
+  // Re-check conversation status (might have been ended during delay)
+  const statusCheck = await query<{ status: string }>(
+    'SELECT status FROM conversations WHERE id = $1',
+    [conversationId]
+  );
+  if (statusCheck.rows[0]?.status === 'ended') {
+    console.log('[DEMO] Conversation ended during delay, skipping seeker response');
+    return;
+  }
+
+  // Generate demo seeker response
+  const response = await generatePeerBotResponse(
+    messages,
+    { topic, community_name: communityName },
+    { isDemoSeeker: true }
+  );
+
+  // Save and emit
+  const msgResult = await query<MessageRow>(
+    `INSERT INTO messages (conversation_id, sender_membership_id, content, moderation_result)
+     VALUES ($1, NULL, $2, $3)
+     RETURNING *`,
+    [conversationId, response, JSON.stringify({ sender: 'peerbot', demo_seeker: true })]
+  );
+
+  emitToConversation(conversationId, 'new_message', {
+    ...msgResult.rows[0],
+    sender_email: null,
+  });
+
+  console.log(`[DEMO] Sent demo seeker response for conversation ${conversationId}`);
 }
 
 export default router;

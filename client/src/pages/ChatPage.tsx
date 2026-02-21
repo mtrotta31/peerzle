@@ -429,11 +429,15 @@ export default function ChatPage() {
   const recentMessagesForSuggestions: SuggestionsMessage[] = useMemo(() => {
     return messages.slice(-10).map((msg) => {
       const isPeerBot = msg.moderation_result?.sender === 'peerbot';
+      const isDemoSeeker = msg.moderation_result?.demo_seeker === true;
       const isMine = !isPeerBot && msg.sender_email === user?.email;
 
       let role: 'seeker' | 'helper' | 'peerbot';
-      if (isPeerBot) {
+      if (isPeerBot && !isDemoSeeker) {
         role = 'peerbot';
+      } else if (isDemoSeeker) {
+        // Demo seeker messages appear as seeker
+        role = 'seeker';
       } else if (userRole === 'helper') {
         role = isMine ? 'helper' : 'seeker';
       } else {
@@ -1080,26 +1084,35 @@ Take your time, be yourself, and remember — you're not alone.`;
           </p>
         ) : messages.length > 0 ? (
           messages.map((message, index) => {
-            const isPeerBot = message.moderation_result?.sender === 'peerbot';
-            const isMine = !isPeerBot && !isAdminViewer && message.sender_email === user?.email;
+            const isPeerBotRaw = message.moderation_result?.sender === 'peerbot';
+            const isDemoSeeker = message.moderation_result?.demo_seeker === true;
+            // Demo seeker messages should NOT be treated as PeerBot
+            const isPeerBot = isPeerBotRaw && !isDemoSeeker;
+            const isMine = !isPeerBotRaw && !isAdminViewer && message.sender_email === user?.email;
 
             // Determine the sender's role based on membership ID
-            const isFromSeeker = message.sender_membership_id === conversation?.seeker_membership_id;
+            // Demo seeker messages have no sender_membership_id but are from the seeker
+            const isFromSeeker = message.sender_membership_id === conversation?.seeker_membership_id || isDemoSeeker;
             const isFromHelper = message.sender_membership_id === conversation?.helper_membership_id;
 
             // Check if sender changed from previous message
             const prevMessage = index > 0 ? messages[index - 1] : null;
-            const prevIsPeerBot = prevMessage?.moderation_result?.sender === 'peerbot';
-            const prevIsMine = prevMessage && !prevIsPeerBot && !isAdminViewer && prevMessage.sender_email === user?.email;
-            const senderChanged = !prevMessage || (isMine !== prevIsMine) || (isPeerBot !== prevIsPeerBot);
+            const prevIsPeerBotRaw = prevMessage?.moderation_result?.sender === 'peerbot';
+            const prevIsDemoSeeker = prevMessage?.moderation_result?.demo_seeker === true;
+            const prevIsPeerBot = prevIsPeerBotRaw && !prevIsDemoSeeker;
+            const prevIsMine = prevMessage && !prevIsPeerBotRaw && !isAdminViewer && prevMessage.sender_email === user?.email;
+            const senderChanged = !prevMessage || (isMine !== prevIsMine) || (isPeerBot !== prevIsPeerBot) || (isDemoSeeker !== prevIsDemoSeeker);
 
             // For admin viewers, determine message styling based on role
             const getSenderLabel = () => {
               if (isPeerBot) return 'PeerBot';
               if (isAdminViewer) {
+                if (isDemoSeeker) return 'Demo Seeker (Simulated)';
                 const role = isFromSeeker ? 'Seeker' : isFromHelper ? 'Helper' : 'Unknown';
                 return `${role}: ${message.sender_email || 'Anonymous'}`;
               }
+              // Demo seeker messages appear as "Your Peer" to helpers
+              if (isDemoSeeker) return 'Your Peer';
               // Show friendly label instead of email for privacy
               if (userRole === 'seeker') {
                 return isFromHelper ? 'Peer Supporter' : 'Anonymous';
@@ -1112,6 +1125,7 @@ Take your time, be yourself, and remember — you're not alone.`;
             const getBackgroundColor = () => {
               if (isMine) return '#7C5CFC'; // Helper bubble (purple) for own messages
               if (isPeerBot) return '#F0F0F0'; // PeerBot gray
+              if (isDemoSeeker) return '#DCE9FF'; // Demo seeker = seeker light blue
               if (isAdminViewer) {
                 if (isFromSeeker) return '#DCE9FF'; // Seeker light blue
                 if (isFromHelper) return '#7C5CFC'; // Helper purple
@@ -1123,6 +1137,7 @@ Take your time, be yourself, and remember — you're not alone.`;
             const getTextColor = () => {
               if (isMine) return 'white';
               if (isPeerBot) return '#1E3A5F';
+              if (isDemoSeeker) return '#1E3A5F';
               if (isAdminViewer && isFromHelper) return 'white';
               return '#1E3A5F';
             };
@@ -1130,6 +1145,7 @@ Take your time, be yourself, and remember — you're not alone.`;
             // Label colors based on role
             const getLabelColor = () => {
               if (isPeerBot) return '#64748B';
+              if (isDemoSeeker) return '#2B7CF6'; // Demo seeker uses seeker color
               if (isAdminViewer) {
                 if (isFromSeeker) return '#2B7CF6';
                 if (isFromHelper) return '#7C5CFC';

@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { query } from '../config/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import crypto from 'crypto';
+import { startDemoHelperSimulation, cancelDemoHelperSimulation } from '../services/matching-queue';
 
 const router = Router();
 
@@ -382,6 +383,25 @@ router.put('/:slug/availability', authenticate, async (req: AuthenticatedRequest
     }
 
     console.log(`[HELPER] ${isAvailable ? 'Available' : 'Unavailable'}: User ${userId} in ${slug}`);
+
+    // Demo community: trigger or cancel helper simulation
+    if (isAvailable) {
+      // Check if this is a demo community
+      const isDemoResult = await query<{ is_demo: boolean }>(
+        'SELECT is_demo FROM communities WHERE id = $1',
+        [communityId]
+      );
+
+      if (isDemoResult.rows[0]?.is_demo) {
+        startDemoHelperSimulation(userId, communityId, result.rows[0].id).catch(err => {
+          console.error('[DEMO] Helper simulation error:', err);
+        });
+      }
+    } else {
+      // If toggling OFF, cancel any pending simulation
+      cancelDemoHelperSimulation(userId);
+    }
+
     res.json(result.rows[0]);
   } catch (error) {
     console.error('Toggle availability error:', error);

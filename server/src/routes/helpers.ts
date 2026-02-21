@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { query } from '../config/database';
 import { authenticate, AuthenticatedRequest } from '../middleware/auth';
 import { emitToConversation } from '../config/socket';
-import { cancelMatchingProcess } from '../services/matching-queue';
+import { cancelMatchingProcess, handleDemoSeekerJoined } from '../services/matching-queue';
 import { calculateMatchScore } from '../services/matching';
 import { sendPushNotification } from '../services/push-notifications';
 
@@ -17,6 +17,7 @@ interface ConversationRow {
   status: string;
   started_at: Date;
   ended_at: Date | null;
+  is_demo_seeker: boolean;
   community_slug: string;
   community_name: string;
   seeker_email: string;
@@ -128,7 +129,7 @@ router.post('/accept/:conversationId', authenticate, async (req: AuthenticatedRe
     const userId = req.user!.userId;
 
     // Get conversation and verify it's still in matching status
-    const convResult = await query<ConversationRow & { community_id: string }>(
+    const convResult = await query<ConversationRow & { community_id: string; community_name: string }>(
       `SELECT c.*, cm.slug as community_slug, cm.name as community_name
        FROM conversations c
        JOIN communities cm ON cm.id = c.community_id
@@ -222,6 +223,13 @@ router.post('/accept/:conversationId', authenticate, async (req: AuthenticatedRe
     });
 
     console.log(`[HELPER] Accepted conversation ${conversationId}: Helper ${helperEmail}`);
+
+    // Check if this is a demo seeker conversation - send PeerBot seeker's opening message
+    if (conversation.is_demo_seeker) {
+      handleDemoSeekerJoined(conversationId, conversation.topic, conversation.community_name).catch(err => {
+        console.error('[DEMO] Demo seeker greeting error:', err);
+      });
+    }
 
     // Send push notification to the seeker
     // Get seeker's user_id from their membership

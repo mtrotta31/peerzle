@@ -23,6 +23,7 @@ interface ConversationRow {
   seeker_post_mood: number | null;
   helper_compliment_badges: string[] | null;
   conversation_saved_by: string[] | null;
+  is_demo_seeker: boolean;
 }
 
 interface MessageRow {
@@ -330,6 +331,13 @@ router.post('/:id/end', authenticate, async (req: AuthenticatedRequest, res: Res
       endedBy: userId,
     });
 
+    // Check if this was a demo seeker conversation - auto-submit rating and badges
+    if (endedConversation.is_demo_seeker && endedConversation.helper_membership_id) {
+      autoSubmitDemoSeekerRating(id, endedConversation.helper_membership_id).catch(err => {
+        console.error('[DEMO] Auto-rating error:', err);
+      });
+    }
+
     res.json(endedConversation);
   } catch (error) {
     console.error('End conversation error:', error);
@@ -510,5 +518,41 @@ router.post('/:id/save', authenticate, async (req: AuthenticatedRequest, res: Re
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+/**
+ * Auto-submit rating and compliment badges for demo seeker conversations.
+ * Called when helper ends a demo seeker conversation.
+ */
+async function autoSubmitDemoSeekerRating(
+  conversationId: string,
+  _helperMembershipId: string
+): Promise<void> {
+  // Delay to simulate natural timing (rating usually comes after conversation ends)
+  await new Promise(resolve => setTimeout(resolve, 3000));
+
+  // Random positive rating (4-5 stars, weighted towards 5)
+  const rating = Math.random() > 0.3 ? 5 : 4;
+
+  // Pick 1-2 random badges
+  const allBadges = ['great_listener', 'helpful_advice', 'felt_heard', 'above_beyond', 'easy_to_talk', 'understood_me'];
+  const shuffled = [...allBadges].sort(() => Math.random() - 0.5);
+  const selectedBadges = shuffled.slice(0, Math.random() > 0.5 ? 2 : 1);
+
+  // Insert rating (from demo seeker's perspective - no membership_id since seeker is simulated)
+  await query(
+    `INSERT INTO conversation_ratings (conversation_id, membership_id, role, rating, felt_heard, would_recommend)
+     VALUES ($1, NULL, 'seeker', $2, true, true)
+     ON CONFLICT DO NOTHING`,
+    [conversationId, rating]
+  );
+
+  // Set badges on conversation
+  await query(
+    `UPDATE conversations SET helper_compliment_badges = $1, seeker_post_mood = 4 WHERE id = $2`,
+    [selectedBadges, conversationId]
+  );
+
+  console.log(`[DEMO] Auto-submitted rating ${rating} stars with badges: ${selectedBadges.join(', ')} for conversation ${conversationId}`);
+}
 
 export default router;

@@ -403,7 +403,7 @@ export interface Message {
   sender_membership_id: string | null;
   content: string;
   created_at: string;
-  moderation_result: { sender?: string } | null;
+  moderation_result: { sender?: string; demo_helper?: boolean; demo_seeker?: boolean } | null;
   sender_email: string | null;
 }
 
@@ -446,6 +446,8 @@ export interface Conversation {
   user_role?: 'seeker' | 'helper';
   // Demo community flag
   is_demo?: boolean;
+  // Demo seeker flag (helper is chatting with simulated seeker)
+  is_demo_seeker?: boolean;
 }
 
 // Conversation API

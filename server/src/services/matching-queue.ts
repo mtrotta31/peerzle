@@ -186,6 +186,141 @@ async function handleDemoMatching(conversationId: string): Promise<void> {
   });
 }
 
+// =============================================================================
+// DEMO HELPER SIMULATION (Wave 3)
+// When a helper toggles available in demo community, simulate a pending request
+// =============================================================================
+
+// Track active demo helper simulations (prevent duplicates)
+const activeDemoHelperSimulations = new Map<string, NodeJS.Timeout>();
+
+/**
+ * Start demo helper simulation when helper goes available in demo community.
+ * After 10-15s delay, generates a fake pending request.
+ */
+export async function startDemoHelperSimulation(
+  userId: string,
+  communityId: string,
+  membershipId: string
+): Promise<void> {
+  // Cancel any existing simulation for this user
+  cancelDemoHelperSimulation(userId);
+
+  // Random delay: 10-15 seconds
+  const delay = Math.floor(Math.random() * 5000) + 10000;
+
+  console.log(`[DEMO] Starting helper simulation for user ${userId}, delay: ${delay}ms`);
+
+  const timeout = setTimeout(async () => {
+    try {
+      await createDemoSeekerConversation(userId, communityId, membershipId);
+    } catch (err) {
+      console.error('[DEMO] Error creating demo seeker conversation:', err);
+    }
+    activeDemoHelperSimulations.delete(userId);
+  }, delay);
+
+  activeDemoHelperSimulations.set(userId, timeout);
+}
+
+/**
+ * Cancel any pending demo helper simulation for a user.
+ */
+export function cancelDemoHelperSimulation(userId: string): void {
+  const timeout = activeDemoHelperSimulations.get(userId);
+  if (timeout) {
+    clearTimeout(timeout);
+    activeDemoHelperSimulations.delete(userId);
+    console.log(`[DEMO] Cancelled helper simulation for user ${userId}`);
+  }
+}
+
+/**
+ * Create a demo seeker conversation and notify the helper.
+ */
+async function createDemoSeekerConversation(
+  helperUserId: string,
+  communityId: string,
+  _helperMembershipId: string
+): Promise<void> {
+  // 1. Get community config for topics
+  const communityResult = await query<{ config: { topics?: string[] } }>(
+    'SELECT config FROM communities WHERE id = $1',
+    [communityId]
+  );
+  const topics = communityResult.rows[0]?.config?.topics || ['General Support'];
+
+  // 2. Pick random topic
+  const topic = topics[Math.floor(Math.random() * topics.length)];
+
+  // 3. Generate fake seeker display name
+  const seekerDisplayName = generateDisplayName();
+
+  // 4. Random match score: 70-90%
+  const matchScore = Math.floor(Math.random() * 21) + 70;
+
+  // 5. Create a demo seeker conversation record
+  const convResult = await query<{ id: string }>(
+    `INSERT INTO conversations (community_id, seeker_membership_id, topic, status, match_score, is_demo_seeker)
+     VALUES ($1, NULL, $2, 'matching', $3, true)
+     RETURNING id`,
+    [communityId, topic, matchScore]
+  );
+  const conversationId = convResult.rows[0].id;
+
+  // 6. Emit help_request to the helper
+  const event: HelpRequestEvent = {
+    conversationId,
+    communityId,
+    topic,
+    matchScore,
+    startedAt: new Date().toISOString(),
+  };
+  emitToUser(helperUserId, 'help_request', event);
+
+  console.log(`[DEMO] Created demo seeker conversation ${conversationId} for helper ${helperUserId} (topic: ${topic}, score: ${matchScore}%, seeker: ${seekerDisplayName})`);
+}
+
+/**
+ * Handle when a helper accepts a demo seeker conversation.
+ * Sends the initial message from the simulated seeker.
+ */
+export async function handleDemoSeekerJoined(
+  conversationId: string,
+  topic: string | null,
+  communityName: string
+): Promise<void> {
+  // Small delay before first message
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  // Generate opening message from demo seeker
+  const openingMessage = await generatePeerBotResponse(
+    [], // Empty - this is the first message
+    { topic, community_name: communityName },
+    { isDemoSeeker: true }
+  );
+
+  // Insert message
+  const msgResult = await query<{ id: string; conversation_id: string; sender_membership_id: string | null; content: string; created_at: Date; moderation_result: object | null }>(
+    `INSERT INTO messages (conversation_id, sender_membership_id, content, moderation_result)
+     VALUES ($1, NULL, $2, $3)
+     RETURNING *`,
+    [conversationId, openingMessage, JSON.stringify({ sender: 'peerbot', demo_seeker: true })]
+  );
+
+  // Emit message
+  emitToConversation(conversationId, 'new_message', {
+    ...msgResult.rows[0],
+    sender_email: null,
+  });
+
+  console.log(`[DEMO] Sent demo seeker opening message for conversation ${conversationId}`);
+}
+
+// =============================================================================
+// HELPER NOTIFICATION
+// =============================================================================
+
 /**
  * Send help_request to a set of helpers for a conversation.
  */
