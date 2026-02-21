@@ -47,7 +47,20 @@ app.set('trust proxy', 1);
 initializeSocket(httpServer);
 
 // Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", "data:", "blob:"],
+      connectSrc: ["'self'", "wss:", "ws:"],  // Allow WebSocket connections
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+}));
 app.use(cors({
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,

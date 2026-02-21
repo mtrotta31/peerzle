@@ -8,9 +8,11 @@ export interface HelpRequestEvent {
   startedAt: string;
 }
 
-// In production with same-origin deployment, VITE_API_URL should be empty string
-// which means socket.io will connect to the same origin
-const SOCKET_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+// In production, use relative URLs (same origin) for socket.io
+// In development, fall back to localhost:3001 for the backend server
+const SOCKET_URL = import.meta.env.PROD
+  ? ''  // Production: same origin
+  : (import.meta.env.VITE_API_URL ?? 'http://localhost:3001');
 
 let socket: Socket | null = null;
 
