@@ -1,13 +1,14 @@
 -- Seed: Epilepsy Community
 -- Run with: psql $DATABASE_URL -f database/seeds/epilepsy-community.sql
 
-INSERT INTO communities (slug, name, verification_method, helper_verification_required, is_demo, config)
+INSERT INTO communities (slug, name, verification_method, helper_verification_required, is_demo, is_active, config)
 VALUES (
   'epilepsy',
   'Epilepsy Community',
   'open',
   true,
   false,
+  true,
   '{
     "branding": {
       "primaryColor": "#7B2D8E"
@@ -36,4 +37,5 @@ ON CONFLICT (slug) DO UPDATE SET
   verification_method = EXCLUDED.verification_method,
   helper_verification_required = EXCLUDED.helper_verification_required,
   is_demo = EXCLUDED.is_demo,
+  is_active = EXCLUDED.is_active,
   config = EXCLUDED.config;
