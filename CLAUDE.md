@@ -24,10 +24,16 @@ This is a deeply personal project connected to the founder's brother's story. Tr
 ```
 peerzle/
 ├── client/           # React PWA frontend (Vite + CSS Variables)
+│   └── src/
+│       ├── components/   # Reusable UI components
+│       ├── pages/        # Route-level page components
+│       ├── hooks/        # Custom React hooks (e.g., usePWAInstallPrompt)
+│       ├── services/     # API and service layer
+│       └── context/      # React context providers
 ├── server/           # Node.js/Express backend
 ├── database/
 │   ├── schema.sql    # Base database schema
-│   ├── migrations/   # Sequential migration files (001-017+)
+│   ├── migrations/   # Sequential migration files (001-023+)
 │   └── seeds/        # Community seed data
 ├── .env.example      # Environment variable template
 └── CLAUDE.md         # This file
@@ -45,6 +51,7 @@ peerzle/
 - **Bottom Navigation:** COMPLETE — All 5 waves shipped (see below)
 - **Demo Community:** COMPLETE — All 4 waves shipped (see below)
 - **Communities:** 6 live communities running (including Demo)
+- **PWA Install Prompt:** iOS Safari instructions + Android native beforeinstallprompt on login page
 
 ### Tier 3 Status
 
@@ -168,6 +175,7 @@ This is a mental health platform. Safety is non-negotiable.
 - **Emergency contacts are always optional:** Never force users to provide emergency contact info. Use warm framing.
 - **Webhook security:** All webhook payloads use HMAC signing. Retry logic: 3 attempts with exponential backoff.
 - **Mood analytics privacy:** Admin mood endpoints require minimum 5 users for aggregation. Individual mood scores are never exposed to admins — only aggregate averages and anonymous alert patterns (display names only).
+- **Mood check-in notifications:** Daily reminders sent at 14:00 UTC (~11 AM EST). Scheduler runs every 15 minutes, checks for users who haven't checked in today and haven't been notified. See `server/src/services/mood-checkin-scheduler.ts`.
 
 ## Matching Algorithm
 
@@ -183,7 +191,7 @@ When no human helpers are available AND cross-org matching is exhausted, fall ba
 
 ## Demo Community
 
-The Demo community (`slug: demo`, `is_demo: true`) provides a sandbox for users to experience Peerzle without affecting real users.
+The Demo community (`slug: demo`, `is_demo: true`) provides a sandbox for users to experience Peerzle without affecting real users. Demo communities are sorted to appear first on the CommunitiesPage.
 
 ### Demo Seeker Experience (Wave 1-2)
 - When a seeker starts a conversation in demo community, matching is bypassed
@@ -232,6 +240,7 @@ The Demo community (`slug: demo`, `is_demo: true`) provides a sandbox for users 
 - **API responses must include `is_demo` when needed** — The `endConversation` endpoint must return `is_demo` from the community so the frontend can show the demo CTA instead of the standard "What's Next?" card.
 - **Same-origin deployment requires relative URLs** — In production, frontend and API are served from app.peerzle.com. The client uses `import.meta.env.PROD` to detect production builds and uses empty string for API baseURL (relative URLs like `/api/auth/login`). Never hardcode absolute URLs for API calls.
 - **Marketing site requires www subdomain** — Links to the marketing site must use `www.peerzle.com` (not `peerzle.com`) for proper routing. The marketing site is a client-side SPA that requires the www subdomain.
+- **PWA install prompt uses localStorage** — The `pwa-install-dismissed` key tracks if user dismissed the install prompt. The `usePWAInstallPrompt` hook handles platform detection (iOS Safari vs Android Chrome), standalone mode detection, and the `beforeinstallprompt` event for native Android install.
 
 ### Development Workflow
 
