@@ -35,14 +35,15 @@ peerzle/
 ## Current State
 
 - **Live at:** peerzle-production.up.railway.app
-- **Database migration:** 020 (always check for the latest before creating new ones)
+- **Database migration:** 023 (always check for the latest before creating new ones)
 - **Tier 1:** COMPLETE — 12 core features + community join flow, helper verification, helper training module, password reset, TOS acceptance
 - **Tier 2:** COMPLETE — All 5 phases shipped. Matching algorithm with weighted scoring, connection cards with match percentages, mood checks, compliment badges, coaching tips, dynamic suggestions, admin stats summary
 - **Tier 3:** COMPLETE — All 5 phases shipped
 - **Tier 4:** COMPLETE — Daily Mood Check-Ins + Admin Mood Trend Analytics
 - **Settings Page:** COMPLETE — 5 sections (Account, Profile, Notifications, Emergency Contact, Privacy)
-- **Bottom Navigation:** COMPLETE — All 4 waves shipped (see below)
-- **Communities:** 5 live communities running
+- **Bottom Navigation:** COMPLETE — All 5 waves shipped (see below)
+- **Demo Community:** COMPLETE — All 3 waves shipped (see below)
+- **Communities:** 6 live communities running (including Demo)
 
 ### Tier 3 Status
 
@@ -63,6 +64,14 @@ peerzle/
 | 3 | Check-In Tab (mood check-in + history + badge indicator) | ✅ Complete |
 | 4 | Cleanup + Resources Migration to Settings | ✅ Complete |
 | 5 | Helper Tab (impact stats, badges, streak, coaching tips, pending requests) | ✅ Complete |
+
+### Demo Community Status
+
+| Wave | Feature | Status |
+|------|---------|--------|
+| 1 | Demo community with `is_demo` flag, bypass real matching, instant PeerBot connection | ✅ Complete |
+| 2 | Demo helper persona (PeerBot acts as trained peer), demo banners, "Try Demo" badge | ✅ Complete |
+| 3 | Helper flow simulation (simulated pending requests, PeerBot as seeker, auto-rating) | ✅ Complete |
 
 ## Architecture Decisions (Don't Change These)
 
@@ -170,6 +179,29 @@ The matching system uses weighted scoring across multiple dimensions:
 
 When no human helpers are available AND cross-org matching is exhausted, fall back to PeerBot (AI companion). PeerBot is a supplement, not a replacement, for human connection.
 
+## Demo Community
+
+The Demo community (`slug: demo`, `is_demo: true`) provides a sandbox for users to experience Peerzle without affecting real users.
+
+### Demo Seeker Experience (Wave 1-2)
+- When a seeker starts a conversation in demo community, matching is bypassed
+- PeerBot instantly connects using the **demo helper persona** (acts as trained peer supporter, never says it's AI)
+- Connection card shows generated helper name, random match score (78-95%), shared topics
+- Demo banner appears: "Demo Mode — Chatting with an AI helper to show you how Peerzle works"
+
+### Demo Helper Experience (Wave 3)
+- When helper toggles "Available" in demo community, a simulated help request appears after 10-15 seconds
+- Request has random topic, generated seeker name, match score (70-90%)
+- PeerBot acts as the **demo seeker persona** (hesitant at first, opens up, expresses gratitude after 5-8 exchanges)
+- When conversation ends, PeerBot auto-submits positive rating (4-5 stars) and 1-2 compliment badges
+
+### Key Implementation Details
+- `communities.is_demo` — Flag that triggers demo behavior
+- `conversations.is_demo_seeker` — Flag for helper-side demo (PeerBot is the seeker)
+- `moderation_result.demo_helper` — Marks messages from demo helper persona
+- `moderation_result.demo_seeker` — Marks messages from demo seeker persona
+- Demo messages display with proper names (not "PeerBot") and no bot avatar
+
 ## Common Patterns and Gotchas
 
 ### Things Claude Code Gets Wrong (Add to this list!)
@@ -183,6 +215,9 @@ When no human helpers are available AND cross-org matching is exhausted, fall ba
 - **Always wrap the entire SW push handler in event.waitUntil()** — early returns before waitUntil cause iOS to kill the service worker before the notification displays
 - **Always run migrations on production after deploying** — Railway auto-deploy does NOT run migrations automatically. Run them manually via `psql $DATABASE_URL -f database/migrations/XXX.sql`
 - **Don't forget to update this CLAUDE.md** when you discover new patterns or fix recurring issues
+- **When generating AI responses for a new role, seed with context** — Empty message arrays cause the AI to default to helper behavior. Seed with a fake message from the other party so the AI knows its role (e.g., demo seeker needs a fake helper greeting first).
+- **LEFT JOIN for nullable foreign keys** — When a column can be NULL (like `seeker_membership_id` for demo seeker conversations), use LEFT JOIN not INNER JOIN, and handle NULL in WHERE conditions (`column IS NULL OR column != value`).
+- **Demo messages need special frontend handling** — Check `moderation_result.demo_helper` and `moderation_result.demo_seeker` flags to display proper names instead of "PeerBot" and hide the bot avatar.
 
 ### Development Workflow
 
@@ -220,6 +255,7 @@ Each community has specific requirements:
 | Veterans | Attestation | Optional | TBD |
 | Higher Education | .edu email | Optional | TBD |
 | Employee Wellness | Invite code | Training required | Custom |
+| **Peerzle Demo** | Open | Not required | Blue (#2B7CF6) |
 
 ## Running Locally
 
