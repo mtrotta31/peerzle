@@ -53,7 +53,30 @@
       "Bash(VAPID_PUBLIC_KEY=\"\" VAPID_PRIVATE_KEY=\"\" VAPID_SUBJECT=\"\" node:*)",
       "Bash(npx ts-node:*)",
       "Bash(npm run typecheck:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(pkill:*)",
+      "Bash(claude mcp list:*)",
+      "Bash(kill:*)",
+      "Bash(python3:*)",
+      "Bash(claude mcp add:*)",
+      "Bash(claude mcp remove:*)",
+      "Bash(npx:*)",
+      "Bash(npm search:*)",
+      "WebSearch",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_type",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_network_requests",
+      "mcp__playwright__browser_evaluate",
+      "mcp__playwright__browser_console_messages",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_press_key",
+      "mcp__playwright__browser_close",
+      "WebFetch(domain:app.peerzle.com)",
+      "WebFetch(domain:peerzle.com)",
+      "WebFetch(domain:peerzle-website.vercel.app)",
+      "WebFetch(domain:www.peerzle.com)"
     ]
   }
 }

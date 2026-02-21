@@ -2,6 +2,8 @@ import { useState, FormEvent } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AxiosError } from 'axios';
+import { usePWAInstallPrompt } from '../hooks/usePWAInstallPrompt';
+import PWAInstallPrompt from '../components/PWAInstallPrompt';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -12,6 +14,9 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const returnTo = searchParams.get('returnTo');
+
+  // PWA install prompt
+  const { showPrompt, isIOS, canUseNativePrompt, dismiss, triggerNativeInstall } = usePWAInstallPrompt();
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -288,6 +293,16 @@ export default function LoginPage() {
           </Link>
         </div>
       </div>
+
+      {/* PWA Install Prompt */}
+      {showPrompt && (
+        <PWAInstallPrompt
+          isIOS={isIOS}
+          canUseNativePrompt={canUseNativePrompt}
+          onDismiss={dismiss}
+          onNativeInstall={triggerNativeInstall}
+        />
+      )}
     </div>
   );
 }
