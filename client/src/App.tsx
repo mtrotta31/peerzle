@@ -27,6 +27,7 @@ import MoodCheckInPage from './pages/MoodCheckInPage';
 import MoodHistoryPage from './pages/MoodHistoryPage';
 import MessagesPage from './pages/MessagesPage';
 import CommunityLayout from './components/CommunityLayout';
+import DemoRedirect from './pages/DemoRedirect';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -128,6 +129,9 @@ function AppRoutes() {
       {/* Public legal routes */}
       <Route path="/terms" element={<TermsOfService />} />
       <Route path="/privacy" element={<PrivacyPolicy />} />
+
+      {/* Demo route - handles auth internally and auto-joins demo community */}
+      <Route path="/demo" element={<DemoRedirect />} />
 
       {/* Protected routes */}
       <Route

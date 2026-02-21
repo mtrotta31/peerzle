@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { AxiosError } from 'axios';
 
@@ -10,6 +10,8 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnTo = searchParams.get('returnTo');
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -18,7 +20,7 @@ export default function LoginPage() {
 
     try {
       await login(email, password);
-      navigate('/communities');
+      navigate(returnTo || '/communities');
     } catch (err) {
       const axiosError = err as AxiosError<{ error: string }>;
       setError(axiosError.response?.data?.error || 'Login failed');

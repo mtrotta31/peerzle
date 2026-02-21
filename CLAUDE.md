@@ -42,7 +42,7 @@ peerzle/
 - **Tier 4:** COMPLETE — Daily Mood Check-Ins + Admin Mood Trend Analytics
 - **Settings Page:** COMPLETE — 5 sections (Account, Profile, Notifications, Emergency Contact, Privacy)
 - **Bottom Navigation:** COMPLETE — All 5 waves shipped (see below)
-- **Demo Community:** COMPLETE — All 3 waves shipped (see below)
+- **Demo Community:** COMPLETE — All 4 waves shipped (see below)
 - **Communities:** 6 live communities running (including Demo)
 
 ### Tier 3 Status
@@ -72,6 +72,7 @@ peerzle/
 | 1 | Demo community with `is_demo` flag, bypass real matching, instant PeerBot connection | ✅ Complete |
 | 2 | Demo helper persona (PeerBot acts as trained peer), demo banners, "Try Demo" badge | ✅ Complete |
 | 3 | Helper flow simulation (simulated pending requests, PeerBot as seeker, auto-rating) | ✅ Complete |
+| 4 | Post-session CTA ("Get in Touch", "Learn More"), `/demo` route with auto-join | ✅ Complete |
 
 ## Architecture Decisions (Don't Change These)
 
@@ -195,12 +196,20 @@ The Demo community (`slug: demo`, `is_demo: true`) provides a sandbox for users 
 - PeerBot acts as the **demo seeker persona** (hesitant at first, opens up, expresses gratitude after 5-8 exchanges)
 - When conversation ends, PeerBot auto-submits positive rating (4-5 stars) and 1-2 compliment badges
 
+### Post-Session CTA + /demo Route (Wave 4)
+- After demo conversation ends (seeker or helper), show CTA card instead of standard "What's Next?" card
+- CTA includes: "Get in Touch" (mailto:matt.trotta31@gmail.com) and "Learn More" (peerzle-website.vercel.app/for-organizations)
+- `/demo` route auto-joins demo community: unauthenticated users → login with returnTo → auto-join → redirect to /community/demo
+- LoginPage and SignupPage support `returnTo` query parameter for post-auth redirects
+
 ### Key Implementation Details
-- `communities.is_demo` — Flag that triggers demo behavior
-- `conversations.is_demo_seeker` — Flag for helper-side demo (PeerBot is the seeker)
+- `communities.is_demo` — Flag that triggers demo behavior (migration 021)
+- `conversations.is_demo_seeker` — Flag for helper-side demo (PeerBot is the seeker) (migration 022)
 - `moderation_result.demo_helper` — Marks messages from demo helper persona
 - `moderation_result.demo_seeker` — Marks messages from demo seeker persona
 - Demo messages display with proper names (not "PeerBot") and no bot avatar
+- `/demo` route: `DemoRedirect.tsx` handles auth check, auto-join, and redirect
+- Post-session CTA: Conditional rendering in ChatPage "What's Next?" card based on `conversation.is_demo`
 
 ## Common Patterns and Gotchas
 

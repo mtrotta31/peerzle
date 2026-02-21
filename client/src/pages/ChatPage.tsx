@@ -396,8 +396,10 @@ export default function ChatPage() {
 
   const handleRatingSubmitted = () => {
     setShowRatingModal(false);
-    // For seekers, show "what's next" prompt; for helpers, go to dashboard
-    if (userRole === 'seeker') {
+    // For seekers, show "what's next" prompt
+    // For helpers in demo community, also show the "what's next" (demo CTA)
+    // For regular helpers, go to dashboard
+    if (userRole === 'seeker' || conversation?.is_demo) {
       setShowWhatsNext(true);
     } else {
       navigate(`/community/${conversation?.community_slug}`);
@@ -1480,7 +1482,7 @@ Take your time, be yourself, and remember — you're not alone.`;
         />
       )}
 
-      {/* What's Next Card - shown to seekers after post-chat modal */}
+      {/* What's Next Card - shown after post-chat modal */}
       {showWhatsNext && conversation?.community_slug && (
         <div
           style={{
@@ -1508,77 +1510,163 @@ Take your time, be yourself, and remember — you're not alone.`;
               textAlign: 'center',
             }}
           >
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🌟</div>
-            <h2 style={{ margin: '0 0 8px', fontSize: '22px', fontWeight: 600, color: '#1E3A5F' }}>
-              What's next?
-            </h2>
-            <p style={{ margin: '0 0 24px', fontSize: '14px', color: '#64748B' }}>
-              Thank you for sharing. Your wellbeing matters.
-            </p>
+            {conversation.is_demo ? (
+              <>
+                {/* Demo CTA */}
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>🎯</div>
+                <h2 style={{ margin: '0 0 8px', fontSize: '22px', fontWeight: 600, color: '#1E3A5F' }}>
+                  You just experienced Peerzle!
+                </h2>
+                <p style={{ margin: '0 0 24px', fontSize: '14px', color: '#64748B' }}>
+                  Want to bring this to your organization?
+                </p>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <button
-                onClick={() => navigate(`/community/${conversation.community_slug}`)}
-                style={{
-                  padding: '14px 24px',
-                  backgroundColor: '#2B7CF6',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '24px',
-                  cursor: 'pointer',
-                  fontSize: '15px',
-                  fontWeight: 600,
-                  transition: 'background-color 0.2s',
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = '#1E6AD9';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = '#2B7CF6';
-                }}
-              >
-                Start another conversation
-              </button>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <a
+                    href="mailto:matt.trotta31@gmail.com?subject=Interested%20in%20Peerzle%20for%20our%20organization"
+                    style={{
+                      display: 'block',
+                      padding: '14px 24px',
+                      backgroundColor: '#2B7CF6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '24px',
+                      cursor: 'pointer',
+                      fontSize: '15px',
+                      fontWeight: 600,
+                      textDecoration: 'none',
+                      transition: 'background-color 0.2s',
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#1E6AD9';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#2B7CF6';
+                    }}
+                  >
+                    Get in Touch
+                  </a>
 
-              <button
-                onClick={() => navigate(`/community/${conversation.community_slug}/history`)}
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: 'white',
-                  color: '#2B7CF6',
-                  border: '1px solid #E2E8F0',
-                  borderRadius: '24px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                  transition: 'all 0.2s',
-                }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.borderColor = '#2B7CF6';
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.borderColor = '#E2E8F0';
-                }}
-              >
-                View session history
-              </button>
+                  <a
+                    href="https://peerzle-website.vercel.app/for-organizations"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'block',
+                      padding: '12px 24px',
+                      backgroundColor: 'white',
+                      color: '#2B7CF6',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '24px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      textDecoration: 'none',
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.borderColor = '#2B7CF6';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.borderColor = '#E2E8F0';
+                    }}
+                  >
+                    Learn More
+                  </a>
 
-              <button
-                onClick={() => navigate(`/community/${conversation.community_slug}`)}
-                style={{
-                  padding: '12px 24px',
-                  backgroundColor: 'transparent',
-                  color: '#64748B',
-                  border: 'none',
-                  borderRadius: '24px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: 500,
-                }}
-              >
-                Return to dashboard
-              </button>
-            </div>
+                  <button
+                    onClick={() => navigate(`/community/${conversation.community_slug}`)}
+                    style={{
+                      padding: '12px 24px',
+                      backgroundColor: 'transparent',
+                      color: '#64748B',
+                      border: 'none',
+                      borderRadius: '24px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Return to dashboard
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {/* Standard What's Next */}
+                <div style={{ fontSize: '48px', marginBottom: '16px' }}>🌟</div>
+                <h2 style={{ margin: '0 0 8px', fontSize: '22px', fontWeight: 600, color: '#1E3A5F' }}>
+                  What's next?
+                </h2>
+                <p style={{ margin: '0 0 24px', fontSize: '14px', color: '#64748B' }}>
+                  Thank you for sharing. Your wellbeing matters.
+                </p>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  <button
+                    onClick={() => navigate(`/community/${conversation.community_slug}`)}
+                    style={{
+                      padding: '14px 24px',
+                      backgroundColor: '#2B7CF6',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '24px',
+                      cursor: 'pointer',
+                      fontSize: '15px',
+                      fontWeight: 600,
+                      transition: 'background-color 0.2s',
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.backgroundColor = '#1E6AD9';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.backgroundColor = '#2B7CF6';
+                    }}
+                  >
+                    Start another conversation
+                  </button>
+
+                  <button
+                    onClick={() => navigate(`/community/${conversation.community_slug}/history`)}
+                    style={{
+                      padding: '12px 24px',
+                      backgroundColor: 'white',
+                      color: '#2B7CF6',
+                      border: '1px solid #E2E8F0',
+                      borderRadius: '24px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                      transition: 'all 0.2s',
+                    }}
+                    onMouseOver={(e) => {
+                      e.currentTarget.style.borderColor = '#2B7CF6';
+                    }}
+                    onMouseOut={(e) => {
+                      e.currentTarget.style.borderColor = '#E2E8F0';
+                    }}
+                  >
+                    View session history
+                  </button>
+
+                  <button
+                    onClick={() => navigate(`/community/${conversation.community_slug}`)}
+                    style={{
+                      padding: '12px 24px',
+                      backgroundColor: 'transparent',
+                      color: '#64748B',
+                      border: 'none',
+                      borderRadius: '24px',
+                      cursor: 'pointer',
+                      fontSize: '14px',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Return to dashboard
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
