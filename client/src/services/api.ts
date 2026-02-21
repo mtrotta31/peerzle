@@ -144,6 +144,7 @@ export interface Community {
   allowed_email_domains?: string[];
   is_public: boolean;
   helper_verification_required: boolean;
+  is_demo?: boolean;
   created_at: string;
 }
 

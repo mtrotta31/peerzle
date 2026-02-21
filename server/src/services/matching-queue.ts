@@ -155,10 +155,11 @@ async function handleDemoMatching(conversationId: string): Promise<void> {
   // before PeerBot greeting arrives
   await new Promise((resolve) => setTimeout(resolve, 1500));
 
-  // Generate PeerBot greeting (using existing persona for now - Wave 2 adds new persona)
+  // Generate PeerBot greeting using demo helper persona
   const greetingContent = await generatePeerBotResponse(
     [{ content: 'Hello, I need someone to talk to.', sender_email: null, is_peerbot: false }],
-    { topic: conv.topic, community_name: conv.community_name }
+    { topic: conv.topic, community_name: conv.community_name },
+    { isDemo: true }
   );
 
   // Insert PeerBot message with demo_helper marker

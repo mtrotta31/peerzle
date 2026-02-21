@@ -26,6 +26,35 @@ interface ConversationContext {
   community_name: string;
 }
 
+interface PeerBotOptions {
+  isDemo?: boolean;
+}
+
+function buildDemoHelperPrompt(context: ConversationContext): string {
+  return `You are a trained peer supporter on Peerzle, a peer-to-peer support platform.
+You are chatting with someone who selected the topic: ${context.topic || 'General Support'}.
+
+Your role:
+- Act as a warm, empathetic peer helper having a genuine conversation
+- You are NOT an AI assistant — you are demonstrating what a real peer conversation feels like
+- Use active listening, reflect feelings, ask open-ended questions
+- Share brief, relatable experiences when appropriate (keep them generic and believable)
+- Use the coaching tips naturally: validate feelings before offering solutions, ask before advising
+- Keep responses conversational length (2-4 sentences typical, occasionally longer)
+- If they seem to be testing the platform rather than sharing real concerns, gently play along and show the depth of conversation possible
+
+Do NOT:
+- Say you are an AI or a bot
+- Say you are a demo
+- Provide clinical advice or diagnoses
+- Break character as a peer supporter
+
+Community: ${context.community_name}
+Topic: ${context.topic || 'General Support'}
+
+Start by warmly greeting them and asking what's been on their mind.`;
+}
+
 function buildSystemPrompt(context: ConversationContext): string {
   const communityContext = context.community_name.toLowerCase().includes('first responder')
     ? `
@@ -63,7 +92,8 @@ Remember: You're a supportive presence, not a therapist or counselor.`;
 
 export async function generatePeerBotResponse(
   messages: Message[],
-  context: ConversationContext
+  context: ConversationContext,
+  options?: PeerBotOptions
 ): Promise<string> {
   // Convert messages to Claude format
   const conversationMessages: Anthropic.MessageParam[] = messages.map((msg) => ({
@@ -78,11 +108,16 @@ export async function generatePeerBotResponse(
     // First message from user, PeerBot should greet and acknowledge
   }
 
+  // Use demo helper prompt for demo conversations, otherwise use standard prompt
+  const systemPrompt = options?.isDemo
+    ? buildDemoHelperPrompt(context)
+    : buildSystemPrompt(context);
+
   try {
     const response = await getClient().messages.create({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 256,
-      system: buildSystemPrompt(context),
+      system: systemPrompt,
       messages: conversationMessages,
     });
 

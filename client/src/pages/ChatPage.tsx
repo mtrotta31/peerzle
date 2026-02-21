@@ -637,6 +637,22 @@ Take your time, be yourself, and remember — you're not alone.`;
         </div>
       )}
 
+      {/* Demo Mode Banner */}
+      {conversation?.is_demo && (
+        <div
+          style={{
+            padding: '10px 20px',
+            backgroundColor: '#EDF4FF',
+            color: '#1E3A5F',
+            textAlign: 'center',
+            fontSize: '14px',
+            borderBottom: '1px solid #DCE9FF',
+          }}
+        >
+          <strong>Demo Mode</strong> — Chatting with an AI helper to show you how Peerzle works
+        </div>
+      )}
+
       {/* Crisis Resources Banner */}
       {showCrisisBanner && (
         <div

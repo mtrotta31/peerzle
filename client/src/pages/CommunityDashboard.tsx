@@ -431,6 +431,31 @@ export default function CommunityDashboard() {
         </div>
       </header>
 
+      {/* Demo Mode Banner */}
+      {community?.is_demo && (
+        <div
+          style={{
+            backgroundColor: '#EDF4FF',
+            borderBottom: '1px solid #DCE9FF',
+            padding: '12px 24px',
+          }}
+        >
+          <div
+            style={{
+              maxWidth: '800px',
+              margin: '0 auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+            }}
+          >
+            <span style={{ color: '#1E3A5F', fontSize: '14px' }}>
+              <strong>Demo Mode</strong> — Experience Peerzle with an AI helper
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Push Notification Banner */}
       {showPushBanner && (

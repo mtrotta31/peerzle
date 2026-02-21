@@ -15,6 +15,7 @@ interface CommunityRow {
   is_public: boolean;
   helper_verification_required: boolean;
   is_active: boolean;
+  is_demo: boolean;
   created_at: Date;
 }
 
@@ -54,7 +55,7 @@ function generateInviteCode(): string {
 router.get('/', async (_req: Request, res: Response) => {
   try {
     const result = await query<CommunityRow>(
-      `SELECT id, slug, name, config, verification_method, allowed_email_domains, is_public, helper_verification_required, created_at
+      `SELECT id, slug, name, config, verification_method, allowed_email_domains, is_public, helper_verification_required, is_demo, created_at
        FROM communities
        WHERE is_active = true
        ORDER BY name`
@@ -73,7 +74,7 @@ router.get('/:slug', async (req: Request, res: Response) => {
     const { slug } = req.params;
 
     const result = await query<CommunityRow>(
-      `SELECT id, slug, name, config, verification_method, allowed_email_domains, is_public, helper_verification_required, created_at
+      `SELECT id, slug, name, config, verification_method, allowed_email_domains, is_public, helper_verification_required, is_demo, created_at
        FROM communities
        WHERE slug = $1 AND is_active = true`,
       [slug]

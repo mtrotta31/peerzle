@@ -275,17 +275,33 @@ export default function CommunitiesPage() {
                   {/* Stacked layout for mobile-friendly cards */}
                   {/* Row 1: Community name + info button */}
                   <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '12px', marginBottom: '8px' }}>
-                    <h2
-                      style={{
-                        margin: 0,
-                        fontSize: '18px',
-                        fontWeight: 600,
-                        color: '#1E3A5F',
-                        flex: 1,
-                      }}
-                    >
-                      {community.name}
-                    </h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                      <h2
+                        style={{
+                          margin: 0,
+                          fontSize: '18px',
+                          fontWeight: 600,
+                          color: '#1E3A5F',
+                        }}
+                      >
+                        {community.name}
+                      </h2>
+                      {community.is_demo && (
+                        <span
+                          style={{
+                            backgroundColor: '#2B7CF6',
+                            color: 'white',
+                            padding: '3px 8px',
+                            borderRadius: '10px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            flexShrink: 0,
+                          }}
+                        >
+                          Try Demo
+                        </span>
+                      )}
+                    </div>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
