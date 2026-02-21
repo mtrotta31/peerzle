@@ -76,6 +76,18 @@ const TOPIC_TEMPLATES = {
     { name: 'Manager Challenges', description: 'Dealing with difficult leadership or feedback' },
     { name: 'General Support', description: 'Any topic not listed above' },
   ],
+  epilepsy: [
+    { name: 'Seizure Management', description: 'Coping with and managing seizures' },
+    { name: 'Medication Side Effects', description: 'Dealing with medication impacts' },
+    { name: 'Newly Diagnosed', description: 'Adjusting to a new diagnosis' },
+    { name: 'Driving Restrictions', description: 'Navigating loss of driving privileges' },
+    { name: 'Employment Challenges', description: 'Workplace accommodations and disclosure' },
+    { name: 'Social Stigma', description: 'Dealing with misunderstanding and discrimination' },
+    { name: 'Mental Health', description: 'Managing anxiety, depression, and emotional health' },
+    { name: 'Relationships', description: 'Navigating relationships affected by epilepsy' },
+    { name: 'Caregiver Support', description: 'Support for family and caregivers' },
+    { name: 'General Support', description: 'Any topic not listed above' },
+  ],
 };
 
 type Tab = 'communities' | 'organizations' | 'webhooks';
@@ -999,6 +1011,7 @@ export default function SuperAdminPanel() {
                     <TemplateButton onClick={() => handleApplyTemplate('veterans')}>Veterans</TemplateButton>
                     <TemplateButton onClick={() => handleApplyTemplate('education')}>Education</TemplateButton>
                     <TemplateButton onClick={() => handleApplyTemplate('employee_wellness')}>Employee Wellness</TemplateButton>
+                    <TemplateButton onClick={() => handleApplyTemplate('epilepsy')}>Epilepsy</TemplateButton>
                     <TemplateButton onClick={() => setFormTopics([])}>Start Blank</TemplateButton>
                   </div>
 
