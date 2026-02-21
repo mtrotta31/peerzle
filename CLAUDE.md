@@ -15,7 +15,8 @@ This is a deeply personal project connected to the founder's brother's story. Tr
 - **AI:** Claude/Anthropic API for PeerBot (AI companion), moderation pipeline, and crisis detection
 - **Auth:** JWT-based authentication
 - **Push:** Web Push API with VAPID keys
-- **Deployment:** Railway (main app + PostgreSQL), Vercel (marketing website at peerzle-website repo)
+- **Deployment:** Railway (main app + PostgreSQL), Vercel (marketing website)
+- **Domains:** app.peerzle.com (application), www.peerzle.com (marketing site)
 - **Repo:** github.com/mtrotta31/peerzle
 
 ## Project Structure
@@ -229,6 +230,8 @@ The Demo community (`slug: demo`, `is_demo: true`) provides a sandbox for users 
 - **Demo messages need special frontend handling** — Check `moderation_result.demo_helper` and `moderation_result.demo_seeker` flags to display proper names instead of "PeerBot" and hide the bot avatar.
 - **Demo helper responses need `is_demo` flag** — When triggering PeerBot in demo communities, pass `{ isDemo: true }` to `generatePeerBotResponse` and set `demo_helper: true` in moderation_result so frontend displays helper persona name instead of "PeerBot".
 - **API responses must include `is_demo` when needed** — The `endConversation` endpoint must return `is_demo` from the community so the frontend can show the demo CTA instead of the standard "What's Next?" card.
+- **Same-origin deployment requires relative URLs** — In production, frontend and API are served from app.peerzle.com. The client uses `import.meta.env.PROD` to detect production builds and uses empty string for API baseURL (relative URLs like `/api/auth/login`). Never hardcode absolute URLs for API calls.
+- **Marketing site requires www subdomain** — Links to the marketing site must use `www.peerzle.com` (not `peerzle.com`) for proper routing. The marketing site is a client-side SPA that requires the www subdomain.
 
 ### Development Workflow
 
@@ -288,3 +291,23 @@ npm run dev          # Starts both client and server
 - Run database migrations manually if schema changes are included
 - Verify the deployment at app.peerzle.com
 - Marketing site deploys separately via Vercel from the peerzle-website repo
+
+### Domain Setup
+
+| Domain | Service | Purpose |
+|--------|---------|---------|
+| app.peerzle.com | Railway | Main application (frontend + API, same-origin) |
+| www.peerzle.com | Vercel | Marketing website |
+| peerzle.com | Redirects to www | Marketing site canonical URL |
+
+### Same-Origin Architecture
+
+The frontend and API are served from the same domain (app.peerzle.com):
+- **Production:** API calls use relative URLs (`/api/...`) — no CORS needed
+- **Development:** Vite proxy forwards `/api` to `localhost:3001`, or `VITE_API_URL` can be set
+- **WebSockets:** Socket.io connects to same origin in production
+
+This is configured in:
+- `client/src/services/api.ts` — uses `import.meta.env.PROD` to detect production
+- `client/src/services/socket.ts` — same pattern for WebSocket URL
+- `server/src/app.ts` — helmet CSP configured to allow WebSocket connections
