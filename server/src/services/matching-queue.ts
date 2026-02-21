@@ -294,8 +294,9 @@ export async function handleDemoSeekerJoined(
   await new Promise(resolve => setTimeout(resolve, 2000));
 
   // Generate opening message from demo seeker
+  // Seed with a fake helper greeting so PeerBot knows to respond AS the seeker
   const openingMessage = await generatePeerBotResponse(
-    [], // Empty - this is the first message
+    [{ content: "Hi there, I'm here to listen. What's on your mind today?", sender_email: 'helper@demo', is_peerbot: false }],
     { topic, community_name: communityName },
     { isDemoSeeker: true }
   );
