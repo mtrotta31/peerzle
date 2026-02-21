@@ -34,7 +34,7 @@ peerzle/
 
 ## Current State
 
-- **Live at:** peerzle-production.up.railway.app
+- **Live at:** app.peerzle.com
 - **Database migration:** 023 (always check for the latest before creating new ones)
 - **Tier 1:** COMPLETE — 12 core features + community join flow, helper verification, helper training module, password reset, TOS acceptance
 - **Tier 2:** COMPLETE — All 5 phases shipped. Matching algorithm with weighted scoring, connection cards with match percentages, mood checks, compliment badges, coaching tips, dynamic suggestions, admin stats summary
@@ -198,7 +198,7 @@ The Demo community (`slug: demo`, `is_demo: true`) provides a sandbox for users 
 
 ### Post-Session CTA + /demo Route (Wave 4)
 - After demo conversation ends (seeker or helper), show CTA card instead of standard "What's Next?" card
-- CTA includes: "Get in Touch" (mailto:matt.trotta31@gmail.com) and "Learn More" (peerzle-website.vercel.app/for-organizations)
+- CTA includes: "Get in Touch" (mailto:matt.trotta31@gmail.com) and "Learn More" (peerzle.com/for-organizations)
 - `/demo` route auto-joins demo community: unauthenticated users → login with returnTo → auto-join → redirect to /community/demo
 - LoginPage and SignupPage support `returnTo` query parameter for post-auth redirects
 
@@ -286,5 +286,5 @@ npm run dev          # Starts both client and server
 
 - Push to `main` branch triggers Railway deployment
 - Run database migrations manually if schema changes are included
-- Verify the deployment at peerzle-production.up.railway.app
+- Verify the deployment at app.peerzle.com
 - Marketing site deploys separately via Vercel from the peerzle-website repo

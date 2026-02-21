@@ -1548,7 +1548,7 @@ Take your time, be yourself, and remember — you're not alone.`;
                   </a>
 
                   <a
-                    href="https://peerzle-website.vercel.app/for-organizations"
+                    href="https://peerzle.com/for-organizations"
                     target="_blank"
                     rel="noopener noreferrer"
                     style={{
