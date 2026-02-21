@@ -11,13 +11,14 @@ const router = Router();
 interface ConversationRow {
   id: string;
   community_id: string;
-  seeker_membership_id: string;
+  seeker_membership_id: string | null;
   helper_membership_id: string | null;
   topic: string | null;
   status: string;
   started_at: Date;
   ended_at: Date | null;
   is_demo_seeker: boolean;
+  match_score: number | null;
   community_slug: string;
   community_name: string;
   seeker_email: string;
@@ -40,9 +41,10 @@ router.get('/pending', authenticate, async (req: AuthenticatedRequest, res: Resp
 
     // Get pending conversations from communities where user is an available helper
     // Include seeker's organization info
-    const result = await query<ConversationRow>(
+    // Use LEFT JOIN for seeker_m to include demo seeker conversations (where seeker_membership_id is NULL)
+    const result = await query<ConversationRow & { is_demo_seeker: boolean }>(
       `SELECT c.id, c.community_id, c.seeker_membership_id, c.helper_membership_id,
-              c.topic, c.status, c.started_at, c.ended_at,
+              c.topic, c.status, c.started_at, c.ended_at, c.is_demo_seeker, c.match_score,
               cm.slug as community_slug, cm.name as community_name,
               COALESCE(seeker_m.display_name, 'Anonymous') as seeker_name,
               seeker_m.organization_id as seeker_org_id,
@@ -50,13 +52,13 @@ router.get('/pending', authenticate, async (req: AuthenticatedRequest, res: Resp
        FROM conversations c
        JOIN communities cm ON cm.id = c.community_id
        JOIN memberships m ON m.community_id = c.community_id AND m.user_id = $1
-       JOIN memberships seeker_m ON seeker_m.id = c.seeker_membership_id
+       LEFT JOIN memberships seeker_m ON seeker_m.id = c.seeker_membership_id
        LEFT JOIN organizations seeker_org ON seeker_org.id = seeker_m.organization_id
        WHERE c.status = 'matching'
          AND c.helper_membership_id IS NULL
          AND m.is_available = true
          AND m.role IN ('helper', 'both')
-         AND c.seeker_membership_id != m.id
+         AND (c.seeker_membership_id IS NULL OR c.seeker_membership_id != m.id)
        ORDER BY c.started_at ASC`,
       [userId]
     );
@@ -81,11 +83,18 @@ router.get('/pending', authenticate, async (req: AuthenticatedRequest, res: Resp
       const pendingWithScores = await Promise.all(
         result.rows.map(async (conv) => {
           try {
-            const score = await calculateMatchScore(
-              helperMembershipId,
-              conv.topic,
-              conv.seeker_membership_id
-            );
+            // Demo seeker conversations already have a pre-generated match_score
+            // For real conversations, calculate the score
+            let score: number | undefined;
+            if (conv.is_demo_seeker) {
+              score = conv.match_score ?? 80; // Use pre-generated score or default
+            } else if (conv.seeker_membership_id) {
+              score = await calculateMatchScore(
+                helperMembershipId,
+                conv.topic,
+                conv.seeker_membership_id
+              );
+            }
             const sameOrg = helperOrgId !== null && conv.seeker_org_id === helperOrgId;
             return {
               ...conv,
@@ -96,7 +105,7 @@ router.get('/pending', authenticate, async (req: AuthenticatedRequest, res: Resp
           } catch {
             return {
               ...conv,
-              match_score: undefined,
+              match_score: conv.is_demo_seeker ? (conv.match_score ?? 80) : undefined,
               same_org: false,
               org_name: conv.seeker_org_name,
             };
@@ -191,19 +200,21 @@ router.post('/accept/:conversationId', authenticate, async (req: AuthenticatedRe
     // Cancel the matching process
     cancelMatchingProcess(conversationId);
 
-    // Compute and persist match score
-    try {
-      const matchScore = await calculateMatchScore(
-        membership.id,
-        conversation.topic,
-        conversation.seeker_membership_id
-      );
-      await query(
-        `UPDATE conversations SET match_score = $1 WHERE id = $2`,
-        [matchScore, conversationId]
-      );
-    } catch (err) {
-      console.error('Failed to persist match score:', err);
+    // Compute and persist match score (skip for demo seeker - already has pre-generated score)
+    if (!conversation.is_demo_seeker && conversation.seeker_membership_id) {
+      try {
+        const matchScore = await calculateMatchScore(
+          membership.id,
+          conversation.topic,
+          conversation.seeker_membership_id
+        );
+        await query(
+          `UPDATE conversations SET match_score = $1 WHERE id = $2`,
+          [matchScore, conversationId]
+        );
+      } catch (err) {
+        console.error('Failed to persist match score:', err);
+      }
     }
 
     // Get helper email for the socket event
